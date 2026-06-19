@@ -1,0 +1,217 @@
+# 胃癌 MLMOD 项目全局约定（Conventions）
+
+本文件是所有方法学约定的唯一来源。CLAUDE.md 和 AGENT.md 均引用本文件，不重复其内容。
+约定可被推翻——如果有充分理由认为某条约定不利于研究质量，应提出并由用户裁决。
+
+## 0. 核心原则
+
+本项目唯一目标是形成高质量、可执行、可审计、不过度声称的研究方案和分析结果。用户、Codex、Claude Code 和任何其他 agent 的意见都只能作为 reasoning 或执行记录，不能直接作为论文证据。
+
+关键结论必须至少追溯到以下三类真实证据之一：
+
+1. 实际数据文件和输出结果表，例如表达矩阵、metadata、模型结果、source data。
+2. 实际运行代码、脚本、命令日志、参数文件和软件版本。
+3. 可核验的文献、数据库、官方文档或公共资源。
+
+如果 agent 意见与真实证据冲突，以真实证据为准。若证据不足，结论必须降级为探索性、方向性或不可评价。
+
+## 1. 阶段边界
+
+### 1a 阶段：主线方案讨论与审核
+
+1a 阶段以自然语言方案为主。此阶段允许反复讨论、反驳、重写和调整，不强制每个小节立即维护结构化 contract 模板。必要时可在自然语言中加入表格、字段清单和 gate 条件，但不要求每个小节都完整拆成五块 contract。
+
+### 1b 阶段：执行准备
+
+与之前的网页agent模式不同，服务器执行阶段由Codex控制Linux服务器执行，Claude Code承担独立审核职责，因此1b阶段大幅简化：
+- 不再需要编写独立的"小节方案"和"提示词"
+- Codex 确认方案每个 F 节描述足够具体，使代码实现无需猜测即可落地
+- 检查跨 F 节文件传递关系（输入 / 输出 RDS、TSV 文件名前后一致）
+- 配置服务器环境、目录结构、依赖管理、git策略和数据上传/下载规则
+- 如有需要，对关键节使用五块 contract 模板结构化
+
+## 2. 结构化 contract 模板
+
+需要结构化时，每个 F 子节包含以下五块：
+
+### input_contract
+
+必须说明：
+- required_inputs：必须读取的文件或对象
+- optional_inputs：可选输入及其用途
+- input_source：上游 F 节输出、本地数据文件或公共数据库下载
+- input_validation：文件存在性、SHA256、shape、字段、样本/细胞数、基因 ID、表达单位、metadata 完整性
+- blocking_input_failure：哪些输入失败会阻断执行
+
+### method_decision_contract
+
+必须说明：
+- default_or_recommended_method：基于预审计的推荐方法
+- method_selection_rules：根据真实数据结构如何选择方法
+- methods_not_allowed_by_default：未满足条件时不得使用的方法
+- required_approval_for_change：哪些变更必须用户批准
+- sensitivity_or_fallback_methods：敏感性分析或降级路径
+- interpretation_boundary：该方法最多能支持什么结论，不能支持什么结论
+
+### output_contract
+
+必须说明：
+- core_audit_outputs：直接影响 gate 判定、方法选择或主要结论的核心表/报告
+- reproduction_outputs：RDS、矩阵、模型对象、脚本、日志、source data、manifest 等复现文件
+- figure_outputs：图、source data 和生成代码
+- output_schema：关键输出字段、允许值、必填字段
+- file_count_policy：核心审计文件优先控制在 5-8 个；补充复现文件可分目录组织
+
+### gate_contract
+
+必须说明：
+- gate_name 和 gate_scope
+- pass_conditions
+- pass_with_limitations_conditions
+- fail_conditions
+- warning_handling
+- researcher_approval_required
+- next_step_allowed_if_pass
+
+### claim_boundary
+
+必须说明：
+- allowed_claims：本小节结果允许支持的结论
+- disallowed_claims：不得从本小节结果推出的结论
+- required_limitation_sentences：必须保留的限制性表述
+- evidence_level_candidate：该小节可能达到的证据等级
+
+## 3. 服务器执行与审计分层
+
+Codex 在 Linux 服务器上逐 gate 执行。完成当前 gate 后必须暂停，产出 gate 报告、真实执行脚本、日志、输出文件和 manifest，并将必要文件同步回本地仓库。Claude Code审核后，由用户决定是否批准进入下一步。
+
+### 审计分层
+
+1. **决策级审计**：影响方法选择、gate 通过、主要结论或解释边界的内容，必须严格审核。例如 DE 方法选择、CNV 恶性判定、MLMOD 评分阈值、pseudobulk 设计、Cox 模型、核心基因筛选。
+2. **记录级审计**：文件命名、checksum、普通 manifest、非关键格式字段等，汇总审核即可，不应消耗主要精力逐项深挖。
+
+每步 integrity check 建议不超过 10 项。若审计工作量开始超过实质分析价值，应优先保留决策级审计，压缩记录级审计。
+
+### 关键中间对象保存
+
+所有 .rds / .h5ad 对象保存到 `objects/` 目录。关键中间变量输出 shape / head / summary 到日志。git 追踪脚本和文本输出，大型二进制对象通过 manifest + SHA256 记录。
+
+## 4. 证据等级与 claim_evidence_matrix.tsv
+
+claim_evidence_matrix.tsv 不在 1a 阶段强制生成。建议在 F0-F8 分析完成、论文写作前，由 Codex 基于执行结果和审阅结果生成。
+
+建议字段：
+- claim_id, F_section, gate_id, claim_text, claim_type
+- evidence_files, code_or_script_source, source_data_files
+- statistical_support, effect_size_or_direction, biological_support
+- reproduction_status, review_status
+- evidence_level, allowed_manuscript_language, required_limitation_sentence, note
+
+证据等级：
+- not_supported：数据不支持或方向相反
+- not_evaluable：关键数据缺失、质量不足或方法失败，不能评价
+- exploratory_only：仅探索性、样本量不足、单方法结果或未复现结果
+- single_cell_supported：单细胞层面有可复现证据支持
+- bulk_supported：bulk 队列层面有可复现证据支持
+- multi_cohort_validated：多个相对独立队列方向一致，且样本重叠风险、平台差异和统计模型已审计
+- mechanistic_hypothesis：机制假设有数据关联或文献支持，但未被本研究实验验证
+
+论文写作时，allowed_manuscript_language 必须与 evidence_level 匹配。关联性证据不得写成因果或实验验证；方向性观察不得写成独立验证。
+
+## 5. 数据先于方法
+
+在制定或执行任何分析方案前，必须先摸清数据结构。方法、参数和解释强度必须由真实数据决定，而不是由文件名、常用套路或 agent 偏好决定。
+
+典型要求：
+- 单细胞：先审计 metadata、QC 字段、作者注释、raw/processed 状态和已有处理
+- bulk：先审计表达单位、log 状态、平台、probe 映射、临床终点、事件数和样本重叠
+- 多组学：先审计来源、版本、genome build、样本匹配和缺失率
+- 外部验证：先确认是否真的含有所需分组、终点或表达数据，不能因数据集知名就预设可验证
+
+若数据结构与预期不一致，必须先更新方法计划，再执行分析。
+
+## 6. 反事实前提检查
+
+12 维度框架适合检查方案的内部质量和一致性，但不能替代对核心前提的质疑。增量审核容易陷入"验证模式"——检查改动是否正确落地，而忽略被改动的内容本身是否建立在正确的前提上。
+
+规则：每个 F 大节 Gate 通过审核前，Codex 必须在结果解读中完成一次反事实前提检查，Claude Code 必须在独立审核中复核该检查是否充分：
+
+1. 识别该 F 节依赖的核心假设（不限于一个）
+2. 假设该假设为假，评估当前 F 节的分析还能支撑什么结论
+3. 如果答案是"几乎不能"，则该假设必须在 gate 内有可验证的检验或对照设计，而不是被默认为真
+4. 如果 gate 内已有相关检验，评估该检验是否真正测试了假设本身，还是只测试了假设的某个推论或副产品
+
+典型反事实问题：
+- F2："如果 MLMOD 签名与通用 OXPHOS / 缺氧签名高度共线，高 MLMOD 亚群是否仍然是功能独特的？"
+- F2.4："如果 bulk 预后效应在调整肿瘤纯度后消失，F2-Gate4 是否应该 PASS？"
+- F3.2："如果恶性上皮中不存在真实的分化轨迹，拟时序分析的输出有什么价值？"
+- F8.3："如果 CellOracle 的基因调控网络推断本身不可靠，虚拟扰动结果能支撑什么？"
+
+该检查与 12 维度中的"科学假设与逻辑链"互补而不重复：维度 1 检查推理链是否有跳跃，反事实检查问如果起点就错了会怎样。
+
+## 7. Gate 标准
+
+* 通过 gate 的唯一标准：**用户明确确认**
+* Codex 和 Claude Code 可以建议是否通过，但最终由用户裁决
+
+## 8. 跨 F 节循环定义防范
+
+单 F 节内的循环定义容易发现（维度 8），但跨多个 F 节的循环链更隐蔽——每个单独的 F 节看起来都合理，但串起来可能构成"用自己的定义验证自己"。
+
+### 本项目的主要循环风险链
+
+F2（MLMOD 签名构建与特异性验证）→ F5（从 MLMOD 亚群筛选核心基因）→ F6（用核心基因构建 bulk signature）→ F7（用 signature 做预后验证）
+
+**风险：如果 MLMOD 签名实际上主要捕获了通用应激/氧化磷酸化信号，那么 F5-F7 的整条链都是在验证这个偏差，而不是独立发现。**
+
+### 必须在方案中设计的对照检验
+
+| 检验位置 | 检验内容 | 不通过时的后果 |
+|---------|---------|-------------|
+| F2 | MLMOD score vs 参照签名（OXPHOS / hypoxia / apoptosis）相关性 | specificity_status 降级，影响全项目解释上限 |
+| F2 | MLMOD score vs nCount_RNA / nFeature_RNA / percent.mt 相关性 | 如果主要由技术因素驱动，需回归掉技术因素后重新评估 |
+| F2.3 | 残差分析：去除参照签名贡献后 MLMOD 残差是否仍有生物学意义 | 如果残差无意义，MLMOD 不具有独立性 |
+| F5→F6 | F6 signature 基因与 MLMOD 打分基因的重叠比例 | 如果 > 50% 重叠，标记循环定义风险 |
+| F6 | 去除通用应激通路基因后 signature 预后效力 | 如果去除后失效，预后价值来自通用应激而非 MLMOD 特异性 |
+| F7 | 至少一个队列中调整肿瘤纯度（ESTIMATE/EPIC）后 signature 显著性 | 如果调整后消失，可能只反映样本细胞组成差异 |
+
+### 1b 总体大纲审核时的跨节追溯
+
+1b 阶段制定执行顺序时，必须画出 F 节之间的数据依赖图（哪个 F 的输出是哪个 F 的输入），检查：是否存在路径使得某个 F 节的核心结论通过下游 F 节回流验证自身的输入假设。
+
+## 9. 负面 / 意外结果处理
+
+当某个分析步骤产生负面结果（如无显著差异、无明显聚类结构、预后无关联）时，按以下顺序排查：
+
+1. **审视方法适配性**：该分析方法是否适合当前数据和科学问题？如果方法本身不适合，换用更合适的方法
+2. **合理调整分析参数**：方法适合但参数可能不优，在有合理生物学或统计学解释的前提下调整参数。注意：不允许无理由地反复调参直到出现显著结果（p-hacking）
+3. **检查上游输入**：上一步的输出是否有问题？回溯检查上游 F 节的数据质量、处理流程
+4. **确认真实负面结果**：如果上述排查均无问题，说明确实不存在显著差异——如实记录该发现，调整下游 F 节计划
+
+核心原则：目的是区分"分析方法的问题"和"数据本身的真实信号"。负面结果本身是有价值的科学发现，不应被掩盖或无限制地重新分析。
+
+## 10. 证据与推理的边界
+
+* **agent 意见是推理（reasoning），不是证据（evidence）**——多个 AI agent 互审可能共享系统性偏差
+* 每个关键结论必须追溯到三类实证依据之一：
+  1. 数据文件（actual data output）
+  2. 运行代码 / 脚本 / 日志（reproducible computation）
+  3. 真实文献 / 数据库（external validation）
+* agent 的分析和建议可以辅助决策，但不能替代上述实证依据
+* **阶段一适用方式**：方案制定阶段尚无数据输出和代码运行，此时方法选择必须有文献支撑——引用具体论文或工具官方文档，说明该方法在类似数据/问题上的验证记录，并论证其适合本研究的具体理由。不能只写"推荐使用 X"或"X 是常用工具"
+
+## 11. QC 要求（由 F0 审计结论驱动，不写死）
+
+* Doublet 检测：F0 先确认数据集是否已有 doublet 检测结果及其可信度；若需独立重做，推荐 scDblFinder，在 clustering 之前完成
+* Ambient RNA 校正：F0 先评估 cross-expression 水平和原作者校正记录；若需补做，推荐 DecontX/SoupX，在归一化之前完成
+* 其他 QC 步骤：不预设"必须做"或"可以跳过"，根据 F0 审计报告中的具体发现决定
+
+## 12. 差异表达
+
+* Pseudobulk：所有涉及差异表达的分析使用 patient 级 pseudobulk 聚合 + DESeq2
+* CNV 独立报告：inferCNV 和 CopyKAT 结果分别报告，不合并为统一 support level
+
+## 13. 签名冻结
+
+* 签名冻结在 bulk 验证前：防止 p-hacking
+* interaction_padj 不显著不阻断基因集构建，只用于 Tier 分层/排序

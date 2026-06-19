@@ -1,0 +1,52 @@
+# 项目概述
+
+## 课题
+胃癌单细胞 RNA-seq 再分析，聚焦 MLMOD（mitoxyperiosis / 线粒体定位膜氧化损伤）亚群筛选、预后关联、核心基因鉴定
+
+## 核心思路（待检验的研究假设链，不是预设结论）
+
+假设 1：胃癌 scRNA-seq 数据中的恶性上皮细胞存在可识别的 MLMOD 表型亚群
+假设 2：MLMOD 签名具有相对于通用应激签名（OXPHOS / 缺氧 / 凋亡等）的特异性
+假设 3：该 MLMOD 亚群与患者预后显著相关
+假设 4：该亚群具有独特的功能特征和核心驱动基因
+假设 5：核心基因可在独立 bulk 队列中构建有效的预后标志物
+
+每个假设在对应 F 节中被检验。如果某个假设不成立，按 `conventions.txt` 负面结果处理流程决定后续方案。
+
+## 数据集
+
+### 单细胞
+* GSE183904（Cancer Discovery 2022），40 样本（26 Primary_Tumor, 10 Normal_Gastric, 3 Peritoneal_Metastasis, 1 Normal_Peritoneum），158,641 细胞，26,571 基因，processed count-like CSV 矩阵（非 FASTQ）
+
+### MLMOD 基因集来源
+* GSE235046（Cell 2025，小鼠 BMDM bulk RNA-seq），需跨物种（mouse→human）跨细胞类型（macrophage→epithelial）迁移
+* MLMOD 三层基因集：seed_mechanistic → mouse_DE_signature → human_scoring_signature
+
+### Bulk
+* 训练集：TCGA-STAD
+* 验证集：GSE15459 / GSE66229 / GSE84426（根据实际可用性调整）
+* SuperSeries 确认：GSE62254 ⊂ GSE66229，GSE84426 ⊂ GSE84437
+
+### PM 样本量限制（全局规则）
+GSE183904 的 Peritoneal_Metastasis 仅 3 样本。所有涉及 PM 的分析遵守以下规则：
+1. PM 样本层统计比较只能作为方向性观察，不得作为假设检验主证据或独立验证来源
+2. 任何 PM 样本层结果必须标注 n=3 限制
+3. PM 细胞层描述性展示（如 UMAP 着色、比例对比图）允许，但图注必须标注来源样本数
+4. 不得将 PM 趋势外推为"转移相关"通用结论——Normal_Peritoneum 仅 1 样本，无法作为对照
+5. 若分析中 PM 结果与 Primary_Tumor 结果方向矛盾，以 Primary_Tumor（n=26）为主体结论
+
+## 关注细胞类型
+恶性上皮为主线，免疫细胞 / 成纤维细胞作为微环境互作对象
+
+## 执行环境
+Linux 服务器，Ubuntu 22.04 Server 64-bit，Intel CPU 3.4GHz，16 核，64GB RAM。
+Codex 控制服务器运行 R/Python/Bash 代码；Claude Code 在用户授权后审核服务器配置、代码和执行结果。
+所有中间文件持久保存在磁盘上；git 管理方案、脚本、小型文本输出和审计记录，大型数据与对象通过 manifest + SHA256 追踪。
+
+## 分析管线
+Seurat v5 + Harmony 整合，inferCNV + CopyKAT 恶性判定，多算法 MLMOD 打分（AddModuleScore / AUCell / ssGSEA / singscore / UCell，秩归一化），staged gate 系统
+
+## 语言约定
+* 日常沟通：中文
+* 代码中的变量名 / 函数名：英文
+* 输出文件名：英文前缀 `F{N}_description.ext`

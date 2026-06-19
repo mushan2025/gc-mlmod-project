@@ -1,0 +1,38 @@
+# Large/raw data and regenerated analysis artifacts.
+data/public_downloads/**
+data/processed_input/**
+objects/**
+tmp/**
+!data/public_downloads/.gitkeep
+!data/processed_input/.gitkeep
+!objects/.gitkeep
+!tmp/.gitkeep
+
+# Large binary analysis outputs.
+*.rds
+*.RDS
+*.rdata
+*.RData
+*.h5ad
+*.loom
+*.feather
+*.tar
+*.gz
+*.zip
+
+# Figure and reference binaries are stored locally, not versioned by git.
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.pdf
+*.docx
+
+# Runtime/editor noise.
+.Rhistory
+.RData
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
