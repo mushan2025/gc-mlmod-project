@@ -1,0 +1,1020 @@
+﻿Codex 会话增量上下文导出
+文件用途：before_F3.3_round
+会话 ID：019e68d9-9638-7951-8246-0187f2d19091
+源文件：C:\Users\14799\.codex\sessions\2026\05\27\rollout-2026-05-27T17-52-30-019e68d9-9638-7951-8246-0187f2d19091.jsonl
+指定文件名：before_F3.3_round.txt
+基准已有消息最大编号：562
+当前可见消息总数：643
+本次增量消息数：81（你 17 条，Codex 64 条）
+导出时间：2026-06-07 21:00:44 Asia/Shanghai
+
+整理说明：仅保留你和 Codex 在界面中可见的新增消息；已排除系统/开发者指令、environment_context、工具调用与输出。
+
+================================================================================
+
+[563] 你 | 2026-06-06 22:56:00 Asia/Shanghai
+继续挑刺下一节
+
+--------------------------------------------------------------------------------
+
+[564] Codex | 2026-06-06 22:56:21 Asia/Shanghai
+我继续按顺序挑下一节。先读 F3 当前内容，再用“主对象是否匹配、统计是否抗伪重复、结论是否会过度、Biomni 能否执行并被审计”这几条线找问题。
+
+--------------------------------------------------------------------------------
+
+[565] Codex | 2026-06-06 22:56:35 Asia/Shanghai
+我会用 life-science research 的路由思路来审，但这一步主要是本地方案审查，不先展开大规模文献检索。若 F3 里出现会影响主结论的方法选择，我会明确标成“需要文献/先例再锁定”。
+
+--------------------------------------------------------------------------------
+
+[566] Codex | 2026-06-06 22:56:55 Asia/Shanghai
+F3 现在明显还停留在导师大纲层级，和前面 F0-F2 的“可执行+可审计”粒度差距很大。这个不是坏事，正好说明下一轮要把它从“想做什么”改成“凭什么做、用哪个对象做、输出什么、失败怎么处理”。
+
+--------------------------------------------------------------------------------
+
+[567] Codex | 2026-06-06 22:57:44 Asia/Shanghai
+下一节是 [F3｜预后特异亚群功能分析](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:521)。我先直说：F3 目前还只是“大纲”，不能直接给 Biomni 执行。最大问题不是方法名字少，而是**输入对象、统计边界、循环验证风险、输出审计文件都没锁定**。
+
+我挑出这些硬问题：
+
+1. **F3 目标表述过强**
+   现在写“发育分化轨迹”，这个词太强。横断面单细胞数据不能证明真实发育、分化或肿瘤演化路径，最多说“状态连续性”“拟时序关联”“转录状态梯度”。建议把 F3 目标改成：解析高MLMOD亚群的功能特征、通路状态和拟时序相关状态变化，不直接声称发育分化。
+
+2. **F3.1 没说用哪个差异基因表**
+   [F3.1](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:523) 写“高MLMOD亚群标志基因”，但没有指定来自 F2 的哪个文件。主线应优先用 `MLMOD_high_vs_low_pseudobulk_markers.tsv`，单细胞 `FindMarkers` 只能探索性使用。否则会回到伪重复问题。
+
+3. **功能富集有循环定义风险**
+   高MLMOD亚群本来就是用 MLMOD signature 打分定义的，如果 F3.1 富集直接用包含打分基因的 marker，很容易富集出线粒体、氧化应激、死亡相关通路，然后形成“自己证明自己”。
+   建议 F3.1 必须分两套：
+   - all pseudobulk markers：完整描述，但标记 `is_MLMOD_scoring_signature_gene`
+   - non-scoring markers：排除 F2 打分基因后做主解释，降低循环定义风险
+
+4. **ORA/GSEA 的背景基因和排序规则没写**
+   GO/KEGG 富集必须定义 universe，不能默认全基因组。建议 universe 用 F2 pseudobulk DE 中实际被检测/进入模型的基因。
+   GSEA 排序也要锁定，例如用 pseudobulk DE 的 `stat`、`signed -log10(p)` 或 `logFC`，不能让 Biomni随意选。
+
+5. **GSVA 这句太模糊**
+   [通路打分可视化](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:527) 写“GSVA包计算高MLMOD细胞的通路活性矩阵”，但没说基因集来源、细胞层还是pseudobulk层、是否做样本层统计。
+   我建议主线不要直接对每个细胞做 GSVA 当作强证据，优先用 sample-aware pseudobulk 或每样本高低组汇总后比较；单细胞 pathway score 可作为可视化。
+
+6. **F3.2 的正常上皮起点仍然需要大改**
+   虽然我们已经补了 `epithelial_continuum_object`，但 [F3.2](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:528) 仍没定义如何构建这个对象。正常上皮、恶性上皮来自不同样本和状态，直接拼起来跑 Monocle3 很容易得到“批次/样本来源轨迹”，不是生物轨迹。
+   需要写清：主线拟时序是否只在恶性上皮内做；正常上皮起点是否作为敏感性；root cell 如何定；若图结构不连通或被样本主导，禁止解释轨迹。
+
+7. **SCENIC 不应轻易放主线**
+   [SCENIC](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:534) 计算重、数据库依赖强、网页 Biomni 不一定稳定。建议写成“可选增强分析”，执行前必须提交资源和数据库计划。主线可以先用差异TF、DoRothEA/decoupleR 或 motif enrichment 作为更轻量方案，是否替换要再查文献和工具可用性。
+
+8. **F3 缺少 Gate 和输出文件**
+   前面 F1/F2 已经是 gate 化执行，F3 也应该有 `F3-Gate1 functional_enrichment` 和 `F3-Gate2 trajectory_state_analysis`。否则 Biomni 做完只给图，后面没法审计。
+
+我的建议：F3 需要整体重写，至少先把 F3.1 和 F3.2 拆成两个 gate。F3.1 先锁定“高MLMOD功能解释怎么避免循环定义”；F3.2 再单独讨论“拟时序到底能不能做、做到什么结论强度”。
+
+--------------------------------------------------------------------------------
+
+[568] 你 | 2026-06-06 23:12:53 Asia/Shanghai
+看起来不错，另外是否需要做多个root做敏感性分析？SCENIC是干什么的，如果分析效果好，可以拆分成小任务来做
+
+--------------------------------------------------------------------------------
+
+[569] Codex | 2026-06-06 23:13:38 Asia/Shanghai
+是的，**拟时序需要多个 root 做敏感性分析**，但必须预先规定，不能跑完以后挑一个“最顺眼”的 root。否则就很像后验调参。
+
+我建议这样定：
+
+**F3.2 主线拟时序 root**
+主线只在 `08_malignant_epithelial_MLMOD_labeled.rds` 的恶性上皮内做，root 选低MLMOD、低CNV或 normal-like marker 较高的恶性上皮状态。这样回答的是：恶性上皮内部是否存在从低MLMOD到高MLMOD的转录状态梯度。
+
+**F3.2 敏感性 root**
+可以预设 2-3 个 root：
+1. 低MLMOD四分位细胞或低MLMOD cluster。
+2. normal-like malignant epithelial cluster，也就是仍被判为恶性，但更接近胃上皮分化状态的cluster。
+3. 另建 `epithelial_continuum_object` 后，用高置信 Normal_Gastric epithelial 作为 root，只作为敏感性分析。
+
+判定标准也要写清：如果不同 root 下 `pseudotime` 与 `MLMOD_Score` 的相关方向一致、高MLMOD细胞集中在相近末端/分支，才可以说“支持MLMOD相关状态梯度”。如果 root 一换方向就变、分支也变，就只能说“存在状态异质性”，不能讲演化方向。
+
+SCENIC 是做什么的：它不是普通差异分析，而是推断**转录因子调控网络**。经典 SCENIC 流程大概三步：先根据共表达推断 TF-靶基因关系，再用 motif 富集过滤出更可信的 regulon，最后用 AUCell 给每个细胞计算 regulon 活性。原始 SCENIC 发表在 Nature Methods 2017，pySCENIC 的可扩展流程发表在 Nature Protocols 2020。
+
+它对我们有用的地方是：F3.1/F3.2告诉我们高MLMOD细胞富集什么功能、沿拟时序怎么变；SCENIC可以进一步问“哪些转录因子 regulon 可能驱动这种状态”。比如最后不是只说一堆线粒体/应激通路，而是能提出候选调控因子。
+
+但我反对把 SCENIC 直接写成 F3 主线硬任务。它资源重、数据库依赖强，而且结果是“调控推断”，不是实验证据。更合适的设计是拆成一个 **F3补充/增强模块**，分小任务执行：
+
+1. SCENIC可行性检查：确认 pySCENIC/SCENIC 可用、human motif database 可获得、输入细胞数是否需要抽样。
+2. 输入对象锁定：优先只用恶性上皮对象，必要时按样本/MLMOD组平衡抽样。
+3. GRN推断：GENIE3/GRNBoost2 生成 TF-target 候选。
+4. motif过滤：RcisTarget/pySCENIC prune 成 regulon。
+5. regulon活性打分：AUCell 得到每细胞 regulon AUC。
+6. 高MLMOD关联：比较高/低MLMOD regulon活性，做 sample-aware 汇总，不能只做 cell-level p值。
+7. 输出候选TF：只把稳定、方向一致、非样本驱动的 TF regulon 作为候选机制。
+
+所以我的结论是：**多个 root 敏感性应该写进 F3.2 主线；SCENIC值得做，但先作为F3增强模块，不作为阻断主线的硬Gate。**
+
+--------------------------------------------------------------------------------
+
+[570] 你 | 2026-06-06 23:18:31 Asia/Shanghai
+拟时序实践教程是怎么推荐敏感性 root的？可以参考。预估一下SCENIC的可行性和耗时
+
+--------------------------------------------------------------------------------
+
+[571] Codex | 2026-06-06 23:18:56 Asia/Shanghai
+这个问题要查一下实践教程和工具文档，不能凭印象拍板。我会优先看 Monocle3、Slingshot 和 SCENIC/pySCENIC 的官方教程或原始论文，然后把能落到我们 F3 的规则提炼出来。
+
+--------------------------------------------------------------------------------
+
+[572] Codex | 2026-06-06 23:20:30 Asia/Shanghai
+查了 Monocle3 和 Slingshot 的教程/文档，我的结论是：
+
+**实践教程不太会直接说“必须做多个 root 敏感性分析”**，但它们都强调一件事：root 应该由先验生物学知识决定，而不是算法自动决定。Monocle3 让用户指定一个或多个起点，并建议根据已知细胞状态、marker 或早期时间点选 root；Slingshot 也说如果不指定起点，算法会按规则自动选，有时甚至是 arbitrary，因此一般推荐用先验知识指定 initial cluster。
+
+所以我们可以这样借鉴：**多个 root 敏感性不是教程里的固定模板，而是当 root 先验不够强时的严谨性补救。** 对我们这个项目很适合，因为胃癌恶性上皮并不是真正时间序列。
+
+我建议 F3.2 写成：
+
+1. 主 root：恶性上皮内部的低MLMOD、低CNV、normal-like marker较高的 malignant epithelial cluster。
+2. 敏感性 root A：全体恶性上皮中 MLMOD_Score 最低四分位细胞对应的 principal graph node。
+3. 敏感性 root B：F1/F2 注释中最接近正常胃上皮分化状态、但仍被判为恶性的 cluster。
+4. 敏感性 root C：另建 `epithelial_continuum_object` 后，以高置信 Normal_Gastric epithelial 为 root，仅作敏感性，不作为主结论。
+5. 可选对照：Slingshot 自动/root-free 或默认 start 结果，只用于观察拓扑是否严重依赖人工 root，不用于主解释。
+
+判定标准也要预注册：如果不同 root 下 `pseudotime` 与 `MLMOD_Score` 的相关方向一致、高MLMOD细胞总是偏向轨迹末端或同类分支，才说“支持MLMOD相关状态梯度”；如果 root 一换方向就变，只能说“存在转录状态异质性”，不能讲进展方向。
+
+SCENIC 可行性方面：**可以做，但不适合一上来当 F3 主线硬任务。** SCENIC/pySCENIC 是三步：GRNBoost2/GENIE3 推断 TF-靶基因共表达网络，cisTarget/motif 过滤直接靶基因，AUCell 给每个细胞打 regulon 活性分。Nature Protocols 2020 的 pySCENIC 文章说 10,000 genes × 50,000 cells 的数据集在优化流程下可小于 2 小时，但网页版 Biomni 环境、数据库下载、依赖和 120 分钟限制会让它变得不稳。
+
+我对我们项目的预估：
+
+- `<=10,000` 恶性上皮细胞：可行，约 30-90 分钟，适合作为首轮。
+- `10,000-30,000` 细胞：中等风险，约 1-3 小时，可能接近或超过 Biomni 单次运行上限。
+- `30,000-50,000` 细胞：不建议一口气跑，容易超时或内存不稳。
+- `>50,000` 细胞：主流程不建议全量 GRN 推断；可以平衡抽样做 GRN，再用 AUCell 给全量细胞打 regulon 活性。
+
+我建议把 SCENIC 拆成 F3 增强模块：
+
+1. `F3-SCENIC-0` 可行性预检：pySCENIC/数据库/TF list/资源/小样本试跑。
+2. `F3-SCENIC-1` 输入锁定：只用恶性上皮；按 `sample_id`、`group_analysis`、`MLMOD_high_label`、`epithelial_cluster_id` 平衡抽样。
+3. `F3-SCENIC-2` GRN 推断：优先 GRNBoost2，固定 seed，记录 workers 和运行时间。
+4. `F3-SCENIC-3` motif pruning：生成 regulon 表。
+5. `F3-SCENIC-4` AUCell：对全量 06a 或 08 对象计算 regulon 活性。
+6. `F3-SCENIC-5` 关联分析：sample-aware 比较高/低MLMOD regulon活性，并检查是否被样本、cluster、nCount 或细胞周期驱动。
+
+因此我会把 **多 root 敏感性写进 F3.2 主线**；把 **SCENIC写成F3增强模块，可拆分执行，先做可行性gate，通过后再跑正式分析**。
+
+参考来源：
+[Monocle3 官方教程](https://cole-trapnell-lab.github.io/monocle-release/monocle3/)
+[Slingshot Bioconductor vignette](https://bioconductor.posit.co/packages/3.24/bioc/vignettes/slingshot/inst/doc/vignette.html)
+[SCENIC, Nature Methods 2017](https://www.nature.com/articles/nmeth.4463)
+[pySCENIC, Nature Protocols 2020](https://www.nature.com/articles/s41596-020-0336-2)
+[pySCENIC FAQ](https://pyscenic.readthedocs.io/en/latest/faq.html)
+
+--------------------------------------------------------------------------------
+
+[573] 你 | 2026-06-06 23:35:43 Asia/Shanghai
+我建议把SCENIC放进主流程，因为最终都要做，而且看起来不会非常耗时。
+
+--------------------------------------------------------------------------------
+
+[574] Codex | 2026-06-06 23:35:57 Asia/Shanghai
+我理解你的判断，而且“最终都要做”这个理由很强。不过我会稍微反驳一下：能不能放进主流程，关键不只是耗时，还包括它是否应该影响 F3 gate 的通过与否，以及失败时会不会拖垮主线。这里我再核一下 SCENIC/pySCENIC 的实际边界，再给一个折中方案。
+
+--------------------------------------------------------------------------------
+
+[575] Codex | 2026-06-06 23:36:32 Asia/Shanghai
+我基本同意把 SCENIC 放进 F3 主流程，但我要保留一个限制：**它可以是主流程的正式分析模块，不应成为 F3 能否成立的唯一阻断项。**
+
+原因是 SCENIC 的生物学价值确实高。它不是普通富集分析，而是推断 TF-regulon 活性，能回答“高MLMOD状态可能由哪些转录因子调控”。这对后续 F5-F8 选核心机制基因很有用。SCENIC 原始方法发表于 [Nature Methods 2017](https://www.nature.com/articles/nmeth.4463)，pySCENIC 可扩展流程发表于 [Nature Protocols 2020](https://www.nature.com/articles/s41596-020-0336-2)，所以工具本身够经典。
+
+但我反驳一点：**“看起来不会非常耗时”不能作为直接全量上主线的理由。** SCENIC 最不稳定的不是 AUCell 打分，而是前两步：GRN 推断和 motif pruning。它依赖 TF list、motif ranking database、基因命名、输入规模和网页环境资源。pySCENIC 文档也显示它的输入、数据库、命令行流程都有比较明确的格式要求；在 Biomni 网页环境里，失败风险主要来自依赖和数据库，而不只是 CPU 时间。
+
+我建议这样折中，既接受你的想法，又控制风险：
+
+**F3.3 SCENIC regulon 分析作为主流程正式模块**
+放在 F3.1 功能富集和 F3.2 拟时序之后，成为 F3 的第三个主线模块，不归入补充验证。
+
+但设一个 **F3-Gate3a 可行性预检**：
+- 检查 pySCENIC 或 R-SCENIC 是否可用。
+- 检查 human motif ranking database 是否可下载或已上传。
+- 检查输入对象细胞数、基因数、表达矩阵格式。
+- 做小规模试跑，比如 500-1000 个平衡抽样细胞。
+- 估计全量或抽样正式运行时间。
+
+通过后进入 **F3-Gate3b 正式 SCENIC**：
+- 如果恶性上皮细胞数不大，直接跑全量。
+- 如果细胞数较大，按 `sample_id`、`group_analysis`、`MLMOD_high_label`、`epithelial_cluster_id` 平衡抽样做 GRN。
+- motif pruning 得到 regulon。
+- AUCell 可以尽量回填到全量恶性上皮细胞。
+- 最后做高/低MLMOD regulon 活性比较，并用 sample-aware 汇总，不能只看 cell-level p 值。
+
+结论强度这样写：
+- SCENIC 成功且结果稳定：作为高MLMOD调控机制主线证据。
+- SCENIC 成功但样本/cluster驱动明显：降级为探索性候选TF。
+- SCENIC 因资源或数据库失败：不阻断 F3.1/F3.2，但记录为 F3-Gate3 technical limitation，后续可本地或服务器复现。
+
+耗时预估我会写得保守一点：
+- 小规模预检：10-30 分钟。
+- <=10,000 恶性上皮细胞：约 30-90 分钟，有较好可行性。
+- 10,000-30,000：中等风险，可能 1-3 小时。
+- >30,000：不建议全量 GRN，建议平衡抽样 GRN + 全量 AUCell。
+- 真正风险点：motif 数据库下载、内存、网页单次运行上限，而不是算法理论上能不能跑。
+
+所以我接受你的方向：**SCENIC放进F3主流程**。但我要把它写成“有可行性预检的小Gate主流程模块”，而不是一句“运行SCENIC分析”。这样既不会降低研究质量，也不会让 Biomni 因一个重工具失败把整个 F3 搞崩。
+
+--------------------------------------------------------------------------------
+
+[576] 你 | 2026-06-06 23:38:07 Asia/Shanghai
+SCENIC的依赖和数据库能否提前准备好
+
+--------------------------------------------------------------------------------
+
+[577] Codex | 2026-06-06 23:38:19 Asia/Shanghai
+可以提前准备，而且我觉得应该提前准备。这里需要把“软件依赖”和“motif数据库/TF列表”分开处理，我先核对一下 pySCENIC 当前官方要求，避免把数据库文件名写错。
+
+--------------------------------------------------------------------------------
+
+[578] Codex | 2026-06-06 23:38:59 Asia/Shanghai
+可以，甚至我建议**提前准备**。SCENIC最容易出问题的不是代码本身，而是数据库、TF列表、版本匹配和文件路径。提前准备能明显降低 Biomni 执行时乱下载、下错版本、跑一半失败的风险。
+
+建议准备一个固定目录：
+
+`data/scenic_resources/`
+
+里面至少放：
+
+1. `allTFs_hg38.txt`
+   人类转录因子列表，用于 GRNBoost2/GENIE3 推断 TF-target 网络。
+
+2. `hg38__refseq-r80__10kb_up_and_down_tss.mc9nr.genes_vs_motifs.rankings.feather`
+   human hg38 cisTarget ranking database，10kb TSS上下游版本。
+
+3. `hg38__refseq-r80__500bp_up_and_100bp_down_tss.mc9nr.genes_vs_motifs.rankings.feather`
+   500bp upstream / 100bp downstream 版本。建议也准备，用两个数据库比一个更稳。
+
+4. `motifs-v9-nr.hgnc-m0.001-o0.0.tbl`
+   motif-to-TF annotation 表。
+
+5. `scenic_resource_manifest.tsv`
+   记录每个文件的文件名、来源URL、物种、genome build、motif collection、文件大小、SHA256、下载日期、用途。
+
+官方 pySCENIC 文档明确说需要三类资源：ranking databases、motif-to-TF annotations、TF list；并提醒 ranking database 大约每个 1.1GB，annotation 文件约 100MB，所以提前准备是合理的。[pySCENIC docs](https://pyscenic.readthedocs.io/en/stable/installation.html)
+
+我的建议是：**不要让 Biomni 到 F3 才临时找数据库。** 可以在 F0/F3准备规则里写：
+
+- 若研究者已上传 `data/scenic_resources/`，Biomni只校验文件大小、SHA256、可读性和版本匹配。
+- 若未上传，Biomni必须先提交下载计划，列出上述4个资源、来源URL、预计大小、保存路径，研究者批准后再下载。
+- 不允许 Biomni 自行换成 hg19、mm10、region-based database 或其他 motif collection，除非研究者批准。
+- 如果 `motifs-v9` 和 `mc9nr` ranking database 不匹配，必须暂停。
+
+依赖方面，优先用 **pySCENIC**，比R版SCENIC在流程拆分上更适合 Biomni：
+
+- Python包/命令：`pyscenic`
+- 关键依赖：`arboreto`、`ctxcore`、`loompy`、`pandas`、`numpy`、`dask/distributed`、`pyarrow`
+- 输入格式：表达矩阵 `.loom` 或 `.tsv/.csv`
+- 三步命令：`pyscenic grn`、`pyscenic ctx`、`pyscenic aucell`
+
+但我建议在计划里写：**F3-SCENIC正式运行前先做资源预检**，输出：
+
+`SCENIC_environment_resource_check.tsv`
+
+字段包括：`resource_name`、`expected_species`、`genome_build`、`motif_collection`、`file_path`、`file_size`、`sha256`、`readable`、`matched_to_gene_symbols`、`status`、`note`。
+
+一句话结论：**能提前准备，而且应该提前准备。** 最好把 SCENIC 数据库当作正式输入资源锁定，而不是执行时临时下载。这样后面 Biomni 跑 SCENIC 时只需要做小规模试跑和正式分析，不会把时间浪费在环境和数据库问题上。
+
+--------------------------------------------------------------------------------
+
+[579] 你 | 2026-06-07 15:13:28 Asia/Shanghai
+我要提前准备SCENIC的依赖和数据库，去哪里下载
+
+--------------------------------------------------------------------------------
+
+[580] Codex | 2026-06-07 15:13:43 Asia/Shanghai
+我来查官方 pySCENIC/SCENIC 资源页，重点确认三类东西：软件依赖、human motif ranking databases、human TF list。这个信息容易过时，我按官方文档和 Aerts lab 资源页来回答。
+
+--------------------------------------------------------------------------------
+
+[581] Codex | 2026-06-07 15:15:08 Asia/Shanghai
+可以提前准备。我们主线建议用 **pySCENIC**，不要先折腾 R-SCENIC 或 SCENIC+。SCENIC+偏多组学/染色质可及性，我们现在只有 scRNA，pySCENIC更合适。
+
+**需要准备的东西**
+1. **pySCENIC 软件环境**
+   官方安装方式：
+   [pySCENIC installation docs](https://pyscenic.readthedocs.io/en/stable/installation.html)
+   可用 `pip install pyscenic`，也可用 Bioconda：
+   [Bioconda pyscenic](https://bioconda.github.io/recipes/pyscenic/README.html)
+
+2. **Human TF list**
+   下载：`allTFs_hg38.txt`
+   来源：[Aerts lab TF lists](https://resources.aertslab.org/cistarget/tf_lists/)
+   直接文件：
+   `https://resources.aertslab.org/cistarget/tf_lists/allTFs_hg38.txt`
+
+3. **motif-to-TF 注释表**
+   用 v10 human HGNC 注释：
+   `motifs-v10nr_clust-nr.hgnc-m0.001-o0.0.tbl`
+   来源：[Aerts lab motif2tf](https://resources.aertslab.org/cistarget/motif2tf/)
+   直接文件：
+   `https://resources.aertslab.org/cistarget/motif2tf/motifs-v10nr_clust-nr.hgnc-m0.001-o0.0.tbl`
+
+4. **human hg38 gene-based motif ranking databases**
+   来源路径：
+   [hg38 refseq_r80 mc_v10_clust gene_based](https://resources.aertslab.org/cistarget/databases/homo_sapiens/hg38/refseq_r80/mc_v10_clust/gene_based/)
+
+   建议下载这两个 `rankings.feather` 文件：
+
+   `hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather`
+   直接文件：
+   `https://resources.aertslab.org/cistarget/databases/homo_sapiens/hg38/refseq_r80/mc_v10_clust/gene_based/hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather`
+
+   `hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather`
+   直接文件：
+   `https://resources.aertslab.org/cistarget/databases/homo_sapiens/hg38/refseq_r80/mc_v10_clust/gene_based/hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather`
+
+**暂时不要下载的东西**
+- 不需要 `scores.feather`，pySCENIC主流程用 `rankings.feather`。
+- 不需要 `screen/` region-based 数据库，那是偏 SCENIC+/区域富集用途。
+- 不建议用旧版 `mc9nr`，官方资源页推荐新版本 `v10nr_clust / mc_v10_clust`。
+
+**建议本地准备目录**
+可以放在：
+
+`D:\胃癌线粒体亚群\data\public_downloads\SCENIC_resources\`
+
+建议结构：
+
+```text
+SCENIC_resources/
+  tf_lists/
+    allTFs_hg38.txt
+  motif2tf/
+    motifs-v10nr_clust-nr.hgnc-m0.001-o0.0.tbl
+  databases/
+    hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather
+    hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather
+```
+
+总大小大约 700 MB 左右，可以接受。Aerts lab 提醒 cisTarget 数据库可能很大，并推荐用 `zsync_curl` 支持断点续传；但我们这几个 gene-based hg38 v10 文件不算夸张，浏览器或 `wget` 一般也可以。
+
+给 Biomni 时，只需要上传这 4 个资源文件，或者让 Biomni 按这些官方 URL 下载并写入 `download_manifest.tsv`。
+
+--------------------------------------------------------------------------------
+
+[582] 你 | 2026-06-07 15:22:01 Asia/Shanghai
+我已经下载allTFs_hg38.txt到本地，你帮我下载其他需要的文件并放在对应的文件夹，并对计划做相应的修改
+
+--------------------------------------------------------------------------------
+
+[583] Codex | 2026-06-07 15:22:24 Asia/Shanghai
+我来处理两件事：先把 SCENIC 其余资源按我们刚定的目录下载并校验，再把主线计划里 F0/F3 对 SCENIC 资源和 F3.3 主流程模块的描述补上。下载文件比较大，我会先看现有目录和你已经下载的 `allTFs_hg38.txt` 放在哪。
+
+--------------------------------------------------------------------------------
+
+[584] Codex | 2026-06-07 15:22:57 Asia/Shanghai
+找到了，你的 `allTFs_hg38.txt` 在项目根目录。我会复制一份到正式资源目录，不移动原文件。接下来下载 motif 注释表和两个 hg38 gene-based ranking feather 数据库。
+
+--------------------------------------------------------------------------------
+
+[585] Codex | 2026-06-07 15:23:21 Asia/Shanghai
+远端文件头正常：motif 表约 98 MB，两个 feather 数据库各约 311-313 MB，总量约 720 MB。现在开始顺序下载，避免并发把连接搞得不稳定。
+
+--------------------------------------------------------------------------------
+
+[586] Codex | 2026-06-07 15:38:47 Asia/Shanghai
+下载命令跑到工具超时了，这不等于下载失败；我先检查目录里已有的完整文件和 `.partial` 文件大小，再决定是继续断点续传还是换方式。
+
+--------------------------------------------------------------------------------
+
+[587] Codex | 2026-06-07 15:39:01 Asia/Shanghai
+这个 `curl` 进程挂住了，而且 `.partial` 还是 0 字节，属于连接没有真正开始写文件。我会停止这个卡住的进程，换 PowerShell/.NET 下载方式，先从 98 MB 的 motif 表试起。
+
+--------------------------------------------------------------------------------
+
+[588] Codex | 2026-06-07 16:10:20 Asia/Shanghai
+motif 表下载完成并校验到 98,718,421 字节，但速度偏慢。两个 feather 数据库更大，我先测试一下有没有更快的下载后端，比如 `aria2c`、BITS 或 `curl` 分段；如果没有，再用可恢复的慢速方式稳稳下完。
+
+--------------------------------------------------------------------------------
+
+[589] Codex | 2026-06-07 16:11:25 Asia/Shanghai
+单连接速度只有大约 33 KB/s，直接下两个 feather 会很慢。好消息是服务器支持 HTTP Range，我准备改用“分块并行下载后合并”的方式：每个数据库切成 8 MB 块，最多 12 个连接并行，下载后逐块校验大小再合并。
+
+--------------------------------------------------------------------------------
+
+[590] Codex | 2026-06-07 16:28:51 Asia/Shanghai
+三个远端文件都下完了；并行分块方式把速度救回来了。现在我生成一个 SCENIC 资源 manifest，记录来源 URL、大小和 SHA256，后面给 Biomni 上传或让它校验时会很有用。
+
+--------------------------------------------------------------------------------
+
+[591] Codex | 2026-06-07 16:29:39 Asia/Shanghai
+资源文件已经落地并有 manifest。接下来我改计划：把 SCENIC 资源目录写入 F0.2，把 `SCENIC_resources_manifest.tsv` 写成预备输入，并把 F3 从大纲升级成含 F3.1 功能、F3.2 多root拟时序、F3.3 SCENIC 主流程的小 gate 结构。
+
+--------------------------------------------------------------------------------
+
+[592] Codex | 2026-06-07 16:29:52 Asia/Shanghai
+我发现刚才定位 F3 的正则用了 `|` 没有转义，所以打印 F3 块时没拿到正确范围。我重新精确定位后再替换，避免误改整篇。
+
+--------------------------------------------------------------------------------
+
+[593] Codex | 2026-06-07 16:30:06 Asia/Shanghai
+我现在替换 F3 大纲为更可执行的版本，并把 SCENIC 资源文件作为 F0/F3 可审计输入写清楚。这里不是给 Biomni 写代码，而是让 Biomni 到时知道“该读哪些文件、校验什么、失败怎么降级”。
+
+--------------------------------------------------------------------------------
+
+[594] Codex | 2026-06-07 16:30:24 Asia/Shanghai
+F0 已经补上 SCENIC 资源目录和 manifest。接下来更新 F1 环境预检里的后续依赖，并整体替换 F3。
+
+--------------------------------------------------------------------------------
+
+[595] Codex | 2026-06-07 16:30:51 Asia/Shanghai
+现在替换 F3 正文。重点是三件事：F3.1 避免循环富集，F3.2 预注册多个 root 敏感性，F3.3 把 SCENIC 放进主流程但设资源/小样本预检 gate。
+
+--------------------------------------------------------------------------------
+
+[596] Codex | 2026-06-07 16:32:10 Asia/Shanghai
+计划已经改好，F3 现在不再是一段大纲，而是三个可审计 gate。现在我会把主线 txt 同步到 WPS，并把 SCENIC 资源目录也复制到 WPS 对应路径。
+
+--------------------------------------------------------------------------------
+
+[597] Codex | 2026-06-07 16:32:33 Asia/Shanghai
+WPS 同步 txt 成功了，但资源目录那一步我用了 `-LiteralPath` 搭配通配符，PowerShell 把 `*` 当字面值处理了，目标目录还是空的。这个是复制命令问题，不是下载文件问题；我马上用正确的递归复制再校验。
+
+--------------------------------------------------------------------------------
+
+[598] Codex | 2026-06-07 16:32:54 Asia/Shanghai
+资源目录现在两个路径一致，5 个文件 SHA256 全部匹配。最后我再检查计划结构和 F3 关键字，确认没有表格标签错配或旧版 SCENIC 大纲残留。
+
+--------------------------------------------------------------------------------
+
+[599] Codex | 2026-06-07 16:33:11 Asia/Shanghai
+结构检查没问题，表格标签仍是 16/16。还有一个本地 `download_manifest.tsv` 已存在，我会把这次 SCENIC 资源追加进去，避免之后只靠单独 manifest 而主下载清单漏记。
+
+--------------------------------------------------------------------------------
+
+[600] Codex | 2026-06-07 16:33:24 Asia/Shanghai
+本地下载清单里目前只有 GSE183904，我会追加 4 条 SCENIC 资源记录，不覆盖原记录。这样 `download_manifest.tsv` 和 `SCENIC_resources_manifest.tsv` 都能追踪这批文件。
+
+--------------------------------------------------------------------------------
+
+[601] Codex | 2026-06-07 16:34:11 Asia/Shanghai
+已完成。
+
+我把你本地的 `allTFs_hg38.txt` 复制到了正式目录，并下载了另外 3 个 SCENIC 必需资源：
+
+- `motifs-v10nr_clust-nr.hgnc-m0.001-o0.0.tbl`
+- `hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather`
+- `hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather`
+
+正式位置：
+
+[SCENIC_resources](D:/胃癌线粒体亚群/data/public_downloads/SCENIC_resources)
+WPS 同步位置也已复制完成：
+
+[SCENIC_resources](D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/data/public_downloads/SCENIC_resources)
+
+我还生成并同步了：
+
+- [SCENIC_resources_manifest.tsv](D:/胃癌线粒体亚群/data/public_downloads/SCENIC_resources/SCENIC_resources_manifest.tsv)
+- [download_manifest.tsv](D:/胃癌线粒体亚群/data/metadata/download_manifest.tsv)
+
+5 个 SCENIC 资源文件在本地路径和 WPS 路径的 SHA256 全部一致。
+
+计划也已修改并同步：
+
+[胃癌MLMOD亚群主线研究方案.txt](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:526)
+
+主要改动：
+- F0.1 增加 `SCENIC_resources_manifest.tsv`。
+- F0.2 增加 SCENIC 资源目录、F3 脚本/结果/日志目录。
+- F1 环境预检增加 `pySCENIC`。
+- F3 重写为三个 gate：功能富集、拟时序、多 root 敏感性、SCENIC regulon 主流程。
+- F3.3 明确 Biomni 必须先校验这 4 个资源文件，再做 SCENIC 小规模试跑和正式分析。
+
+计划文件检查：`[TABLE]` 标签仍然平衡，`16/16`。
+官方资源来源：Aerts lab [TF lists](https://resources.aertslab.org/cistarget/tf_lists/)、[motif2tf](https://resources.aertslab.org/cistarget/motif2tf/)、[hg38 gene-based databases](https://resources.aertslab.org/cistarget/databases/homo_sapiens/hg38/refseq_r80/mc_v10_clust/gene_based/)。
+
+--------------------------------------------------------------------------------
+
+[602] 你 | 2026-06-07 17:02:37 Asia/Shanghai
+找茬F3.1
+
+--------------------------------------------------------------------------------
+
+[603] Codex | 2026-06-07 17:02:51 Asia/Shanghai
+我来专门挑 F3.1，不碰 F3.2/F3.3。重点看功能富集这节是否会出现“循环定义”“背景集不对”“统计单位错”“Biomni 不知道具体怎么执行”这些会被审稿人抓住的问题。
+
+--------------------------------------------------------------------------------
+
+[604] Codex | 2026-06-07 17:03:30 Asia/Shanghai
+F3.1 现在比原来严谨很多，但我继续挑刺的话，仍有几个关键漏洞。
+
+**主要问题**
+1. **F3.1 没定义“marker 入选阈值”**
+现在只说使用 `MLMOD_high_vs_low_pseudobulk_markers.tsv`，但没说哪些基因进入 ORA：`padj < 0.05`？`|logFC| > 0.25`？只取 up？还是 up/down 分开？
+这个必须写清。否则 Biomni 可以随意选一批基因，富集结果会很不稳定。
+
+2. **up 和 down 不能混在一起做 ORA**
+高MLMOD上调基因和下调基因代表不同生物学方向。F3.1 现在只写 `n_genes_up / n_genes_down`，但没有明确 ORA 必须分开做。
+建议：`high_up_non_scoring`、`high_down_non_scoring`、`all_high_up`、`all_high_down` 分别富集。主解释优先看 `high_up_non_scoring`。
+
+3. **F2.3 输出不一定有 F3.1 需要的字段**
+F3.1 依赖 `stat`、`p_value`、`padj`、`logFC`、`is_MLMOD_scoring_signature_gene` 等字段。但 F2.3 当前只强调 marker 表要标记 leakage，没有强制完整字段。
+需要在 F3.1 写一句：若 `MLMOD_high_vs_low_pseudobulk_markers.tsv` 缺少 GSEA 排序或 ORA 过滤所需字段，F3.1 不得继续，应回到 F2.3 补齐。
+
+4. **基因 ID 转换审计缺失**
+GO/KEGG/Reactome 经常需要 Entrez ID 或 Ensembl ID。我们的基因可能是 HGNC symbol。F3.1 现在没要求输出 ID mapping 表。
+建议新增 `F3_gene_id_mapping_for_enrichment.tsv`，记录 `input_gene_symbol`、`mapped_entrez`、`mapped_ensembl`、`mapping_status`、`duplicate_mapping_rule`、`exclude_reason`。否则 KEGG/Reactome 缺基因会被静默丢掉。
+
+5. **数据库主次没分清，容易 cherry-pick**
+GO、KEGG、Reactome、Hallmark 都作为主线，会产生很多结果。后面如果只挑好看的通路讲，会被质疑。
+建议预定义：GO BP + Hallmark 作为主解释，KEGG/Reactome 作为机制补充；或者明确所有数据库都报告，不允许只挑显著好看的。
+
+6. **GO 冗余处理没写**
+GO term 高度冗余，常见结果会一堆相似词，比如 mitochondrial organization、mitochondrial translation、oxidative phosphorylation。
+建议要求输出冗余简化前后结果，例如 `simplify()` 或语义相似度聚类，并保存 `F3_GO_redundancy_reduction.tsv`。
+
+7. **GSVA/ssGSEA 的输入矩阵没定义**
+F3.1 说通路打分，但没说用什么表达层：raw counts、log-normalized、pseudobulk normalized counts、vst？
+建议主线用 `sample_id + MLMOD_high_label` pseudobulk 的 normalized log expression 或 vst/rlog 结果；单细胞层只可视化。
+
+8. **通路分数统计设计不够**
+`F3_pathway_score_by_sample.tsv` 现在只有均值/中位数，没有统计结果字段。
+建议增加 `test_method`、`design_formula`、`effect_size`、`p_value`、`adjusted_p_value`、`covariates_used`、`n_samples_high`、`n_samples_low`、`paired_design_used`。否则 Biomni 可能只画热图，不做可审计统计。
+
+9. **仍需防止 PM 样本驱动**
+F3.1 富集可能其实反映 Primary vs PM，而不是高MLMOD本身。
+建议要求按 `group_analysis` 做敏感性：至少检查 Primary_Tumor 内高低MLMOD方向是否一致；PM 因 n=3 只能方向性展示。
+
+10. **结论边界还要再收紧**
+富集分析只能说明“高MLMOD相关差异基因富集于某些通路”，不能证明这些通路驱动高MLMOD状态。
+建议 F3_gate1 报告里明确：富集结果是功能关联证据，驱动机制需结合 F3.3 SCENIC、F5-F8 或实验验证。
+
+我的建议是：F3.1 需要改，但不是推翻。核心补丁就是四块：**marker阈值、up/down分开、ID mapping审计、通路统计设计**。这几块补上，F3.1 才能交给 Biomni 稳定执行。
+
+--------------------------------------------------------------------------------
+
+[605] 你 | 2026-06-07 17:09:36 Asia/Shanghai
+按你说的改，marker 入选阈值按照教程或者一般惯例来。F2.3 输出不一定有 F3.1 需要的字段，那就检查一下F2.3的问题。数据库主次问题按照教程或一般惯例来。
+
+--------------------------------------------------------------------------------
+
+[606] Codex | 2026-06-07 17:09:54 Asia/Shanghai
+我来按“教程/惯例”先核一下 clusterProfiler / enrichment 的常见规则，再改两处：F2.3 marker 表字段补齐，F3.1 富集规则补严。这样 F3.1 不会依赖一个字段不完整的上游表。
+
+--------------------------------------------------------------------------------
+
+[607] Codex | 2026-06-07 17:10:25 Asia/Shanghai
+我查到的惯例基本是：clusterProfiler/ORA 默认用 BH、多重校正 0.05、qvalue 0.2、背景集必须显式给；GSEA 用排序后的全量基因列表，不是只用显著 DEGs；GO 冗余可用 `simplify(cutoff=0.7)`。我会把这些写成执行规则，同时反向补齐 F2.3 marker 输出字段。
+
+--------------------------------------------------------------------------------
+
+[608] Codex | 2026-06-07 17:10:56 Asia/Shanghai
+我会把 F2.3 的 marker 表定义从“marker列表”扩展成“全量 pseudobulk DE 结果表 + marker标记”。这是关键：GSEA 需要全量被检验基因排序，不能只拿显著基因。F3.1 再从这个全量表里按预注册阈值筛 ORA 输入。
+
+--------------------------------------------------------------------------------
+
+[609] Codex | 2026-06-07 17:11:23 Asia/Shanghai
+F2.3 已补上全量 DE 结果和字段要求。现在改 F3.1：把 ORA 阈值、up/down 分开、ID mapping、数据库主次、GO 去冗余、GSVA 输入层和样本层统计都锁进去。
+
+--------------------------------------------------------------------------------
+
+[610] Codex | 2026-06-07 17:12:18 Asia/Shanghai
+F3.1 已改完。现在我同步 WPS 版本，并检查 F2.3/F3.1 关键字段、表格标签和两个路径哈希。
+
+--------------------------------------------------------------------------------
+
+[611] Codex | 2026-06-07 17:12:46 Asia/Shanghai
+已按这个方向改完，并同步到 WPS 路径。
+
+改动分两块：
+
+1. **反查并补强 F2.3**
+   我把 `MLMOD_high_vs_low_pseudobulk_markers.tsv` 定义成“全量 pseudobulk DE 结果表”，不是只保存显著 marker。这样 F3.1 的 GSEA 才能用全部 tested genes 排序。
+   同时强制 F2.3 输出 `log2FC_high_vs_low`、`stat`、`p_value`、`adjusted_p_value`、`include_in_enrichment_universe`、`is_MLMOD_scoring_signature_gene` 等 F3.1 必需字段。
+
+2. **重写 F3.1 规则**
+   已补入：
+   - ORA 默认阈值：`adjusted_p_value < 0.05` 且 `abs(log2FC_high_vs_low) >= 0.25`
+   - up/down 分开富集：`all_high_up`、`all_high_down`、`non_scoring_high_up`、`non_scoring_high_down`
+   - GSEA 必须用全量 tested genes 排序，不能只用显著 DEG
+   - 新增 `F3_gene_id_mapping_for_enrichment.tsv`
+   - 主解释数据库：GO BP + MSigDB Hallmark
+   - KEGG / Reactome 作为机制补充
+   - GO 去冗余：`simplify(cutoff = 0.7)`
+   - GSVA/ssGSEA 输入矩阵和样本层统计字段
+   - Primary 内方向敏感性和 PM 样本量限制
+   - 明确富集只能说明功能关联，不能证明驱动机制
+
+参考依据主要是 clusterProfiler 的常用参数和文档惯例：`pAdjustMethod = BH`、`pvalueCutoff = 0.05`、`qvalueCutoff = 0.2`、显式 `universe`、GSEA 使用排序基因列表，以及 GO term 使用 `simplify()` 去冗余；MSigDB 官方也说明 Hallmark 是较凝练的生物状态/过程 gene sets，所以适合作为主解释之一。
+
+检查结果：`[TABLE]` 仍然平衡，`16/16`。
+两个主线 txt SHA256 一致：`4F947DCEE1A05D4B4F5ECB56EC6BCBF78E94EBE92C03E04DE7ED0B46CEC9EC50`。
+
+--------------------------------------------------------------------------------
+
+[612] 你 | 2026-06-07 17:14:33 Asia/Shanghai
+选择的这些参数虽然符合文档，但是是否适合本研究？
+
+--------------------------------------------------------------------------------
+
+[613] Codex | 2026-06-07 17:14:53 Asia/Shanghai
+这是个很好的反问。文档默认参数只能说明“工具能这样用”，不等于“这个研究最应该这样用”。我先按本项目的样本结构、F2高MLMOD定义方式和审稿风险来重新评估这些阈值，而不是把教程参数当圣旨。
+
+--------------------------------------------------------------------------------
+
+[614] Codex | 2026-06-07 17:15:51 Asia/Shanghai
+不完全适合。更准确地说：**这些参数适合作为“规范默认起点”，但还需要按本研究目的加两层约束**，否则会出现“参数正确、结论偏松”的问题。
+
+我的判断如下。
+
+1. `adjusted_p_value < 0.05 + |log2FC| >= 0.25`
+这个适合作为 F3.1 的**主线发现阈值**。因为高MLMOD是恶性上皮内部状态差异，不是两个完全不同细胞类型，logFC 不一定很大；`0.25` 不算离谱。
+但它不适合作为“强marker”标准。建议增加一个高可信敏感性阈值：`adjusted_p_value < 0.05 + |log2FC| >= 0.5`。如果 0.25 有通路、0.5 也方向一致，可信度更高；如果只有 0.25 有，解释要降级。
+
+2. `GSEA FDR < 0.25`
+适合作为 GSEA 的探索性阈值，这是经典 GSEA 习惯。但对本研究来说，不能把 `FDR < 0.25` 的通路写成强结论。
+建议写成两档：`FDR < 0.25` 为 suggestive enrichment，`FDR < 0.05` 为 high-confidence enrichment。核心叙事最好来自 `FDR < 0.05` 或多个数据库方向一致。
+
+3. GO BP + Hallmark 作为主解释数据库
+这个总体适合。Hallmark 比较凝练，GO BP 比较细，二者搭配能减少 cherry-pick。
+但对我们这个课题还不够，因为 MLMOD 本质上是线粒体相关死亡/损伤状态。GO/KEGG/Reactome/Hallmark 未必能很好覆盖 mitoxyperiosis 这种新概念。
+我建议额外加入 **MitoCarta3.0 / MitoPathways3.0 targeted audit**，但不是拿来随便挑结果，而是预注册为“线粒体定位与线粒体功能专项验证”。MitoCarta3.0 是 NAR 2021 的高质量线粒体蛋白资源，适合本研究。
+
+4. GO `simplify(cutoff = 0.7)`
+适合。GO 冗余很严重，不做去冗余会很乱。保留简化前和简化后结果即可。
+
+5. `minGSSize = 10, maxGSSize = 500`
+适合。太小的通路不稳定，太大的通路泛化严重。这个范围对 GO/KEGG/Reactome/Hallmark 都合理。
+
+6. pseudobulk GSVA/ssGSEA
+适合，但要注意它是“样本层/伪bulk层通路活性”，不是单细胞层强统计。这个方向我认为是对的。
+
+所以我的结论是：**不是要推翻现有参数，而是要把它们改成“主线发现阈值 + 高可信敏感性阈值 + 线粒体专项验证”三层。**
+
+我建议下一步修改 F3.1：
+
+- 保留 `padj < 0.05 & |log2FC| >= 0.25` 作为 primary discovery ORA。
+- 增加 `padj < 0.05 & |log2FC| >= 0.5` 作为 high-confidence ORA sensitivity。
+- GSEA 结果分成 `FDR < 0.25 suggestive` 和 `FDR < 0.05 high-confidence`。
+- 加入 MitoCarta3.0 / MitoPathways3.0 targeted audit。
+- 如果 ORA 基因太少，不放宽阈值硬做，而是以 GSEA 和通路分数作为主解释。
+
+--------------------------------------------------------------------------------
+
+[615] 你 | 2026-06-07 17:18:01 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[616] Codex | 2026-06-07 17:18:10 Asia/Shanghai
+我来把 F3.1 从“单一默认阈值”改成分层证据：primary discovery、high-confidence sensitivity、GSEA suggestive/high-confidence，以及 MitoCarta/MitoPathways 专项审计。这样参数既符合惯例，也更贴合 MLMOD 这个线粒体损伤主题。
+
+--------------------------------------------------------------------------------
+
+[617] Codex | 2026-06-07 17:18:19 Asia/Shanghai
+我会在 F3.1 里新增一条线粒体专项审计规则，同时把 F3 的预期图表也补一张 MitoCarta/MitoPathways 图，避免执行计划和图表清单脱节。
+
+--------------------------------------------------------------------------------
+
+[618] Codex | 2026-06-07 17:19:16 Asia/Shanghai
+F3.1 参数分层已经写入。现在同步 WPS 并做结构/关键字段检查。
+
+--------------------------------------------------------------------------------
+
+[619] Codex | 2026-06-07 17:19:41 Asia/Shanghai
+已按这个思路改完并同步。
+
+F3.1 现在不是简单套默认参数，而是分成：
+
+- **主线发现阈值**：`adjusted_p_value < 0.05` 且 `abs(log2FC_high_vs_low) >= 0.25`
+- **高可信敏感性阈值**：`adjusted_p_value < 0.05` 且 `abs(log2FC_high_vs_low) >= 0.5`
+- **GSEA 两档解释**：`FDR < 0.25` 为 suggestive，`FDR < 0.05` 为 high-confidence
+- **新增 MitoCarta3.0 / MitoPathways3.0 专项审计**，用于验证高MLMOD相关差异是否真的集中在线粒体定位蛋白或特定线粒体功能子通路
+- 图表清单也补了 `图3-4：MitoCarta3.0/MitoPathways3.0专项审计图`
+
+同时明确：如果 MitoCarta/MitoPathways 不支持，也必须如实报告，不能用泛 GO 线粒体词条替代。
+
+检查结果：`[TABLE]` 仍然平衡，`16/16`。
+两个主线 txt 已同步，SHA256 一致：
+
+`6113548B8393CCDF22E622CA426BF8EFE1580EC628F693B8F00D9ADBCF379AB0`。
+
+--------------------------------------------------------------------------------
+
+[620] 你 | 2026-06-07 17:29:04 Asia/Shanghai
+挑刺F3.2
+
+--------------------------------------------------------------------------------
+
+[621] Codex | 2026-06-07 17:29:13 Asia/Shanghai
+我来专门挑 F3.2。拟时序这节比富集更容易被过度解释，所以我会重点查：root 是否可执行、对象是否会被样本/批次主导、Monocle3/Slingshot 的输入空间是否定义、以及哪些情况必须降级结论。
+
+--------------------------------------------------------------------------------
+
+[622] Codex | 2026-06-07 17:29:44 Asia/Shanghai
+F3.2 现在方向是对的，但还不够可执行。拟时序这块最容易“画出一条漂亮轨迹然后讲故事”，所以我会比较严厉地挑。
+
+**主要问题**
+1. **root 的定义还是太抽象**
+“低MLMOD、低CNV、normal-like marker较高”是合理原则，但没有量化规则。Biomni 到时不知道怎么选主root。
+建议写成可执行标准：候选 cluster 需满足 `median_MLMOD_Score` 处于最低 25%，`median_CNV_score` 处于最低 50%，normal-like epithelial marker score 位于最高 25% 或至少高于全体中位数，并且不是单一样本主导。
+
+2. **normal-like marker score 没定义**
+F1/F2 里有上皮亚型 marker，但 F3.2 没指定用哪些 marker 算 normal-like。
+建议要求从 `cell_type_marker_panel.tsv` 里预先读取正常胃上皮相关 marker，比如 pit/mucous neck/chief/enterocyte/enteroendocrine 等，构建 `normal_epithelial_like_score`，并输出 `F3_normal_like_score.tsv`。不能让 Biomni 自己临时编 marker。
+
+3. **输入表达空间没定义**
+Monocle3/Slingshot 是用什么空间建轨迹？PCA？Harmony embedding？UMAP？integrated assay？RNA log-normalized?
+这很关键。建议：主线用 F1/F2 已确认的恶性上皮对象，在 RNA normalized data 或 SCT/integrated 流程中选 HVG，降维用 PCA；如果用 Harmony embedding，必须说明是为了减少样本/批次，且要做 non-Harmony 敏感性。UMAP 只能可视化，不应作为唯一建图依据。
+
+4. **是否重新选择 HVG 没写**
+拟时序不能直接沿用全细胞 HVG。恶性上皮内部状态分析应在恶性上皮对象内重新选择 HVG，且排除明显技术/QC基因、线粒体编码基因、核糖体基因、细胞周期驱动基因的敏感性要说明。
+否则轨迹很可能是细胞周期或测序深度轨迹。
+
+5. **没有细胞周期和QC混杂审计**
+F3.2 只写 sample/cluster 主导，但 pseudotime 也可能由 `nCount_RNA`、`nFeature_RNA`、`percent.mt`、S/G2M、CNV_score 驱动。
+建议输出 `F3_pseudotime_confounding_audit.tsv`。
+
+6. **cluster 主导不一定是坏事，需要区分**
+现在写“轨迹被 epithelial_cluster_id 主导就降级”。但拟时序本来就可能沿 cluster 状态变化。问题不是 cluster 相关，而是完全等同于离散 cluster 或单一样本。
+建议改成：如果 pseudotime 只反映一个 cluster 排序且缺乏连续过渡，或高MLMOD末端由单一cluster/样本支配，则降级。
+
+7. **样本覆盖标准没写**
+主root或末端高MLMOD如果主要来自一个样本，轨迹就不可靠。
+建议规定：主root和高pseudotime末端都至少来自 3 个 sample_id；任一端 >80% 来自一个样本则 warning；PM 相关分支因为 n=3 只能方向性解释。
+
+8. **epithelial_continuum_object 准入规则太空**
+如果要用正常上皮敏感性 root，必须定义哪些正常上皮能进来：高置信 Normal_Gastric epithelial、无CNV、非doublet、无强污染、样本覆盖足够。
+还要说明：这个对象不能和主恶性上皮拟时序混为一个主结论。
+
+9. **Slingshot 输入和比较指标没写**
+Slingshot 需要 cluster labels 和降维空间。F3.2 只说交叉验证，没有说用什么 cluster、什么 embedding、怎么判断一致/冲突。
+建议输出 `F3_slingshot_comparison.tsv` 字段包括 start.clus、lineages、pseudotime_correlation_with_monocle、terminal_state_overlap、topology_agreement。
+
+10. **graph_test 基因解释仍有循环风险**
+它要求标记 scoring genes，但还不够。拟时序相关基因还应标记是否为 pseudotime construction HVG、是否细胞周期/QC/线粒体/核糖体基因。否则又会把构建轨迹的基因当发现结果。
+
+11. **需要预设“何时不做/不解释拟时序”**
+如果恶性上皮内部没有连续结构，硬跑 Monocle3 没意义。
+建议加失败路径：如果邻接图不连通、root 无法稳定、pseudotime 与 QC/细胞周期强相关、或多root结果方向冲突，则 F3.2 输出 negative/unstable result，不进入“轨迹驱动”叙事。
+
+我建议改 F3.2，核心补 5 个东西：**root量化规则、normal-like score、输入空间/HVG规则、混杂审计、失败降级标准**。这五个补上后，拟时序才比较抗审稿。
+
+--------------------------------------------------------------------------------
+
+[623] 你 | 2026-06-07 17:46:43 Asia/Shanghai
+先按你说的改，参数和算法选择上要符合研究需求和文档要求，fallback路径也要做好
+
+--------------------------------------------------------------------------------
+
+[624] Codex | 2026-06-07 17:47:01 Asia/Shanghai
+我来把 F3.2 改成可执行版本：先用官方/教程口径校准 Monocle3 与 Slingshot 的输入和 root 选择，再把主流程、敏感性和失败降级路径写进 txt。这里会特别注意一点：Monocle3 实际会在低维空间上 learn graph，所以不能简单写“UMAP只能可视化”；要按工具文档的真实用法来表述。
+
+--------------------------------------------------------------------------------
+
+[625] Codex | 2026-06-07 17:47:31 Asia/Shanghai
+我已经看了 Monocle3 和 Slingshot 文档要点：Monocle3 的轨迹流程是 `preprocess_cds -> reduce_dimension -> cluster_cells -> learn_graph -> order_cells`，root 通过 `root_cells` 或 `root_pr_nodes` 指定；Slingshot 需要降维矩阵和 cluster labels，可用 `start.clus` 指定起始 cluster。现在我把这些文档约束和本研究的 fallback 路径写进 F3.2。
+
+--------------------------------------------------------------------------------
+
+[626] Codex | 2026-06-07 17:48:36 Asia/Shanghai
+F3.2 已经扩成可执行版本。现在我同步 WPS，并检查关键输出、fallback、表格标签和哈希。
+
+--------------------------------------------------------------------------------
+
+[627] Codex | 2026-06-07 17:48:59 Asia/Shanghai
+已按你的要求改完 F3.2，并同步到 WPS 路径。
+
+这次主要补了：
+
+- **Monocle3 文档式流程**：`preprocess_cds -> reduce_dimension -> cluster_cells -> learn_graph -> order_cells`
+- **表达空间/HVG规则**：在恶性上皮内部重新选 HVG，不沿用全细胞 HVG；记录 `num_dim`，初始 `50`，允许按证据在 `30-100` 调整
+- **UMAP使用边界**：Monocle3 可按流程用 UMAP learn graph，但不得直接复用 F1 全细胞 UMAP
+- **normal-like score**：只能从 `cell_type_marker_panel.tsv` 读取正常胃上皮相关 marker，不能临时编
+- **root量化规则**：低MLMOD、低CNV、normal-like高、非单一样本主导、细胞数和样本覆盖达标
+- **多root敏感性**：主root + 低MLMOD四分位root + normal-like malignant root + 正常上皮 continuum root
+- **Slingshot交叉验证**：明确 `clusterLabels`、`reducedDim`、`start.clus`、`end.clus` 和比较字段
+- **混杂审计**：新增 `F3_pseudotime_confounding_audit.tsv`
+- **失败/fallback路径**：包括调整HVG、`num_dim`、平衡抽样、Harmony/non-Harmony敏感性、仅保留Slingshot探索结果，以及最终 `negative/unstable pseudotime result`
+
+检查结果：`[TABLE]` 仍平衡，`16/16`。
+两个主线 txt 已同步，SHA256 一致：
+
+`CCE8AA5311D12AAB5F58DB3FC5E6EB7373918E7BB085E0BE33F844614069DCE8`。
+
+--------------------------------------------------------------------------------
+
+[628] 你 | 2026-06-07 20:14:45 Asia/Shanghai
+继续挑刺F3.3
+
+--------------------------------------------------------------------------------
+
+[629] Codex | 2026-06-07 20:15:04 Asia/Shanghai
+我继续只挑 F3.3。SCENIC 这节的风险点会偏工程和可复现：输入矩阵格式、基因过滤、抽样是否引入偏差、GRN/AUCell 分离是否合理、regulon 结果怎样做样本层统计，以及失败时怎么保留主线价值。
+
+--------------------------------------------------------------------------------
+
+[630] Codex | 2026-06-07 20:16:15 Asia/Shanghai
+F3.3 现在框架是好的，但还不够“可执行且抗质疑”。SCENIC 最怕的是跑出一堆 TF 热图，但输入、抽样和统计单位说不清。逐条挑刺如下。
+
+**主要问题**
+1. **输入矩阵格式没锁定**
+pySCENIC 官方 CLI 有 `grn / ctx / aucell` 三步，支持 `csv` 或 `loom`。但 csv/loom 的行列方向容易错：csv 通常是 cells × genes，loom 是 genes × cells。F3.3 现在只说“输入对象”，没说如何从 Seurat/RDS 导出给 pySCENIC。
+建议新增 `F3_SCENIC_input_matrix_audit.tsv`，记录 matrix_format、genes_as_rows_or_columns、n_cells、n_genes、cell_id_match_rate、gene_symbol_match_rate、raw_or_normalized、sparse_or_dense、file_size、sha256。
+
+2. **表达矩阵层没定义**
+SCENIC 是基于表达相关性/回归推断 GRN，输入层会影响结果。不能让 Biomni 随便用 raw counts、LogNormalize data 或 integrated assay。
+建议：GRN 主输入使用恶性上皮 raw/count-like counts 经基础过滤后的表达矩阵；不得使用 Harmony/integrated/scale.data 作为 GRN 输入。AUCell 可基于同一表达矩阵或官方可接受格式计算 regulon activity。若使用 log-normalized 矩阵，必须作为敏感性并说明原因。
+
+3. **基因过滤规则缺失**
+现在没有写哪些基因进入 GRN。全基因直接跑会慢且噪声大；过滤太狠会丢 TF。
+建议预设：保留在至少 `1%` 恶性上皮细胞或至少 `50` 个细胞中表达的基因，取较小/合理者需记录；同时要求每个基因至少覆盖 `>=3 sample_id`，否则标记 sample-specific risk。TF list 中未表达 TF 不进入 GRN，但要记录在 `F3_SCENIC_TF_usage.tsv`。
+
+4. **TF list 匹配审计没有**
+我们下载了 `allTFs_hg38.txt`，但 F3.3 没要求检查 TF gene symbol 是否和表达矩阵一致。
+建议输出 `F3_SCENIC_TF_usage.tsv`：tf_name、present_in_matrix、detected_cell_fraction、n_samples_detected、used_in_grn、exclude_reason。
+
+5. **抽样规则仍太粗**
+“平衡抽样”合理，但没定义每层抽多少、最少保留多少、随机种子、是否允许替换抽样。
+建议：如果需抽样，按 `sample_id + MLMOD_high_label + epithelial_cluster_id` 分层；每层最多固定上限，例如 300-500 cells，同时保留稀有层最低 30-50 cells；所有抽样用 seed 42，输出 `F3_SCENIC_sampling_plan.tsv` 和实际抽样细胞表。
+
+6. **小规模预检的通过标准没写**
+现在说 500-1000 细胞试跑，但没说怎样算通过。
+建议 gate3a 通过标准包括：GRN adjacency 非空、ctx regulon 非空、AUCell matrix 维度正确、cell_id 可回连、至少产生一定数量 regulons，例如 `>=20`，且无严重报错。否则不能进入正式运行。
+
+7. **GRNBoost2 随机性和重复性没处理**
+pySCENIC FAQ 也提醒 GRN 步骤有随机性。现在只写 seed，但没有稳定性检查。
+建议正式 GRN 至少做一次 seed sensitivity，或者在资源允许时做 2 个 seed 的小规模/抽样重复，检查 top regulons 是否大体稳定。资源不足时至少记录“未做重复”的限制。
+
+8. **ctx / motif pruning 参数没写**
+motif pruning 不只是“使用数据库”。需要记录 ranking databases、motif annotation、NES/AUC等关键参数或默认值。
+建议输出 `F3_SCENIC_ctx_parameter_log.tsv`，记录 databases、annotations、rank_threshold、auc_threshold、nes_threshold、motif_annotation_version、command_line。
+
+9. **AUCell 回填到全量细胞的逻辑要更清楚**
+GRN 可以抽样推断，但 AUCell 最好对全量 08 对象计算 regulon 活性。现在写“尽量”，还不够硬。
+建议：正式主线要求“抽样GRN + 全量AUCell”为默认大样本方案；只有技术失败时才降级为抽样AUCell，并明确不能做全量细胞结论。
+
+10. **高/低MLMOD regulon 差异统计仍不够具体**
+按 sample 汇总是对的，但还没写用什么统计。
+建议主分析为 sample-level 或 pseudobulk-like regulon activity 比较：每个 `sample_id + MLMOD_high_label` 求平均/中位 AUC，再用 Wilcoxon/permutation 或线性模型；如果 high/low 同时存在于同一样本，优先配对设计。输出 effect size、p、BH校正、paired_design_used。
+
+11. **候选TF筛选规则没写**
+最后“候选机制因子”需要标准，否则会 cherry-pick。
+建议 TF regulon 入选至少满足：regulon活性高低MLMOD差异 BH < 0.05 或方向稳定；effect size 达标；目标基因数足够；TF自身在恶性上皮表达；非单一样本/cluster驱动；与 MLMOD_Score 相关方向一致。否则只列为 exploratory TF。
+
+12. **SCENIC 结果和 F3.2 拟时序没有接口**
+既然 F3.3 是主流程，应说明 regulon 是否沿 pseudotime 增强。
+建议输出 `F3_SCENIC_pseudotime_regulon_association.tsv`：regulon、cor_with_pseudotime、branch_enrichment、root sensitivity consistency。这样 F3.2 和 F3.3 能接起来。
+
+13. **失败路径还不够细**
+现在只说失败不推翻 F3.1/F3.2。还需要具体 fallback：
+依赖失败、数据库失败、GRN失败、ctx失败、AUCell失败应分别处理。比如 GRN 失败可降低细胞数/基因数，ctx 失败检查 feather v2/pyarrow，AUCell 失败检查 loom/csv格式和内存。
+
+我的建议：F3.3 要补 6 个核心东西：**输入矩阵审计、基因/TF过滤、抽样细则、preflight通过标准、AUCell全量回填、候选TF筛选规则**。这些补上后，SCENIC 才能作为主流程而不是一张“看起来很高级”的调控热图。
+
+参考点：pySCENIC 官方文档列出 `grn / ctx / aucell` 命令流程，并说明支持 csv/loom 输入；官方 FAQ 也提到 GRN 步骤具有随机性，所以我们需要 seed 和稳定性记录。
+[pySCENIC docs](https://pyscenic.readthedocs.io/en/stable/installation.html)
+[pySCENIC FAQ](https://pyscenic.readthedocs.io/en/latest/faq.html)
+
+--------------------------------------------------------------------------------
+
+[631] 你 | 2026-06-07 20:21:17 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[632] Codex | 2026-06-07 20:21:27 Asia/Shanghai
+我来把 F3.3 补成真正可执行的 SCENIC 主流程：输入矩阵、基因/TF过滤、抽样、preflight判定、ctx参数、AUCell全量回填、统计和候选TF规则都会写进去。然后同步两个路径并检查结构。
+
+--------------------------------------------------------------------------------
+
+[633] Codex | 2026-06-07 20:21:37 Asia/Shanghai
+我会直接替换 F3.3 这段，保留“SCENIC 是调控推断、不是实验证明”的边界，同时补全每一步的输出表和失败路径。
+
+--------------------------------------------------------------------------------
+
+[634] Codex | 2026-06-07 20:22:52 Asia/Shanghai
+F3.3 已补全。现在同步 WPS，并检查是否有关键文件名、preflight、AUCell全量回填、候选TF和 pseudotime 接口。
+
+--------------------------------------------------------------------------------
+
+[635] Codex | 2026-06-07 20:23:17 Asia/Shanghai
+已按你说的先改完 F3.3，并同步到 WPS 路径。
+
+这次把 SCENIC 主流程补成了可执行版本，核心新增内容包括：
+
+- `grn / ctx / aucell` 三步流程和环境检查
+- 输入矩阵导出审计：`csv` 默认 `cells x genes`，`loom` 默认 `genes x cells`
+- 禁止使用 Harmony / integrated / scale.data 作为 GRN 输入
+- 基因过滤和 TF list 匹配审计
+- 分层抽样规则和实际抽样细胞表
+- preflight 通过标准：adjacency 非空、regulon 非空、AUCell 维度正确、至少约 20 个 regulons 或合理解释
+- ctx 参数记录：ranking DB、motif annotation、NES/AUC/rank 阈值、完整命令
+- GRN seed 稳定性记录
+- 默认大样本策略：抽样 GRN/ctx + 全量 08 对象 AUCell 回填
+- sample-level regulon 差异统计，禁止只用 cell-level p 值
+- 候选 TF 入选标准
+- 与 F3.2 pseudotime 的接口表
+- 依赖失败、数据库失败、GRN失败、ctx失败、AUCell失败的分步 fallback
+
+检查结果：`[TABLE]` 仍然平衡，`16/16`。
+两个主线 txt 已同步，SHA256 一致：
+
+`77F3666B35F06978AD4D51E65F54F3451D01CC23CC9000FC07357A125AD9693F`。
+
+--------------------------------------------------------------------------------
+
+[636] 你 | 2026-06-07 20:24:55 Asia/Shanghai
+所选参数和算法是否符合本研究？会不会过松或过紧？会不会过于重数学意义而忽视生物学意义
+
+--------------------------------------------------------------------------------
+
+[637] Codex | 2026-06-07 20:25:05 Asia/Shanghai
+这个问题要认真校准。F3.3 的参数不能只看“pySCENIC能跑”，要看它是否服务我们的生物问题：高MLMOD恶性上皮状态的候选调控因子。我要按每个关键参数逐项评估：输入层、过滤、抽样、preflight、统计阈值和候选TF筛选，看看哪里偏数学、哪里需要生物学约束。
+
+--------------------------------------------------------------------------------
+
+[638] Codex | 2026-06-07 20:25:59 Asia/Shanghai
+我的判断：**整体算法选择符合本研究，但当前 F3.3 仍偏“技术可运行 + 统计筛选”，需要再加一层生物学优先级规则。** 否则确实可能变成“谁 p 值好看就选谁”，而不是“谁更像高MLMOD状态的调控因子”。
+
+**算法是否合适**
+pySCENIC 适合放在 F3.3。我们只有 scRNA，没有 ATAC/ChIP，所以 SCENIC 能提供的是“TF-regulon 活性候选”，不是实验证明。它正好能回答：高MLMOD恶性上皮状态是否伴随特定转录因子调控程序增强。
+
+GRNBoost2 作为主算法也合适，因为它比 GENIE3 更适合大单细胞数据。GENIE3可以作为小规模敏感性或 fallback，不适合默认全量跑。
+
+**哪里可能过松**
+1. preflight 里“至少20个regulons”只是技术通过标准，不能说明生物学结果可靠。正式结果还要看 regulon 数量、目标基因数、样本覆盖和稳定性。
+2. “adjusted p < 0.05 或方向稳定”这句话有点松。方向稳定可以作为候选，但不能和 FDR<0.05 等价。
+3. 抽样如果为了“平衡”而过度放大稀有层，可能让少数样本/cluster影响GRN。
+
+**哪里可能过紧**
+1. 基因过滤 `max(50 cells, 1%)` 对普通基因合理，但对低表达 TF 可能偏紧。很多 TF 本来表达低，过严会丢掉生物学关键因子。
+2. 要求 TF 覆盖至少3个 sample_id 合理，但不能直接删除只在少数样本出现的TF，尤其PM只有3个样本。更适合标记风险，而不是硬排除。
+3. sample-level FDR<0.05 可能漏掉真实但样本量不足的调控因子，所以需要 Tier 分级。
+
+**生物学意义需要补强**
+我建议候选TF不要只按统计显著性选，而是分层：
+
+- **Tier 1 高可信候选TF**：regulon活性高低MLMOD差异 FDR<0.05；effect size明确；TF自身在恶性上皮表达；regulon target与non-scoring高MLMOD marker、MitoCarta/MitoPathways或F3.1关键通路有交集；沿pseudotime方向一致；非样本/cluster/QC驱动。
+- **Tier 2 生物学候选TF**：FDR未达0.05但方向跨样本稳定，effect size明确，并且有强生物学支持。
+- **Tier 3 探索性TF**：只在cell-level显著、只在单一cluster/样本显著，或target过少/过泛。
+
+这样就不会过分迷信数学显著性，也不会放任主观挑TF。
+
+**我建议继续修改 F3.3**
+主要改四点：
+
+1. TF过滤改为普通基因和TF分开阈值，低表达TF不直接删，标记风险。
+2. 抽样改为“分层限额 + 总目标细胞数”，防止稀有层被过度放大。
+3. preflight明确只是技术门槛，不代表生物学可信。
+4. 增加 `F3_SCENIC_candidate_TF_biological_review.tsv`，专门记录TF表达、target功能、MitoCarta overlap、pseudotime一致性、胃癌/转移/线粒体应激相关证据和最终Tier。
+
+所以答案是：**当前F3.3没有明显过松或过紧到不可用，但还不够生物学导向。需要把“统计显著TF”升级成“统计 + 稳定性 + 生物学机制一致”的候选TF分级体系。**
+
+--------------------------------------------------------------------------------
+
+[639] 你 | 2026-06-07 20:40:03 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[640] Codex | 2026-06-07 20:40:14 Asia/Shanghai
+我来把 F3.3 从“统计筛选候选TF”改成“统计证据 + 生物学一致性分层”。同时会调整 TF 过滤和抽样规则，避免低表达 TF 被过早删掉，也避免稀有层被抽样过度放大。
+
+--------------------------------------------------------------------------------
+
+[641] Codex | 2026-06-07 20:40:24 Asia/Shanghai
+我会在不增加过多复杂度的前提下改三处核心规则：TF低表达保留/风险标记、抽样总量和分层上限、防止候选TF只靠p值入选；并加一个生物学审查表。
+
+--------------------------------------------------------------------------------
+
+[642] Codex | 2026-06-07 20:41:35 Asia/Shanghai
+已把候选TF的生物学分层写入。现在同步并检查关键字、表格标签和哈希。
+
+--------------------------------------------------------------------------------
+
+[643] Codex | 2026-06-07 20:41:57 Asia/Shanghai
+已按这个方向改完并同步。
+
+F3.3 现在补了更贴合本研究的生物学导向规则：
+
+- **普通基因和 TF 分开过滤**
+  普通基因仍用 `max(50 cells, 1%)`；TF 更宽松，用 `max(20 cells, 0.2%)`，避免低表达但可能关键的 TF 被提前删掉。
+
+- **低表达 TF 不静默删除**
+  记录为 `low_expression_TF`，用于后续解释风险，而不是直接消失。
+
+- **抽样增加总目标细胞数和过度加权警告**
+  防止为了“平衡”把极少数层放大成主导信号。新增 `over_weighted_stratum_warning`。
+
+- **preflight 明确只是技术门槛**
+  不再让“能跑通”被误解成“生物学可信”。
+
+- **regulon 统计结果分层**
+  `statistical_support`、`directional_support`、`exploratory_only`，避免把方向一致但不显著的结果和 FDR<0.05 混为一谈。
+
+- **候选TF分为 Tier 1 / Tier 2 / Tier 3**
+  不再只按 p 值排序，而是结合 TF表达、样本覆盖、target数量、non-scoring高MLMOD marker、MitoCarta/MitoPathways、F3.1通路、F3.2拟时序一致性和混杂风险。
+
+- **新增生物学审查表**
+  `F3_SCENIC_candidate_TF_biological_review.tsv`
+
+检查结果：`[TABLE]` 仍平衡，`16/16`。
+两个主线 txt 已同步，SHA256 一致：
+
+`9E3ADA0F06E3E3B708B63778CD29220A79C3C83612AA75FC73A49A32A8F734D1`。
+
+--------------------------------------------------------------------------------

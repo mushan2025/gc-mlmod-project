@@ -1,0 +1,92 @@
+# Codex修改指令：全局范围分级、PM规则、F3.2轨迹前置检查与F8.3证据上限 Round 1
+
+## 背景
+
+S2已将MLMOD签名特异性对照和纯度混杂硬决策节点落入F2，并通过验证。本prompt处理第三方全局审查中剩余的4项建议，均为Suggestion级别（非Blocking/Warning），但对1b阶段拆分方案和Biomni执行时的资源分配与解释边界有直接影响。
+
+4项Suggestion涉及：全局文件头2处新增（范围分级 + PM规则）、F3.2一处小修改（轨迹合理性前置检查）、F8.3一处小修改（证据等级硬上限）。
+
+---
+
+## Suggestion 修改
+
+### S1. 全局F大节范围分级
+
+**问题**：F0-F8当前以相同权重呈现，但实际上不同F节对"找到功能独特亚群并验证临床意义"这一核心目标的贡献差异很大。1b拆分方案和Biomni执行时需要明确优先级，避免在扩展分析上投入过多资源导致核心分析不够扎实。
+
+**精确位置**：当前第6行（"claim_evidence_matrix.tsv不要求在1a阶段..."）之后、第7行（"F0｜项目准备..."）之前插入新段落。
+
+**新增内容要求**：
+
+F大节范围分级。F0-F8按对核心研究目标的贡献分为三个优先级：
+- 核心（Core）：F0、F1、F2——必须完成。F0建立数据基线，F1完成细胞注释和恶性判定，F2完成MLMOD打分、亚群定义、特异性验证和临床意义验证。核心节的gate状态决定整个项目的基础解释强度。
+- 推荐（Recommended）：F3、F5——强烈建议完成。F3解析功能状态、转录连续性和候选调控网络，是回答"亚群在做什么"的主要分析。F5从F2/F3候选中筛选核心基因供F6-F8使用，是下游深度分析的入口。
+- 扩展（Extended）：F4、F6、F7、F8——视资源和核心节结论强度决定是否执行。F4（细胞通讯）、F6（免疫）、F7（多组学）、F8（单基因深度分析）为核心发现增加宽度和深度，但项目可在仅完成Core + Recommended的情况下形成可发表的核心结论。
+范围分级不改变各F节内部的gate和交付要求。Extended节即使执行，也必须遵循既有gate规则和interpretation_level上限。若F2-Gate4 interpretation_level为exploratory_only，Extended节的结论强度不会因为执行更多分析而升级。
+
+---
+
+### S2. 全局PM样本量限制规则
+
+**问题**：GSE183904中Peritoneal_Metastasis仅3个样本。当前F0.3、F2.3、F2.4、F4.4、F8.1均单独标注了PM样本量限制，但措辞和严格程度不完全一致，且未覆盖所有可能涉及PM比较的F节（如F3、F6）。缺少一条全局规则，可能导致新增分析步骤或1b拆分时遗漏PM限制。
+
+**精确位置**：紧接S1新增的"F大节范围分级"段落之后、F0标题行之前。
+
+**新增内容要求**：
+
+全局PM样本量限制。GSE183904中Peritoneal_Metastasis仅有3个样本。以下规则适用于F0-F8所有节，不因个别节未单独重申而例外：(1) 任何涉及PM的组间比较（包括但不限于比例统计、差异表达、通路分析、拟时序分支、通讯分析、免疫关联和临床关联）最高只能作为方向性观察或描述性数据展示，不得作为假设检验的主统计证据或独立验证来源。(2) PM相关图表和结果文字必须标注"Peritoneal_Metastasis n=3"。(3) 即使PM方向性观察与Primary_Tumor主分析方向一致，也不得将PM结果视为独立验证证据；PM与Primary_Tumor方向一致只能作为"方向性支持"而非"独立队列验证"。(4) 各F节中已有的PM相关限制语句继续保留，本全局规则作为兜底。
+
+---
+
+### S3. F3.2新增轨迹合理性前置检查
+
+**问题**：F3.2拟时序分析假设恶性上皮中存在可被Monocle3/Slingshot捕捉的连续状态梯度。当前F3.2 Step 5（line 601）有fallback："若多次fallback后仍无法形成稳定连续结构，F3.2结论应为negative/unstable pseudotime result"。但这是事后响应——Biomni会先投入完整的Monocle3/Slingshot计算资源才能发现数据不适合轨迹推断。一个低成本的前置检查可以在发现数据纯粹为离散cluster结构（无连续过渡）时节省Biomni的120min执行窗口。
+
+反事实前提：如果恶性上皮中不存在真实的分化/状态梯度，Monocle3仍会输出一条principal graph——它只是拟合噪声和离散cluster间的人工连接。前置检查的目的是在投入完整分析资源前评估轨迹推断的生物学合理性。
+
+**精确位置**：F3.2第一步（当前第597行"F3.2运行前必须确认..."）中，在现有准入检查之后追加。
+
+**新增内容要求**（在第一步现有"准入"段落末尾追加）：
+
+此外，Biomni在启动Monocle3完整流程前应完成轨迹合理性快速评估：在08对象恶性上皮中检查(1) PCA前几个主成分的细胞分布是否呈现连续梯度而非纯粹离散团簇（可用Hartigan's dip test或密度可视化辅助判断），(2) MLMOD_Score与前几个PC的Spearman相关是否存在（|rho| > 0.15），(3) 恶性上皮cluster之间是否存在bridging cells（如UMAP邻域图中跨cluster连接密度大于随机预期，或k-NN图中跨cluster边占比不极低）。若三项检查均指向纯粹离散结构且无连续过渡证据，Biomni应在F3_gate2_pseudotime_report.md中报告trajectory_plausibility = low，并请求研究者批准是否仍投入资源运行完整Monocle3/Slingshot流程。即使研究者批准继续，F3.2的interpretation_level上限也应降低为exploratory_pattern_description而非transcript_state_gradient。trajectory_plausibility评估结果必须写入F3_pseudotime_embedding_plan.tsv新增字段trajectory_plausibility_assessment（high/moderate/low）。
+
+---
+
+### S4. F8.3证据等级硬上限
+
+**问题**：F8.3（条件性in silico perturbation）的claim控制已经很严格（line 871-873：不允许写"敲除证明"，只允许写"预测/提示"），但在interpretation_level字段没有设置形式化的最高值。如果Biomni的所有稳健性检查都通过、负对照都一致，interpretation_level可能被记为较高等级，但in silico perturbation在没有真实扰动训练数据的情况下，其最高可信度仍然只是计算假设。
+
+**精确位置**：F8.3第一段（当前第871行"F8不得把'在Seurat矩阵中将核心基因表达置零'当作真实基因敲除..."）末尾、第二段（当前第872行"CellOracle或其他GRN扰动工具..."）之前。
+
+**新增内容要求**（在第871行段落末尾追加一句）：
+
+F8.3所有结果的interpretation_level最高为model_supported_hypothesis，即使所有稳健性检查通过且负对照一致；对应的claim_evidence_matrix.tsv证据等级最高为mechanistic_hypothesis。不存在任何F8.3内部条件组合能使interpretation_level达到single_cell_supported或更高。
+
+---
+
+## 修改后确认清单
+
+1. [ ] S1: 第6行之后、F0标题行之前，存在"F大节范围分级"段落
+2. [ ] S1: 包含Core（F0/F1/F2）、Recommended（F3/F5）、Extended（F4/F6/F7/F8）三级定义
+3. [ ] S1: 明确"Extended节不因执行更多分析而升级interpretation_level"
+4. [ ] S2: 紧接范围分级之后，存在"全局PM样本量限制"段落
+5. [ ] S2: 包含四项规则：方向性观察上限、n=3标注、非独立验证、兜底条款
+6. [ ] S3: F3.2第一步中，准入检查之后存在轨迹合理性快速评估内容
+7. [ ] S3: 包含三项检查：PCA连续性/dip test、MLMOD_Score与PC相关、bridging cells
+8. [ ] S3: 低合理性时要求研究者审批且降低interpretation_level
+9. [ ] S3: F3_pseudotime_embedding_plan.tsv新增trajectory_plausibility_assessment字段
+10. [ ] S4: F8.3第一段末尾存在"interpretation_level最高为model_supported_hypothesis"
+11. [ ] S4: 明确"不存在任何F8.3内部条件组合能达到single_cell_supported"
+12. [ ] F3.2第二步至第八步未被误改
+13. [ ] F8.3第二段（CellOracle前提）和第三段（执行规则）未被误改
+14. [ ] `[TABLE]` / `[/TABLE]` 仍为17/17
+15. [ ] 两个路径SHA256一致
+
+---
+
+## 注意事项
+
+1. **不要修改CLAUDE.md或conventions.txt**。
+2. **不要新增TABLE**——本次修改只在全局文件头增加两段、F3.2和F8.3各追加少量文字。
+3. S1和S2在全局头部区域插入时，注意不要破坏现有6行全局执行约定的连续性——S1和S2应作为新段落插入在第6行之后，不是插入第6行内部。
+4. S3和S4是精确追加，不替换现有内容。

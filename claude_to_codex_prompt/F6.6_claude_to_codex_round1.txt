@@ -1,0 +1,102 @@
+# Codex修改指令：F5+F6第三方审查修订 Round 1
+
+## 背景
+
+第三方审查者完成了F5（第664-717行）和F6（第718-763行）的全面审核。两节均由Codex从导师大纲级别独立扩展为可执行方案，质量非常高：F5覆盖队列审计、候选基因池冻结、多维度评估和综合评分（约43行密集规范，24个输出文件）；F6覆盖免疫浸润多算法估计、连续相关性与分组差异、免疫模块预注册、TIDE/IPS/SubMap、双gate系统和claim control table（约46行密集规范，29个输出文件）。
+
+结构层面检查：TABLE 16/16配平、RDS/文件手递链F2→F5→F6闭合、PM 3样本限制不直接涉及（bulk）、签名冻结显式传递、正常上皮不混入06a不直接涉及、效应量体系F5(HR/Cliff's delta)和F6(Spearman rho)各自适配、scoring gene循环定义防护完整、TME_expression_warning传递完整、bulk confounding传递完整、跨平台不合并规则一致、审批暂停点齐全。
+
+核心问题是 **F6打断了F2-Gate4解释等级的显式传递链**。F3.0(525行)、F4.0(602行)、F4.6(649行)、F5(666行)和F5 gate报告(706行)均显式包含F2-Gate4 interpretation_level，但F6的输入审计表、综合汇总表和gate报告均未包含此字段。两个Suggestion分别涉及F5.0与F2.4的队列交叉引用和F6.3效应量阈值跨节注释。
+
+修改涉及F6.0(722行)、F6_core_gene_usage.tsv(723行)、F6通用交付规则(720行)、F6_integrated_immunity_summary.tsv(748行)、F5.0(669行)和F6.3(736行)共六处。修改后需同步WPS路径并验证`[TABLE]`标签平衡和SHA256一致。
+
+---
+
+## Warning 修改（必须完成）
+
+### W1. F6显式承接F2-Gate4解释等级——与F3/F4/F5对齐
+
+**问题**：F3.0(525行)写了"若F2-Gate4为阴性或方向不一致，F3仍可作为机制探索继续"；F4.0(602行)写了对应F4版本；F5(666行)写了"F5必须继承F2-Gate4的interpretation_level"并在F5 gate报告(706行)要求列出。但F6没有任何一处显式承接F2-Gate4。虽然F6通过F5_gate_status间接继承（F5 PASS_WITH_NOTED_LIMITATIONS导致F6 exploratory_immunity_association），但F5 PASS_WITH_NOTED_LIMITATIONS可能因多种原因产生（外部OS验证不足、事件数不足、PH假设等），审阅者无法从F6 gate报告直接判断F2-Gate4背景。后果：若F2-Gate4为"探索性继续"但F5仍通过（有限制），F6 gate报告可能不提及F2-Gate4，使审阅者误以为免疫关联结论建立在已验证的高MLMOD亚群基础上。
+
+**修改涉及四处**：
+
+#### W1a. F6.0 第722行——插入F2-Gate4解释等级继承声明
+
+**精确位置**：第722行，"但所有免疫结果默认标记为exploratory_immunity_association。"这句句号之后、"若没有任何allowed_for_F6 = TRUE的基因"之前。
+
+**新增内容**（插在两句之间，作为独立一句）：
+> F6必须继承F2-Gate4的interpretation_level；若F2-Gate4为negative、direction_inconsistent或exploratory_only，F6不能把免疫关联结论写成已验证预后意义亚群的免疫微环境特征，只能写成探索性免疫相关候选；F6_gate_immunity_report.md和F6_final_claim_control_table.tsv的措辞上限必须受F2-Gate4解释等级约束。
+
+#### W1b. F6_core_gene_usage.tsv 第723行——追加F2_Gate4_interpretation_level字段
+
+**精确位置**：第723行字段列表中，"F5_interpretation_level"之后、"TME_expression_warning"之前。
+
+**新增内容**（逗号分隔插入）：
+> F2_Gate4_interpretation_level、
+
+修改后该段字段序列应为：`...F5_gate_status、F5_interpretation_level、F2_Gate4_interpretation_level、TME_expression_warning...`
+
+#### W1c. F6通用交付规则 第720行——gate报告必述内容追加F2-Gate4信息
+
+**精确位置**：第720行，"F6_gate_immunity_report.md必须给出gate result: PASS、PASS_WITH_NOTED_LIMITATIONS或FAIL，并"之后、"逐基因列出F6解释等级"之前。
+
+**新增内容**（插在"并"和"逐基因"之间）：
+> 列出F2-Gate4解释等级和MLMOD_high_definition_status（natural_discrete_subgroup/operational_high_activity_group/exploratory_Q3_group），并
+
+修改后该句应为：`...FAIL，并列出F2-Gate4解释等级和MLMOD_high_definition_status（natural_discrete_subgroup/operational_high_activity_group/exploratory_Q3_group），并逐基因列出F6解释等级、是否允许进入论文主线免疫叙事、以及必须写明的限制。`
+
+#### W1d. F6_integrated_immunity_summary.tsv 第748行——追加F2_Gate4_interpretation_level字段
+
+**精确位置**：第748行字段列表中，"F5_gate_status"之后、"F6_deconvolution_support_tier"之前。
+
+**新增内容**（逗号分隔插入）：
+> F2_Gate4_interpretation_level、
+
+修改后该段字段序列应为：`...selection_class_from_F5、F5_gate_status、F2_Gate4_interpretation_level、F6_deconvolution_support_tier...`
+
+---
+
+## Suggestion 修改
+
+### S1. F5.0 与F2.4队列建议的交叉引用
+
+**问题**：F5.0(669行)列出导师原始方案5个队列"TCGA-STAD、GSE15459、GSE66229、GSE84426和GSE26253"，措辞"优先审计"隐含非排他。但F2.4(516行)已明确"建议同时审计GSE62254/ACRG和GSE84437"，preupload_resources_manifest.tsv也确认这两个数据集已预下载。F5.0没有交叉引用F2.4的额外队列建议，Biomni可能不知道这些队列已被推荐且已可用。此外GSE62254(ACRG)与GSE66229可能存在样本重叠（同一韩国队列不同发表），F6.1(726行)已注明但F5.0未提及。
+
+**修改位置**：第669行，"但不得作为预后验证队列。"这句句号之后，F5.0第二段（第670行"在下载任何Bulk数据前"）之前。
+
+**新增内容**（作为独立一句追加在第669行末尾）：
+> F2.4已建议审计的GSE62254/ACRG和GSE84437也应纳入F5.0审计范围；GSE62254与GSE66229可能存在样本重叠或派生队列关系（同一韩国胃癌人群不同发表），F5_bulk_dataset_audit.tsv中必须对这两个数据集标记sample_overlap_risk并在独立队列判定时考虑此风险。若Biomni或研究者在审计过程中发现导师列表之外的其他公开胃癌队列可能增强外部验证，可在F5_gate0_bulk_dataset_audit_report.md中提议追加并说明理由，但新增队列必须通过同样的审计标准且获研究者批准后才能纳入。
+
+### S2. F6.3效应量阈值与F3/F4体系的跨节注释
+
+**问题**：F6.3(736行)使用Spearman |rho| 阈值（0.20 weak / 0.20-0.30 moderate / >=0.30 strong）判断免疫关联强度；F3.3/F4.5使用Cliff's delta / matched rank-biserial r（0.20 / 0.33 阈值）判断组间差异。两套阈值适用于不同分析类型（连续相关 vs 组间差异），逻辑上合理。但审阅者通读全文时可能困惑为什么数值不同，特别是0.20在两套体系中含义不同（F3/F4的0.20是"有意义效应量下限"，F6的0.20是"weak升moderate的分界线"）。
+
+**修改位置**：第736行，"才可作为strong_support候选。"这句句号之后、"疑似样本重叠的队列不得作为独立重复。"之前。
+
+**新增内容**（插在两句之间，作为独立一句）：
+> 此处|rho|阈值适用于连续变量相关性分析，与F3.3/F4.5的Cliff's delta和matched rank-biserial r组间差异效应量属于不同统计量体系，阈值数值不应跨节混用或类比。
+
+---
+
+## 修改后确认清单
+
+完成所有修改后，请逐项验证：
+
+1. [ ] W1a: grep `F6必须继承F2-Gate4的interpretation_level` 确认在第722行附近存在
+2. [ ] W1a: 确认新增内容位于"exploratory_immunity_association"之后、"若没有任何allowed_for_F6"之前，不破坏F5 gate = FAIL的阻断逻辑
+3. [ ] W1a: 确认新增句中包含"F6_gate_immunity_report.md和F6_final_claim_control_table.tsv的措辞上限必须受F2-Gate4解释等级约束"
+4. [ ] W1b: 确认F6_core_gene_usage.tsv字段列表中"F5_interpretation_level"和"TME_expression_warning"之间出现"F2_Gate4_interpretation_level"
+5. [ ] W1c: 确认第720行F6_gate_immunity_report.md必述内容中出现"F2-Gate4解释等级"和"MLMOD_high_definition_status"
+6. [ ] W1c: 确认"natural_discrete_subgroup/operational_high_activity_group/exploratory_Q3_group"三个值均出现
+7. [ ] W1c: 确认修改后句子结构通顺——"FAIL，并列出F2-Gate4...，并逐基因列出..."
+8. [ ] W1d: 确认F6_integrated_immunity_summary.tsv字段列表中"F5_gate_status"和"F6_deconvolution_support_tier"之间出现"F2_Gate4_interpretation_level"
+9. [ ] S1: grep `GSE62254/ACRG和GSE84437也应纳入F5.0审计范围` 确认在第669行末尾附近存在
+10. [ ] S1: grep `GSE62254与GSE66229可能存在样本重叠` 确认重叠风险提示存在
+11. [ ] S1: 确认新增内容位于"但不得作为预后验证队列"之后、第670行"在下载任何Bulk数据前"之前
+12. [ ] S2: grep `不同统计量体系，阈值数值不应跨节混用或类比` 确认在第736行附近存在
+13. [ ] S2: 确认新增内容位于"strong_support候选"之后、"疑似样本重叠"之前
+14. [ ] F5其他部分（F5.1-F5.3, 第674-717行）未被误改
+15. [ ] F6其他部分（F6.1-F6.5, 第725-746行）未被误改
+16. [ ] F3.0(525行)和F4.0(602行)的F2-Gate4表述保持不变
+17. [ ] `[TABLE]` / `[/TABLE]` 配平检查（应仍为16/16）
+18. [ ] 两个路径SHA256一致

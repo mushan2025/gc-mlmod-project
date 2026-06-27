@@ -1,0 +1,1022 @@
+﻿Codex 会话增量上下文导出
+文件用途：before_F8.0_round
+会话 ID：019e68d9-9638-7951-8246-0187f2d19091
+源文件：C:\Users\14799\.codex\sessions\2026\05\27\rollout-2026-05-27T17-52-30-019e68d9-9638-7951-8246-0187f2d19091.jsonl
+指定文件名：before_F8.0_round.txt
+基准已有消息最大编号：933
+当前可见消息总数：1003
+本次增量消息数：70（你 18 条，Codex 52 条）
+导出时间：2026-06-11 19:37:09 Asia/Shanghai
+
+整理说明：仅保留你和 Codex 在界面中可见的新增消息；已排除系统/开发者指令、environment_context、工具调用与输出。
+
+================================================================================
+
+[0934] 你 | 2026-06-11 17:32:43 Asia/Shanghai
+继续挑刺下一节
+
+--------------------------------------------------------------------------------
+
+[0935] Codex | 2026-06-11 17:32:58 Asia/Shanghai
+继续往后就是 F7：基因组变异与分子通路深度分析。我先把当前 F7 原文读出来，再按 12 维度挑刺；这一节目前看起来还是导师大纲级，估计需要扩成 Biomni 可执行 SOP。
+
+--------------------------------------------------------------------------------
+
+[0936] Codex | 2026-06-11 17:34:13 Asia/Shanghai
+F7 现在明显还是“大纲”，还不能给 Biomni 执行。我的挑刺会比较狠：这一节如果不重写，很容易变成“把 TCGA 能跑的都跑一遍”，但和我们的核心科学问题连接不够紧。
+
+**F7 总体问题**
+1. 缺少 F7.0 输入准入。
+   F7 应该只分析 `F5_core_gene_selection.tsv` 中 `allowed_for_F7 = TRUE` 的核心基因。F6 不是 F7 的硬依赖，但 F6 的限制结论要作为解释边界。若 F5 没有允许进入 F7 的基因，F7 不能临时换基因。
+
+2. 缺少多组学数据审计。
+   TCGA-STAD 突变、CNV、甲基化、表达、临床样本必须先做 sample barcode 匹配。不能默认所有样本都有 mutation/CNV/methylation。需要输出 `F7_multiomics_sample_matching.tsv`，否则 TMB、CNV、甲基化、表达之间的样本会乱。
+
+3. TCGA 下载不能默认已具备。
+   我们之前知道 TCGA 表达下载不是无脑直链可用。F7 涉及 mutation、CNV、methylation，文件更复杂，必须先让 Biomni 输出 `F7_download_plan.tsv`，获批后再下载或由你上传。
+
+**F7.1 问题**
+1. TMB 分析写得太粗。
+   TMB 不能只是“突变数”。必须规定 MAF 来源、突变类型、是否只算 nonsynonymous coding mutations、分母 Mb 如何定义。还要调整 MSI，因为 MSI-H 会强烈影响 TMB。否则核心基因高表达组 TMB 高，可能只是 MSI 混杂。
+
+2. MSI 不能从表达矩阵随便推断。
+   必须使用 TCGA 已有 MSI 状态、分子分型或可靠临床/分子注释来源。若没有可靠 MSI 字段，只能标记 not_available，不能用免疫分数或 ML 结果代替 MSI。
+
+3. CNV 分析要分清两件事。
+   一是核心基因自身 CNV 是否影响核心基因表达；二是核心基因高低表达组是否有不同 CNV 负荷/特定扩增缺失。前者比较直接，后者更容易受 subtype/purity 混杂。需要分开写。
+
+4. “共突变基因”这个表述有风险。
+   如果核心基因本身很少突变，按“核心基因突变组”分析会没有统计功效。更合理的是：核心基因高/低表达组的突变景观差异，或核心基因表达与 TP53、CDH1、KRAS、ARID1A 等关键突变状态的关联。若某核心基因突变样本数 <10 或突变率 <5%，不得做核心基因突变组主分析。
+
+**F7.2 问题**
+1. GSEA 排序规则没写。
+   应预注册：按核心基因连续表达相关系数排序，或高/低表达组差异统计量排序。禁止跑多个排序方式后挑最漂亮的。还要记录 MSigDB/Reactome/KEGG/Hallmark 版本。
+
+2. GSEA 有循环定义风险。
+   如果通路富集里出现 MLMOD scoring genes、核心候选基因本身，可能只是定义变量驱动富集。必须做 sensitivity：去除核心基因和 MLMOD signature genes 后重新跑或标记 circularity warning。
+
+3. WGCNA 不是任何样本量都能做。
+   WGCNA 对样本量和表达矩阵质量要求高。需要设置最低样本数，例如 matched expression samples <50 不做主分析，<100 只能探索。还要保存 soft threshold、module eigengene、网络对象和参数。
+
+4. 转录调控部分逻辑混在一起。
+   JASPAR 启动子 motif 只能说明“潜在 TF 结合位点”，不能证明调控。TCGA 甲基化能支持“启动子甲基化与表达相关”，但不能验证 TF 结合。建议拆成两条：TF motif/TF activity 探索；DNA methylation-expression 关联分析。
+
+5. 甲基化验证需要非常具体。
+   要规定使用 450K/EPIC 哪种平台、CpG 到 promoter 的映射规则、beta 值处理、核心基因表达匹配、相关方法、多重校正。否则“TCGA甲基化验证”太空泛。
+
+**我建议**
+F7 要重写成：
+`F7.0 输入与多组学样本匹配`
+`F7.1 突变、TMB、MSI 和关键驱动事件关联`
+`F7.2 CNV 与核心基因表达关联`
+`F7.3 GSEA/通路富集`
+`F7.4 WGCNA 共表达模块`
+`F7.5 TF motif/TF activity 与甲基化调控探索`
+`F7.6 综合解释、Gate 和交付文件`
+
+这一节必须从大纲扩成 SOP，不然 Biomni 会自由发挥太多。
+
+--------------------------------------------------------------------------------
+
+[0937] 你 | 2026-06-11 17:34:41 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[0938] Codex | 2026-06-11 17:35:03 Asia/Shanghai
+我会把 F7 从现在的四行大纲扩成可执行的 SOP，并保持我们前面形成的规则：先输入准入和下载计划，再多组学样本匹配，最后才做 TMB/MSI/CNV/GSEA/WGCNA/调控探索和 Gate。改完会同步两份 TXT 并检查表格标签。
+
+--------------------------------------------------------------------------------
+
+[0939] Codex | 2026-06-11 17:35:28 Asia/Shanghai
+我注意到 F7 目前没有自己的图表清单，而 F8 已经占用了 `[TABLE 15]`。这次我会给 F7 增加一张预期图表表，并把 F8 的表顺延为 `[TABLE 16]`；这样结构更完整，但表格总数会从 16 对变成 17 对，这是有意改变。
+
+--------------------------------------------------------------------------------
+
+[0940] Codex | 2026-06-11 17:37:16 Asia/Shanghai
+F7 已经从大纲扩成 SOP，并新增了 F7 图表表，所以表格配对数量会增加。我现在同步到 WPS，并检查 `[TABLE]` / `[/TABLE]`、哈希和 F7/F8 表号。
+
+--------------------------------------------------------------------------------
+
+[0941] Codex | 2026-06-11 17:38:03 Asia/Shanghai
+已按刚才的挑刺把 F7 从大纲扩成可执行 SOP，并同步到两份 TXT：
+
+- [本地 TXT](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+- [WPS TXT](D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群主线研究方案.txt)
+
+主要改动：新增 `F7.0-F7.7`，覆盖输入准入、多组学下载计划、TCGA 样本匹配、TMB/MSI/驱动事件、CNV-expression、GSEA、WGCNA、TF/methylation 调控探索和 F7 gate。还新增了 F7 预期图表 `[TABLE 15]`，所以原 F8 图表顺延为 `[TABLE 16]`。
+
+检查结果：`[TABLE]` / `[/TABLE]` 为 `17/17`；本地与 WPS SHA256 一致：`51AAD678E8995CBC6D8CD2005D130E937D31B7A0E5CD04D116671710AF11672F`。
+
+--------------------------------------------------------------------------------
+
+[0942] 你 | 2026-06-11 17:47:44 Asia/Shanghai
+挑刺F7.0、7.1、7.2
+
+--------------------------------------------------------------------------------
+
+[0943] Codex | 2026-06-11 17:47:56 Asia/Shanghai
+我先把 F7.0-F7.2 的现文再精确读一遍，然后只做挑刺，不改文件。重点会盯三件事：F5/F2 交接是否闭合、多组学文件和样本匹配是否可执行、TMB/MSI/突变关联是否会被混杂或低功效带偏。
+
+--------------------------------------------------------------------------------
+
+[0944] Codex | 2026-06-11 17:48:50 Asia/Shanghai
+F7.0-F7.2 现在已经比大纲强很多，但还有几处我觉得必须继续收紧。
+
+**F7.0 挑刺**
+1. F6 读取条件写得不够准确。
+   现在写“若F6已完成且gate不是FAIL”，但 F6 已拆成两个 gate。这里应该写清楚是读取 `F6_immunity_microenvironment_gate` 和 `F6_immunotherapy_prediction_gate`，不能用一个笼统 gate。
+
+2. `MLMOD_high_definition_status` 的来源不够稳。
+   F7_core_gene_usage.tsv 要输出这个字段，但 F7.0 只要求读取 `F2_gate4_clinical_validation_report.md`，不要求读取 `F2_gate3_high_group_report.md` 或 `MLMOD_high_cell_assignment.tsv`。建议补：必须读取 F2-Gate3 或能明确高 MLMOD 定义状态的文件。
+
+3. 缺少 F7 结论措辞上限。
+   F7 应显式继承 F2-Gate4 和 F5 解释等级。若 F2/F5 只是探索性，F7 不能写“核心机制”，只能写“多组学相关线索”。
+
+4. `allowed_for_F7` 缺少失败处理细节。
+   若 `F5_core_gene_selection.tsv` 缺少 `allowed_for_F7` 字段，Biomni 应暂停询问，而不是默认 TRUE 或 FALSE。
+
+**F7.1 挑刺**
+1. 数据来源优先级没写。
+   TCGA-STAD 可以来自 GDC、UCSC Xena、cBioPortal、Firehose/FireBrowse、MC3 MAF 等，不同来源字段、版本、样本数不一样。必须要求 Biomni 在 `F7_download_plan.tsv` 里说明首选来源和 fallback，不得混用不同来源后不记录。
+
+2. 缺少版本/基因组构建信息。
+   MAF、CNV、甲基化、表达可能是 GRCh37/GRCh38 或不同 pipeline。应在 manifest 或 audit 里记录 `genome_build、data_release、pipeline_version`。
+
+3. 样本匹配还缺 patient-level 决策。
+   现在记录 barcode_rule，但还应明确：主分析以 patient 为单位；多个 tumor aliquot 时如何选择，例如优先 primary tumor、最高质量、最新/最完整组学交集。否则一个病人可能被不同组学用不同样本代表。
+
+4. 缺少样本交集最低门槛。
+   应设门槛：比如 TMB/MSI/CNV-expression/methylation-expression 的 matched samples <30 只能 directional；<20 不做统计主分析。否则低样本交集也会产出看似完整的表。
+
+5. 缺少 per-sample 审计表。
+   `F7_multiomics_sample_matching.tsv` 是匹配表，但 TMB/MSI 等还需要样本级计算表，例如 `F7_sample_level_genomic_features.tsv`，记录每个样本 TMB、mutation_count、MSI_status、subtype、purity、CNV burden 等，方便审计统计结果来源。
+
+**F7.2 挑刺**
+1. TMB 需要更明确的计算规则。
+   “nonsynonymous coding mutations”还不够，应列出包括哪些 Variant_Classification，如 Missense_Mutation、Nonsense_Mutation、Frame_Shift、Splice_Site 等；是否排除 Silent、Intron、UTR 必须写清楚。
+
+2. TMB 分母不能模糊。
+   如果用 TCGA WES 常用近似值，需要写明；如果不能确认分母，就只能用 `mutation_count_proxy`。这个已经写了，但还应要求输出 `TMB_calculation_audit.tsv`。
+
+3. MSI 和分子亚型是强混杂，不只是 warning。
+   MSI-H、EBV、GS、CIN 等 TCGA 分型可能同时影响突变负荷、免疫和基因表达。建议要求主结果和 `MSI/subtype-stratified` 或调整后敏感性结果一起输出；若样本量不够调整，就强制降级。
+
+4. 缺少多重校正范围。
+   TMB、MSI、driver event 关联都要 BH 校正，且需定义 scope：至少 dataset + analysis_type 下全部 gene/event；不能每个基因单独校正后挑显著。
+
+5. 缺少效应量解释标准。
+   Spearman rho、Cliff’s delta、OR/logistic beta 应分别记录，不应只看 p 值。低事件数的 driver event 尤其容易假阳性。
+
+6. 关键驱动事件列表需要可扩展但不能自由发挥。
+   现在列了 TP53、CDH1、ARID1A、KRAS、PIK3CA、ERBB2、RHOA。建议要求 Biomni 在 `F7_driver_event_plan.tsv` 中注明每个事件的胃癌依据和事件类型，新增事件必须获批。
+
+7. “共突变”这个词最好降权。
+   当前方案已经避免以核心基因突变组为主分析，这是对的。建议正文里把“共突变”替换为“关键驱动事件关联”，更准确。
+
+我的建议：F7.0-F7.2 需要小幅加固，不需要推倒重写。重点补：双 Gate 引用、F2-Gate3 来源、TCGA 数据来源/版本、样本交集门槛、样本级 genomic feature 表、TMB 具体分类、多重校正和 subtype/MSI 敏感性规则。
+
+--------------------------------------------------------------------------------
+
+[0945] 你 | 2026-06-11 17:49:26 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[0946] Codex | 2026-06-11 17:49:52 Asia/Shanghai
+我会做一轮“加固式修改”，不重写 F7，只把 F7.0-F7.2 的执行边界补实：双 Gate 读取、F2-Gate3 来源、TCGA 多组学来源版本、样本交集门槛、样本级 genomic feature 表、TMB 分类规则和多重校正范围。
+
+--------------------------------------------------------------------------------
+
+[0947] Codex | 2026-06-11 17:51:20 Asia/Shanghai
+F7.0-F7.2 的加固修改已经写入了。现在我同步 WPS，并检查新增字段、表格配对、哈希一致性，顺便确认 F7 最终交付清单已经补上新增的两个关键表。
+
+--------------------------------------------------------------------------------
+
+[0948] Codex | 2026-06-11 17:51:32 Asia/Shanghai
+检查里发现一个很小的格式瑕疵：`F7_sample_level_genomic_features.tsv` 字段列表里有一个英文逗号混在中文顿号中。我顺手修掉，避免 Biomni 把字段名误读。
+
+--------------------------------------------------------------------------------
+
+[0949] Codex | 2026-06-11 17:51:51 Asia/Shanghai
+小格式修正完成。我再跑最后一次同步和校验，把结果给你。
+
+--------------------------------------------------------------------------------
+
+[0950] Codex | 2026-06-11 17:52:04 Asia/Shanghai
+已按刚才的挑刺修改 F7.0、F7.1、F7.2，并同步到本地和 WPS 两份 TXT。
+
+主要加固点：
+- F7.0：补上 `F2_gate3_high_group_report.md`、`MLMOD_high_definition_status` 来源、F6 双 Gate 引用、`allowed_for_F7` 缺失时必须暂停询问，以及 F2/F5 探索性解释等级对 F7 结论措辞的限制。
+- F7.1：补上 TCGA 多组学来源优先级、fallback 来源、`genome_build/data_release/pipeline_version`、patient-level 代表样本选择规则、样本交集最低门槛，并新增 `F7_sample_level_genomic_features.tsv`。
+- F7.2：补上 TMB 纳入/排除的 `Variant_Classification` 规则，新增 `F7_TMB_calculation_audit.tsv`，要求 MSI/subtype 敏感性分析、多重校正范围，以及关键驱动事件依据和事件类型预注册。
+
+检查结果：`[TABLE]` / `[/TABLE]` 仍为 `17/17`；本地与 WPS SHA256 一致：`6464573F1CBF1D299A3510E4EA7846D5C6D855E77FCA40216D1F5E0B45FC44AC`。
+
+--------------------------------------------------------------------------------
+
+[0951] 你 | 2026-06-11 17:56:47 Asia/Shanghai
+你说一下目前挑刺时都遵循哪些原则或者经验
+
+--------------------------------------------------------------------------------
+
+[0952] Codex | 2026-06-11 17:57:15 Asia/Shanghai
+目前我挑刺主要遵循这几类原则：
+
+1. **先问这一步是否服务核心科学问题**
+   不因为“能跑”就做。每一步都要回答：它是否帮助证明或限定“胃癌 MLMOD 高活性恶性上皮亚群及核心基因的生物学/临床意义”。
+
+2. **区分主证据、补充证据、探索性证据**
+   单细胞、bulk、免疫预测、多组学、通路分析的证据强度不同。不能把探索性结果写成验证，不能把相关性写成机制，不能把预测写成临床获益。
+
+3. **所有关键决策必须可审计**
+   包括数据来源、版本、样本纳排、参数、随机种子、软件版本、输入输出文件、checksum、中间对象。Biomni 不能只口头报告，必须输出表格和 manifest。
+
+4. **防止逻辑循环**
+   例如用 MLMOD signature 定义高低组，又用同一批基因证明 MLMOD 通路富集；用核心基因参与模块评分，又说模块与核心基因相关。凡是有 overlap，都要标记并做去除重叠后的敏感性分析。
+
+5. **防止样本独立性错误**
+   单细胞不能把细胞当患者；bulk 多组学不能把同一 patient 的多个 aliquot 当独立样本；可能重叠的队列不能当独立验证。
+
+6. **统计显著性必须配合效应量和生物学意义**
+   不只看 p 值。要求效应量、FDR、多重校正范围、方向一致性、样本量、低功效警告和解释等级一起判断。
+
+7. **关键混杂必须预先识别**
+   例如肿瘤纯度、TME 组成、MSI、EBV/GS/CIN 分型、平台批次、治疗背景、样本部位。混杂不能只写 warning，要能影响最终解释等级。
+
+8. **Gate 必须能真正阻断**
+   每个 F 节都要有输入准入、审批暂停点、PASS/PASS_WITH_NOTED_LIMITATIONS/FAIL，以及失败时不得自动进入下一节的规则。
+
+9. **Biomni 执行友好但不为简化牺牲严谨性**
+   不是为了让 Biomni 好跑而选低质量方法，而是把方法、fallback、失败处理、审批点和输出字段写清楚，减少它自由发挥。
+
+10. **上下游字段必须闭合**
+   比如 F2-Gate4 解释等级要传到 F3/F4/F5/F6/F7；`allowed_for_F7` 要来自 F5；F6/F7 不能自己换核心基因。
+
+11. **解释边界要提前写死**
+   bulk 相关性不能证明恶性上皮内在机制；TIDE/IPS/SubMap 不能证明免疫治疗获益；JASPAR motif 不能证明 TF 调控；WGCNA 共表达不等于因果。
+
+12. **优先让方案能被未来复现和审计**
+   所以经常要求输出 sample-level 表、参数表、source data、RDS/中间对象、下载计划、manifest、claim control table，而不是只输出最终图。
+
+简单说，我不是在问“这分析能不能做”，而是在问：**做出来以后，能不能支撑我们想写的那句话；如果不能，它最多允许我们写到什么程度。**
+
+--------------------------------------------------------------------------------
+
+[0953] 你 | 2026-06-11 18:08:42 Asia/Shanghai
+这12条都很好，另外还有一个注意事项就是先摸清数据再制定方案，可以参考下面这段：
+## 方案制定前的第一原则：先摸清数据再动手
+
+**在制定任何分析方案之前，必须先对数据集做全面的预审计（data reconnaissance）。** 不要在没看过数据的情况下写死 QC 流程或方法选择。
+
+这条原则来自一个具体教训：在之前的项目中，biomni agent 在 F1 中跳过了 doublet 检测，理由是"author data already QC'd"；但第三方审阅时也差点误判为"完全没做 doublet 检测"——实际上原始数据已包含作者计算好的 `doublet_score` 和 `predicted_doublet` 列。如果一开始就审计了数据的 metadata 结构，双方都不会犯错。
+
+### 通用要求
+
+**F0（数据预审计）的产出应当直接驱动后续方案的具体参数选择。**
+
+#### 单细胞数据审计
+
+1. **全面审计 metadata**：列出所有 obs 列名、每列的 unique values 分布、已有的 QC 列（percent.mt / doublet_score / predicted_doublet / batch 等）、已有的注释列（cell_type / subtype 等）
+2. **确认数据形态**：raw counts 还是 normalized/processed？是否已经过 QC 过滤？还是包含全部 droplets？
+3. **检查原作者的 QC 标准**：原论文/GEO 描述中用了什么 QC 阈值、是否做了 doublet 检测（用了什么工具）、是否做了 ambient RNA 校正、是否已经过滤低质量细胞
+4. **根据审计结果决定方案**，不写死流程：
+   - 原作者已做某 QC 步骤且结果可信 → 方案中只需验证 + 记录，不需要重做
+   - 原作者未做或结果不可信 → 方案中必须加入该步骤
+   - 原作者提供 raw counts → 需要完整 QC 流程
+   - 原作者提供 processed/filtered counts → 需要评估已有 QC 的充分性，明确记录哪些步骤被省略及其理由
+5. **F0 审计结论作为 F1 方案的前置输入**：F1 的 QC 方案应写成"根据 F0 审计结论决定是否需要 X"，而不是"必须做 X"或"可以跳过 Y"
+
+#### Bulk / 临床数据审计
+
+6. **样本量与临床信息完整度**：训练集/验证集的样本数、事件数（死亡/复发）、缺失率、临床变量覆盖度（TNM 分期、分化程度、治疗信息等），在方案制定前确认，而不是执行到预后分析才发现事件数不够
+7. **验证集可用性**：GEO 验证集是否真的包含所需的临床终点和表达数据格式
+8. **平台兼容性**：芯片 vs RNA-seq，基因 ID 格式（symbol / Ensembl / probe），batch 来源
+
+#### 空间转录组数据审计（如适用）
+
+9. **数据格式与可用性**：确认有哪些空间数据可用、与单细胞数据的匹配性（同一癌种/同一数据来源）
+
+### 审计产出
+
+F0 应产出一份结构化的 **数据审计报告**（TSV + 文本摘要），作为后续所有 F 节方案的前置依据。方案中的每个方法选择都应能追溯到审计报告中的具体发现。
+
+## 历史教训清单
+
+以下问题来自之前项目的第三方审阅，作为方案设计时的检查参考。不是所有条目都适用于每个项目——根据 F0 审计结论判断哪些相关。
+
+| # | 曾出现的问题 | 应对原则 |
+|---|-----------|---------|
+| 1 | **未确认已有 QC 就盲目跳过/重做某步骤** | F0 先审计数据已有 QC 信息，根据审计结论决定 |
+| 2 | **未评估 ambient RNA 情况** | F0 审计 cross-expression 水平和原作者校正记录 |
+| 3 | **cell-level DE 导致统计膨胀** | 涉及组间差异表达时使用 pseudobulk（sample/patient 级聚合）|
+| 4 | **候选组合爆炸（笛卡尔积）** | 候选定义数据驱动，不预设交叉组合；先看聚类结构再定义 |
+| 5 | **"独立"评分实际高度重叠（rho>0.95）** | 声称独立的评分/panel 之间不允许大量基因重叠 |
+| 6 | **工具"无法分类"被当作正向证据** | 不同方法独立报告；"无法分类/不确定"≠"支持" |
+| 7 | **方法间不一致悬而未决** | 在产生不一致的分析阶段就生成专门报告并处理，不留到下游 |
+| 8 | **AI agent 单会话上下文过长导致幻觉** | 每个 session 只做一个子任务，输入/输出通过文件传递 |
+| 9 | **输出版本增殖（单步 6 个版本）** | 每步最多 1 个正式输出 + 1 个修订 |
+| 10 | **审计工作量远大于实质分析** | integrity check 精简（≤ 10 项/步），精力放在生物学方法上 |
+
+--------------------------------------------------------------------------------
+
+[0954] Codex | 2026-06-11 18:09:11 Asia/Shanghai
+完全同意，而且这条应该放在前面，作为 **第0原则**：
+
+**先摸清数据，再锁定方案。**
+
+我会把它作为以后挑刺时的第一层判断：任何方法、参数、阈值、是否重做 QC、是否能做某类统计，都不能脱离数据实际形态。也就是说，方案不能写成“必须做 DoubletFinder / 必须做某 QC / 必须跑某模型”，而应写成：
+
+> 先审计数据中已有信息、原作者处理记录、raw/processed 状态、metadata 字段、样本量和缺失情况；再根据审计结果决定执行路径。
+
+这条原则还能帮我们避免两类错误：
+
+1. **盲目重做**
+   比如原作者已经有可信 doublet 检测、QC、过滤结果，我们再重做可能反而引入不一致。正确做法是验证、记录、必要时敏感性分析。
+
+2. **盲目跳过**
+   比如看到“author QC’d”就直接跳过 doublet/ambient/QC 审计，这也是不严谨的。必须先确认 metadata 和论文/GEO 说明里到底有什么。
+
+我会把目前挑刺原则更新成这个结构：
+
+- **第0原则：data reconnaissance first**
+  先审计数据形态、metadata、样本量、已有 QC、临床字段、平台和文件来源，再制定具体方法。
+- **第1-12原则：科学问题、证据等级、可审计性、循环定义、样本独立性、统计与效应量、混杂、Gate、Biomni执行、上下游闭合、解释边界、可复现性。**
+
+对我们当前方案的直接影响是：后面继续挑 F7/F8 时，我会更主动检查每一节有没有类似：
+
+- “先输出 audit/plan，再决定是否执行”
+- “缺字段时暂停询问，不默认”
+- “根据数据结构决定主流程/降级/fallback”
+- “参数来自数据审计，而不是凭空写死”
+
+你这段历史教训清单也很有价值，我会把它当作之后每节挑刺的隐性 checklist，尤其是：cell-level DE、候选组合爆炸、方法不一致处理、agent 单任务边界、输出版本控制这几条。
+
+--------------------------------------------------------------------------------
+
+[0955] 你 | 2026-06-11 18:10:41 Asia/Shanghai
+继续挑刺F7.3、7.4
+
+--------------------------------------------------------------------------------
+
+[0956] Codex | 2026-06-11 18:10:51 Asia/Shanghai
+我会按刚才新增的“先摸清数据再定方案”原则来挑 F7.3/F7.4。这里重点看 CNV 和 GSEA：一个最容易被纯度/分型混杂，一个最容易出现循环定义和排序规则漂移。
+
+--------------------------------------------------------------------------------
+
+[0957] Codex | 2026-06-11 18:11:30 Asia/Shanghai
+F7.3/F7.4 现在方向是对的，但还需要继续加固，尤其是“先摸清数据再决定怎么做”这一条。
+
+**F7.3 CNV 挑刺**
+1. 缺少 CNV 数据预审计表。
+   现在直接进入 CNV-expression 分析，但应先输出 `F7_CNV_data_audit.tsv`，确认数据类型到底是 GISTIC、segment mean、gene-level CNV、thresholded CNV，还是 cBioPortal 派生值。不同数据不能混着解释。
+
+2. CNV 数据来源和基因映射规则还不够硬。
+   如果用 GISTIC，需要明确 focal/broad、thresholded value、gene-level mapping；如果用 segment，需要说明如何把 segment 映射到 gene，例如 overlap gene body、TSS window、最大绝对 segment mean 等。否则 CNV 值不可复现。
+
+3. 缺少 CNV burden 定义。
+   “全基因组或关键区域 CNV 负荷差异”现在没定义。必须预注册：是 fraction genome altered、aneuploidy score、arm-level alteration count、focal event count，还是 GISTIC altered gene count。不能让 Biomni 自己临时选。
+
+4. 需要明确表达-CNV主问题的统计方式。
+   cis CNV-expression 可以用 Spearman 或线性模型，但应记录 CNV 是 ordinal GISTIC 还是 continuous segment mean。GISTIC -2/-1/0/1/2 更像有序变量，不应完全按连续值随便线性解释。
+
+5. 缺少低事件数规则。
+   如果某核心基因扩增/缺失样本极少，比如 deep deletion 或 amplification <5% 或 n<10，就不能做主统计，只能描述频率。
+
+6. 纯度和分子亚型不能只是 warning。
+   CNV 与 CIN subtype、肿瘤纯度高度相关。应要求输出调整或分层敏感性分析；如果无法调整，解释等级降级为 `subtype_or_purity_confounded`。
+
+7. 缺少多重校正范围。
+   `F7_CNV_expression_results.tsv` 现在没有 `p_adjust_scope`。应至少按 `dataset_id + analysis_type` 下全部核心基因和 CNV 指标做 BH。
+
+8. 需要和 F7.1 的样本级表闭合。
+   `F7_sample_level_genomic_features.tsv` 已经记录 `core_gene_CNV_values` 和 `aneuploidy_or_CNV_burden_if_available`，F7.3 应明确所有 CNV 统计必须来自该样本级表或能回溯到它。
+
+**F7.4 GSEA 挑刺**
+1. GSEA 前也要先做表达数据审计。
+   不能默认所有 bulk 矩阵都适合 GSEA。需要确认是否全转录组、基因数、重复基因处理、低表达过滤、平台类型、gene symbol 映射率。建议输出 `F7_GSEA_input_audit.tsv`。
+
+2. 排序规则还可以更具体。
+   “Spearman 或线性模型统计量”二选一会给 Biomni 自由度。建议默认：主分析用核心基因连续表达与全基因表达的 Spearman rho 排序；线性模型或高低组差异作为敏感性。不能两个都跑完后挑结果。
+
+3. 自相关问题没有说清。
+   用某核心基因表达对全基因排序时，核心基因本身必须从 rank list 中去除，否则它会在自身相关分析里制造伪信号。所有 MLMOD scoring genes 也要标记，必要时做去除后敏感性分析。
+
+4. 样本量门槛缺失。
+   GSEA 的相关排序在小样本队列中不稳。应继承 F7.1 样本交集规则：matched expression samples <30 只能方向性探索；<20 不做主统计。
+
+5. gene set 数据库选择要防止过宽。
+   Hallmark、Reactome、KEGG 可以，但不建议一开始就把 GO BP/CC/MF 全铺开，否则多重检验和解释负担很大。GO 可作为补充且需单独标记。
+
+6. 缺少 pathway redundancy 处理。
+   Reactome/KEGG 通路高度重叠。需要输出 `F7_GSEA_pathway_redundancy_summary.tsv` 或在报告中说明相似通路合并解释，避免把同一生物学信号写成十个独立发现。
+
+7. 多队列一致性规则缺失。
+   F7.4 说每个队列单独跑，但没说如何汇总。应新增 `F7_GSEA_cross_dataset_summary.tsv`，记录同一 gene set 在不同队列中的 NES 方向、FDR、是否一致。单队列显著不能直接当主结论。
+
+8. 排序基因数量和覆盖率要设门槛。
+   若 rank list 可用基因数太少、基因集匹配率太低，GSEA 不可靠。建议要求 rank genes ≥5000，gene set matched genes ≥10 且覆盖率达到预设阈值，否则 `not_evaluable` 或 `low_coverage_warning`。
+
+9. 解释边界仍要更硬。
+   GSEA 富集只能说明核心基因表达相关的转录状态，不等于核心基因调控该通路。尤其 WGCNA/GSEA 都是共表达层面证据，不能写机制因果。
+
+建议：F7.3 和 F7.4 都需要小幅加固。重点补 `F7_CNV_data_audit.tsv`、CNV burden 定义、CNV 多重校正、`F7_GSEA_input_audit.tsv`、默认排序规则、跨队列 GSEA 汇总和 pathway redundancy 处理。
+
+--------------------------------------------------------------------------------
+
+[0958] 你 | 2026-06-11 18:13:37 Asia/Shanghai
+先摸清数据再决定怎么做这一条是不是应该放在F0做？这样后边的步骤就都可以使用现成结果了
+
+--------------------------------------------------------------------------------
+
+[0959] Codex | 2026-06-11 18:13:56 Asia/Shanghai
+是的，而且你这个判断是对的：**“先摸清数据再决定怎么做”应该放在 F0，作为所有后续 F 节的共同前置依据。**
+
+但我会稍微优化一下：不是把所有具体数据都在 F0 一次性彻底审完，而是把 F0 设计成两层。
+
+**第一层：F0 全局数据预审计**
+F0 负责建立项目级数据地图，回答：
+
+- 有哪些数据集？
+- 每个数据集是什么类型：scRNA、bulk、clinical、mutation、CNV、methylation、spatial？
+- 文件是否已下载/上传？
+- 是 raw、filtered、processed 还是 normalized？
+- metadata/clinical 字段有哪些？
+- 样本量、患者数、细胞数、事件数大概是多少？
+- 是否有作者已有 QC、doublet、cell type annotation、clinical endpoint、platform annotation？
+- 哪些数据能支撑哪些 F 节？
+- 哪些数据需要后续 F 节再详细审计？
+
+输出可以是：
+
+- `F0_dataset_inventory.tsv`
+- `F0_file_manifest.tsv`
+- `F0_metadata_field_inventory.tsv`
+- `F0_clinical_field_inventory.tsv`
+- `F0_data_readiness_by_F_section.tsv`
+- `F0_author_processing_audit.tsv`
+- `F0_global_data_reconnaissance_report.md`
+
+**第二层：各 F 节专项审计**
+F0 不需要把每个分析细节全部审完。比如：
+
+- F1 再做单细胞 QC/metadata 深度审计；
+- F5 再做 bulk 生存终点和临床字段深度审计；
+- F6 再做免疫算法所需全转录组矩阵审计；
+- F7 再做 mutation/CNV/methylation 样本匹配审计。
+
+这样最稳：F0 提供“地图和准入依据”，各 F 节根据 F0 结果做“专项执行审计”。
+
+所以后续方案里的写法应该从：
+
+> F7 先审计数据，再决定方法
+
+优化成：
+
+> F7 必须读取 F0 的全局数据预审计结果；若 F0 已证明相关数据可用，则进入 F7 专项审计；若 F0 未覆盖或数据状态改变，则先补充 F7 专项审计并更新 F0/manifest。
+
+这样不会让 F0 变成无限大的总任务，也不会让后面每节凭空摸数据。
+
+我建议之后要回头补 F0：把 `data reconnaissance first` 明确写成 F0 的核心任务，并让 F1-F8 都引用 F0 的数据地图。F7.3/F7.4 仍然可以继续加固，但“通用摸底原则”应该前移到 F0。
+
+--------------------------------------------------------------------------------
+
+[0960] 你 | 2026-06-11 18:14:30 Asia/Shanghai
+同意，先按你说的改F7.3、7.4
+
+--------------------------------------------------------------------------------
+
+[0961] Codex | 2026-06-11 18:14:52 Asia/Shanghai
+我会先把 F7.3/F7.4 按刚才的具体问题补实：CNV 先做数据审计和 burden 定义，GSEA 先做输入审计和固定主排序规则。F0 的“全局数据预审计”我们后面再统一回补，避免这次改动跨太多节。
+
+--------------------------------------------------------------------------------
+
+[0962] Codex | 2026-06-11 18:15:12 Asia/Shanghai
+我看到当前 F0 已经有 `data_audit.tsv`，但它目前主要服务 F1 单细胞准入。F7.3/F7.4 这次我会保留专项审计表，后面再把 F0 升级成全局数据地图，让 F7 可以读取 F0 结果并只补缺口。
+
+--------------------------------------------------------------------------------
+
+[0963] Codex | 2026-06-11 18:16:53 Asia/Shanghai
+F7.3/F7.4 已经按审计优先、固定主规则、跨队列汇总和解释边界加固。现在我同步到 WPS，并做表格、哈希和新增输出名检查。
+
+--------------------------------------------------------------------------------
+
+[0964] Codex | 2026-06-11 18:17:06 Asia/Shanghai
+已按你的确认修改 F7.3 和 F7.4，并同步到本地与 WPS 两份 TXT。
+
+主要加固点：
+- F7.3：新增 `F7_CNV_data_audit.tsv` 和 `F7_CNV_burden_definition.tsv`，要求先确认 CNV 数据类型、GISTIC/segment 含义、基因映射、CNV burden 定义，再做 CNV-expression 分析；补上低事件数、CIN/纯度混杂、多重校正和样本级表回溯。
+- F7.4：新增 `F7_GSEA_input_audit.tsv`、`F7_GSEA_cross_dataset_summary.tsv`、`F7_GSEA_pathway_redundancy_summary.tsv`；固定主排序规则为核心基因连续表达与全基因表达的 Spearman rho；要求移除核心基因自身、标记 MLMOD signature overlap、处理通路冗余和跨队列一致性。
+
+检查结果：`[TABLE]` / `[/TABLE]` 仍为 `17/17`；本地与 WPS SHA256 一致：`911240170033A61973127931D5C0EABE59D934AD3EF925D60ED1AF1E6C7BAF49`。
+
+--------------------------------------------------------------------------------
+
+[0965] 你 | 2026-06-11 18:19:29 Asia/Shanghai
+挑刺F7.5与7.6
+
+--------------------------------------------------------------------------------
+
+[0966] Codex | 2026-06-11 18:19:38 Asia/Shanghai
+我继续按同一套原则挑 F7.5/F7.6，尤其会看：WGCNA 是否被当成“必做机制”、TF/methylation 是否越界成因果、以及这些分析是否先审计数据和资源再执行。
+
+--------------------------------------------------------------------------------
+
+[0967] Codex | 2026-06-11 18:20:15 Asia/Shanghai
+F7.5/F7.6 的方向是对的，但现在仍偏“能跑什么就跑什么”，需要再加几道闸。
+
+**F7.5 WGCNA 挑刺**
+1. 还缺 WGCNA 输入审计表。
+   现在有 `F7_WGCNA_qc_plan.tsv`，但更像运行计划，不是数据预审计。建议加 `F7_WGCNA_input_audit.tsv`，记录表达矩阵是否全转录组、样本数、基因数、缺失值、重复基因处理、低表达过滤、批次信息、离群样本、是否适合 WGCNA。
+
+2. 样本离群点处理没写。
+   WGCNA 对 outlier 很敏感。应要求先做 sample clustering/PCA，输出离群样本报告。离群样本排除必须有预设规则和研究者批准，不能跑完后随意删。
+
+3. 批次和平台问题没处理。
+   WGCNA 最好在单一平台/单一队列内做。不能跨 TCGA RNA-seq 和 GEO microarray 合并。若队列内有 batch，需要说明是否校正；若 batch 与临床/分型高度混杂，WGCNA 只能探索。
+
+4. `>=100` 还不等于适合主分析。
+   还要看有效样本是否同质、基因数是否足够、scale-free topology 是否合理、模块是否稳定。建议把 “>=100 可作为主探索分析” 改成 “满足样本量和网络质量指标后才可作为主探索分析”。
+
+5. 缺少模块稳定性/敏感性分析。
+   至少应要求记录不同 gene_filter_rule、soft power 或 bootstrap/重采样下模块是否稳定。否则一个模块可能只是参数产物。
+
+6. Hub gene 容易被过度解释。
+   WGCNA hub 是共表达网络中心，不等于调控因子。应明确 hub genes 只能作为共表达候选，不得写成上游驱动基因。
+
+7. 模块-核心基因关系需要区分两种情况。
+   一种是核心基因属于某模块；另一种是模块 eigengene 与核心基因表达相关。这两个证据强度不同，字段里应分开。
+
+8. 还缺跨数据集验证规则。
+   如果只在 TCGA 做 WGCNA，不能说模块稳健。可要求在外部队列做 module score preservation 或 module eigengene 方向验证；做不了则降级。
+
+**F7.6 TF / methylation 挑刺**
+1. TF motif 分析前缺少启动子定义计划。
+   必须先写清楚 promoter 是 TSS ±1kb、±2kb、还是其他范围；TSS 来源是 GENCODE/Ensembl/UCSC 哪个版本。不同定义会影响 motif 结果。
+
+2. JASPAR motif 证据太弱，需要分级。
+   motif presence 只能是最低级证据。更强一点的是 TF 表达与核心基因表达相关、TF activity 与核心基因相关、F3 SCENIC 支持、公开 ChIP/ENCODE 支持。应设置证据等级。
+
+3. TF activity 数据适配性没写。
+   DoRothEA/VIPER 多用于 bulk 表达，SCENIC 来自单细胞 regulon，二者不能混成同一证据。需要 `evidence_context` 字段区分 single-cell regulon、bulk TF activity、motif prediction、database target。
+
+4. TF 候选也要防循环。
+   如果 TF 是 MLMOD signature gene、核心候选基因，或与评分定义高度重叠，应标记 circularity warning。
+
+5. 甲基化分析缺少输入审计表。
+   建议加 `F7_methylation_data_audit.tsv`，记录平台、CpG数、样本数、表达匹配数、beta值范围、缺失率、probe过滤、SNP/cross-reactive probe处理、promoter CpG覆盖情况。
+
+6. promoter CpG 多个探针怎么汇总还不够。
+   现在只有 `multiple_CpG_summary_rule` 字段，但没规定默认策略。建议默认逐 CpG 分析 + promoter summary 敏感性；不要只取最显著 CpG。
+
+7. 甲基化与表达相关要控制 CNV/纯度/分型。
+   核心基因表达可能由 CNV、MSI/EBV/CIN/GS 或纯度驱动。甲基化负相关如果不调整这些，只能是 epigenetic hint。
+
+8. 甲基化方向要符合生物学位置。
+   promoter hypermethylation 与表达负相关比较合理；gene body methylation 的解释不同。需要区分 promoter、enhancer、gene body，不要都叫“甲基化调控”。
+
+9. TF 与 methylation 两条线的综合规则缺失。
+   如果 motif、TF activity、methylation 三者支持同一方向，证据可稍强；如果互相矛盾，需要降级并写明。建议加 `F7_regulation_evidence_integration.tsv`。
+
+10. 多重校正范围不足。
+   TF 候选、CpG-expression 相关都要明确 BH scope。尤其多个 TF、多个 motif、多个 CpG 时，不能每个核心基因单独挑最显著。
+
+建议：F7.5/F7.6 需要小幅加固，重点补 `F7_WGCNA_input_audit.tsv`、模块稳定性/外部验证、`F7_methylation_data_audit.tsv`、TF证据等级、甲基化多CpG策略、以及 `F7_regulation_evidence_integration.tsv`。
+
+--------------------------------------------------------------------------------
+
+[0968] 你 | 2026-06-11 18:20:53 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[0969] Codex | 2026-06-11 18:21:12 Asia/Shanghai
+我会把 F7.5/F7.6 加固成“先审计、再决定是否运行、再限定解释”的结构。WGCNA 会补输入审计、离群点和稳定性；TF/甲基化会补启动子定义、证据等级、甲基化数据审计和调控证据整合表。
+
+--------------------------------------------------------------------------------
+
+[0970] Codex | 2026-06-11 18:22:35 Asia/Shanghai
+F7.5/F7.6 已经改入正文了。我现在同步到 WPS，并检查表格配对、哈希、以及新增的 WGCNA/调控审计文件是否都进入最终交付清单。
+
+--------------------------------------------------------------------------------
+
+[0971] Codex | 2026-06-11 18:22:47 Asia/Shanghai
+已按你的要求修改 F7.5 和 F7.6，并同步到本地与 WPS 两份 TXT。
+
+这次主要加固了两块：
+
+- F7.5：新增 `F7_WGCNA_input_audit.tsv`，要求先审计表达矩阵、离群样本、batch 和资源；补充模块稳定性 `F7_WGCNA_module_stability.tsv`、外部验证 `F7_WGCNA_external_validation.tsv`，并明确 WGCNA hub 不能写成上游调控因子。
+- F7.6：新增 `F7_TF_regulatory_region_plan.tsv`、`F7_methylation_data_audit.tsv` 和 `F7_regulation_evidence_integration.tsv`；把 TF motif、TF activity、SCENIC/数据库/ChIP、甲基化证据分级整合，限制单一 motif 或单一甲基化相关性只能作为探索线索。
+
+检查结果：`[TABLE]` / `[/TABLE]` 仍为 `17/17`；本地与 WPS SHA256 一致：`BFF6834983E56AAC5E5D1B42C90546DE3005CD2DB321D7E3AF308F87CE9298BB`。
+
+--------------------------------------------------------------------------------
+
+[0972] 你 | 2026-06-11 18:24:53 Asia/Shanghai
+挑刺一下整个F7
+
+--------------------------------------------------------------------------------
+
+[0973] Codex | 2026-06-11 18:25:04 Asia/Shanghai
+我会把 F7 当成一个整体来审，而不是逐小节重复挑。重点看上下游闭合、文件清单是否自洽、Gate 是否能阻断、以及 F7 是否已经因为过度审计变得不利于 Biomni 执行。
+
+--------------------------------------------------------------------------------
+
+[0974] Codex | 2026-06-11 18:26:29 Asia/Shanghai
+F7 现在已经很扎实，但整体看还有几个结构性问题。不是方法方向错，而是需要让它更像“可执行、可降级、可审计”的 Biomni 任务，而不是一口气堆满所有多组学分析。
+
+**总体问题**
+1. **F7 还没有显式读取 F0 数据地图。**
+   我们刚刚确认“先摸清数据再决定方案”应放到 F0。那 F7.0 以后应读取 `F0_dataset_inventory.tsv`、`F0_data_readiness_by_F_section.tsv`、`F0_global_data_reconnaissance_report.md`。否则 F7 仍是在本节内部重新摸数据，没有真正复用 F0 的全局预审计。
+
+2. **F7 的 mandatory 和 conditional 输出需要分层。**
+   现在交付清单很长，很多文件是“若运行才有意义”，例如 WGCNA、methylation、TF motif。建议区分：
+   - 必须输出：输入审计、下载计划、样本匹配、样本级特征表、integrated summary、gate report、manifest。
+   - 条件输出：TMB、CNV、GSEA、WGCNA、TF、methylation 结果表。
+   条件输出如果未运行，应输出 `not_evaluable` 状态，而不是强行生成空结果。
+
+3. **F7 需要一个总方法执行计划。**
+   现在有下载计划，但缺 `F7_method_execution_plan.tsv`。F7.1 审计完真实数据后，Biomni 应先列出哪些分析可做、哪些不可做、哪些降级、每项用什么输入和参数，等待批准后再跑 F7.2-F7.6。
+
+4. **公共数据库资源没有统一审计。**
+   F7 会用 MSigDB、Reactome、KEGG、JASPAR、DoRothEA、ENCODE/ChIP、可能还有 cBioPortal/GDC/Xena。应加 `F7_external_resource_audit.tsv`，记录数据库版本、访问日期、许可/登录要求、下载来源、失败 fallback。否则 Biomni 可能临时换来源。
+
+5. **F7 gate 现在太“一锅端”。**
+   `F7_multiomics_gate` 同时管 mutation/CNV/methylation/GSEA/WGCNA/TF。建议至少在 gate report 内拆出子状态：
+   - `F7_genomic_epigenomic_status`
+   - `F7_pathway_status`
+   - `F7_regulation_status`
+   - `F7_integrated_claim_status`
+   不一定要拆成多个正式 Gate，但报告里要分层，否则某一块失败会污染整个 F7 解释。
+
+6. **F7 PASS 条件可能偏硬。**
+   现在要求“至少一种基因组或表观基因组分析 + 一种通路/调控分析”。如果只有 TCGA 表达和 GSEA 可用，但 mutation/CNV/methylation不可用，F7 应该是 `PASS_WITH_NOTED_LIMITATIONS`，不是完全 FAIL。建议明确不同可用组合对应的解释等级。
+
+7. **缺少 F7 claim control table。**
+   F6 有 `F6_final_claim_control_table.tsv`，F7 也应该有 `F7_final_claim_control_table.tsv`，列出允许写什么、不允许写什么。F7 特别容易把“相关线索”写成“机制”，必须控措辞。
+
+8. **统计模型资格还不够明确。**
+   TMB/CNV/methylation/driver event 都有 covariate adjustment，但没写事件数或样本数是否足够。应增加规则：例如 logistic/Cox/多变量模型需要最低事件数；不足时只做未调整或方向性分析。
+
+9. **外部队列角色还需明确。**
+   F7 多组学基本依赖 TCGA；GEO 外部队列多半只能做表达/GSEA/WGCNA module score 验证。应明确：外部 GEO 不具备 mutation/CNV/methylation 时不得被写成多组学验证队列。
+
+10. **F7 和 F8 的关系要更清楚。**
+   F7 完成后暂停是对的，但 F7 不应完全阻断 F8 的单细胞深度分析。更合理：F7 未通过时，不得把 F7 结果带入 F8 机制叙事；但 F8 是否继续应由 F5/F6/F7 gate 和研究者共同决定。
+
+11. **图表清单已落后于正文复杂度。**
+   F7 现在新增了 CNV audit、GSEA redundancy、regulation integration、WGCNA stability，但图7-1至图7-10没完全覆盖。建议加或调整图：F7 claim control / evidence integration、GSEA cross-dataset consistency、regulatory evidence integration。
+
+12. **F7 有轻微过度审计风险。**
+   当前质量很高，但 Biomni 执行可能负担大。应在 F7.0 增加一句：每个子分析最多一个正式主输出版本和一个修订版本；每个子步骤 integrity check 控制在 ≤10 项，避免审计工作量淹没分析本身。
+
+**我建议下一轮修改**
+重点不改每个算法细节，而是补 F7 的“总控层”：
+
+- 读取 F0 数据地图；
+- 新增 `F7_method_execution_plan.tsv`；
+- 新增 `F7_external_resource_audit.tsv`；
+- 新增 `F7_final_claim_control_table.tsv`；
+- 在 F7.7 里分层记录 genomic/pathway/regulation/integrated 状态；
+- 把 mandatory / conditional 输出说清楚；
+- 明确 F7 对 F8 的阻断边界。
+
+这样 F7 会更稳，也更适合 Biomni 一节一节执行。
+
+--------------------------------------------------------------------------------
+
+[0975] 你 | 2026-06-11 18:27:03 Asia/Shanghai
+先按你说的改，然后挑刺一下F0
+
+--------------------------------------------------------------------------------
+
+[0976] Codex | 2026-06-11 18:27:20 Asia/Shanghai
+我会先改 F7 的“总控层”，不再继续往每个算法里塞细节：补 F0 数据地图引用、F7 总方法计划、外部资源审计、claim control、子状态和 F8 边界。改完同步两份 TXT 后，再单独挑刺 F0。
+
+--------------------------------------------------------------------------------
+
+[0977] Codex | 2026-06-11 18:27:50 Asia/Shanghai
+F7 总控层我会改得轻一点：不推翻已写好的 F7.2-F7.6，只在 F7.0/F7.1/F7.7 和图表清单里补“读 F0 数据地图、总方法计划、外部资源审计、claim control、条件输出分层和 F8 边界”。
+
+--------------------------------------------------------------------------------
+
+[0978] Codex | 2026-06-11 18:29:16 Asia/Shanghai
+F7 总控层已补完。我现在同步 WPS、检查表格和关键新增文件名，然后继续读 F0 剩余部分，准备给你 F0 的整体挑刺。
+
+--------------------------------------------------------------------------------
+
+[0979] Codex | 2026-06-11 18:29:25 Asia/Shanghai
+F7 修改和校验都过了。我已读完整 F0 主体，接下来给你挑刺：F0 目前服务 F1 很强，但作为全项目“数据预审计中枢”还不够，这会影响我们刚才给 F7 加的全局数据地图引用。
+
+--------------------------------------------------------------------------------
+
+[0980] Codex | 2026-06-11 18:30:04 Asia/Shanghai
+已先按我说的改完 F7，并同步到两份 TXT。
+
+F7 改动重点：
+- 新增/要求 `F7_method_execution_plan.tsv`：F7.1 审计后先决定哪些模块可做、哪些降级、哪些不可评估，获批后才跑 F7.2-F7.6。
+- 新增 `F7_external_resource_audit.tsv`：统一审计 MSigDB、Reactome、KEGG、JASPAR、DoRothEA、ENCODE/ChIP、GDC、Xena、cBioPortal、MC3 等资源。
+- 新增 `F7_final_claim_control_table.tsv`：控制 F7 允许写什么、不允许写什么。
+- F7 gate report 分层记录 `F7_genomic_epigenomic_status`、`F7_pathway_status`、`F7_regulation_status`、`F7_integrated_claim_status`。
+- 明确 mandatory / conditional 输出，未运行模块必须写 `not_evaluable`，不能强行生成伪结果。
+- 明确 F7 不机械阻断 F8：F7 失败时，F8 仍可经批准继续，但不能引用 F7 作为机制支持。
+- F7 图表从约 10 图更新为约 12 图。
+
+检查结果：`[TABLE]` / `[/TABLE]` 为 `17/17`；本地和 WPS SHA256 一致：`FFDCE2DAE6DD1564915A85E2DE7E09BB1439B7B42B89F48234BB41D3151B8298`。
+
+**F0 整体挑刺**
+F0 目前作为“F1 单细胞准入准备”写得很细，但作为“全项目数据预审计中枢”还不够。现在最大问题是：F0 只强力服务 GSE183904/F1，没有为 F5-F7 的 bulk、clinical、mutation、CNV、methylation、external resource 建立全局数据地图。
+
+1. **F0 目标太窄。**
+   当前目标写的是“进入 Seurat 分析前”。这适合旧版 F0，但现在我们已经确定 F0 应承担 `data reconnaissance first`。应改成：F0 不只服务 F1，还要建立全项目数据地图，为 F1-F8 提供数据状态、文件状态和可用性边界。
+
+2. **缺少全局数据地图输出。**
+   应新增：
+   - `F0_dataset_inventory.tsv`
+   - `F0_file_manifest.tsv`
+   - `F0_data_readiness_by_F_section.tsv`
+   - `F0_global_data_reconnaissance_report.md`
+   - `F0_external_resource_inventory.tsv`
+
+3. **`data_audit.tsv` 名称太泛，但实际只审 GSE183904 单细胞矩阵。**
+   建议保留 `data_audit.tsv` 给 F1，但明确它是 `F0_scRNA_matrix_audit.tsv` 或至少在字段中标明 `audit_scope = scRNA_GSE183904_matrix_format`。否则后续 F7 看到 data_audit 会误以为 bulk/multiomics 也审过。
+
+4. **F0.1 文件清单没有 bulk/multiomics 准备文件。**
+   我们本地已经有 bulk GEO、平台注释、TCGA survival、SCENIC、inferCNV 等资源，但 F0 只把 SCENIC 单独列了。F0 应把“预上传资源清单”作为正式输入，例如 `preupload_resources_manifest.tsv` 和 `preupload_pending_resources.tsv`。
+
+5. **F0.2 目录结构有 F5-F7 目录，但 F0 审计产出没有覆盖它们。**
+   目录已经预留 `results/F5_bulk_marker/`、`results/F7_genomics_pathway/`，但 F0 没有告诉 Biomni 哪些资源已存在、哪些到对应 F 再上传、哪些不能提前用。需要 `F0_data_readiness_by_F_section.tsv` 解决。
+
+6. **F0.3 写死“主线数据集只使用 GSE183904”容易误导。**
+   对 F1 主线是对的，但对整个项目不对。建议改成“F0-F1单细胞主线数据集只使用 GSE183904；F2-F7 可按后续节审批使用 GSE235046、bulk GEO、TCGA 等外部验证/补充资源”。
+
+7. **缺少 metadata 全字段 inventory。**
+   现在 F0 主要要求建 `sample_info.tsv`，但没有要求输出原始 GEO metadata 所有字段、unique values 和缺失率。应新增 `F0_metadata_field_inventory.tsv`，这正是我们刚才说的 doublet_score 教训对应的核心文件。
+
+8. **缺少作者处理/QC 记录审计。**
+   F0 应要求输出 `F0_author_processing_audit.tsv`，记录原文/GEO 是否说明 QC、过滤、doublet、ambient RNA、normalization、annotation。这样 F1 才能决定“验证+记录”还是“重做/补做”。
+
+9. **F0 对已有注释列的审计不够。**
+   如果数据有作者 cell_type/subtype/cluster/doublet 等列，应全部列出来。虽然 GSE183904 当前是 CSV 矩阵为主，但若 metadata 或后续对象提供作者标签，F0/F1 应先审计字段，而不是等 F1 注释后才比较。
+
+10. **Bulk / 临床数据预审计缺位。**
+   F5 之前最好至少知道哪些 bulk 队列已预下载、是否有表达矩阵、平台、临床字段、OS/event、样本数。F0 不需要深审，但要建立 inventory。否则 F5/F6/F7 会重复摸数据。
+
+11. **F0 gate 只判断能否进入 F1。**
+   这可以保留，但应新增“全项目数据地图完成状态”。例如 F0 gate 可以分两层：`F0_scRNA_F1_gate` 和 `F0_project_data_inventory_status`。后者即便不完整，也要明确哪些 F 节需要后续专项审计。
+
+12. **F0 没有明确“后续 F 节若发现数据状态变化，必须回填 F0/manifest”。**
+   这个对全项目一致性很重要。比如 F7 新下载 TCGA CNV，应该追加到全局 manifest，而不是只存在 F7 局部文件中。
+
+我的建议：下一步应先改 F0，不是大重写，而是把它从“F1准备”升级为“F1准备 + 全项目数据地图”。新增 F0.8 或把 F0.1/F0.7 扩展都可以，但我更倾向新增：
+
+`F0.8 全项目数据预审计与后续F节数据地图`
+
+这样不会破坏已经定稿的 F0.1-F0.7。
+
+--------------------------------------------------------------------------------
+
+[0981] 你 | 2026-06-11 19:04:21 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[0982] Codex | 2026-06-11 19:04:46 Asia/Shanghai
+我会把 F0 从“只服务 F1 的单细胞准备”扩成“F1准入 + 全项目数据地图”。为了不扰乱已经稳定的 F0.1-F0.7，我会新增 F0.8，并在目标、文件清单、F0.3、F0.7 里做少量衔接修改。
+
+--------------------------------------------------------------------------------
+
+[0983] Codex | 2026-06-11 19:05:07 Asia/Shanghai
+我现在开始改 F0。核心思路是保留 `data_audit.tsv` 服务 F1 的既有含义，同时新增项目级 inventory/readiness 文件，避免把单细胞矩阵审计和 bulk/multiomics 数据地图混在一张表里。
+
+--------------------------------------------------------------------------------
+
+[0984] Codex | 2026-06-11 19:06:07 Asia/Shanghai
+刚才补丁因为最后一处上下文我写成了不存在的 `allowed_level`，整块没有落地。我会拆成几段小补丁重新应用，降低这种格式误差。
+
+--------------------------------------------------------------------------------
+
+[0985] Codex | 2026-06-11 19:07:16 Asia/Shanghai
+F0 的表格、目录和数据边界已经更新了。接下来我会加 F0.8 的完整段落，并把 F0.7 的 gate 改成“双层状态”：F1 准入与全项目数据地图状态分开。
+
+--------------------------------------------------------------------------------
+
+[0986] Codex | 2026-06-11 19:08:02 Asia/Shanghai
+F0.8 已新增，F0.7 也改成双层 gate 了。我还要修一个衔接点：F0 内部子节范围现在应从 F0.1-F0.7 更新为 F0.1-F0.8。
+
+--------------------------------------------------------------------------------
+
+[0987] Codex | 2026-06-11 19:08:34 Asia/Shanghai
+现在做同步和一致性检查。我会重点确认：表格标签数量没坏、F0.8 存在、F7 引用的 F0 文件名现在确实在 F0 中定义、本地和 WPS 哈希一致。
+
+--------------------------------------------------------------------------------
+
+[0988] Codex | 2026-06-11 19:08:57 Asia/Shanghai
+已按你的确认修改 F0，并同步到本地与 WPS 两份 TXT。
+
+这次主要改动：
+- F0 目标从“进入 Seurat 前准备”升级为“F1 单细胞准入 + 全项目数据预审计地图”。
+- 新增 F0.8：`全项目数据预审计与后续F节数据地图`。
+- 新增/纳入输出：`F0_dataset_inventory.tsv`、`F0_file_manifest.tsv`、`F0_metadata_field_inventory.tsv`、`F0_author_processing_audit.tsv`、`F0_data_readiness_by_F_section.tsv`、`F0_external_resource_inventory.tsv`、`F0_global_data_reconnaissance_report.md`。
+- 明确 `data_audit.tsv` 只服务 GSE183904 单细胞矩阵准入，不代表 bulk/multiomics 已审计。
+- F0 gate 改成两层：`F0_scRNA_F1_gate` 和 `F0_project_data_inventory_status`。
+- F0-F1 主线数据集仍是 GSE183904，但 F2-F7 的外部数据作为后续候选资源进入 inventory，不自动进入主分析。
+
+检查结果：`[TABLE]` / `[/TABLE]` 仍为 `17/17`；本地与 WPS SHA256 一致：`5CD3BCD6D83380913D4D20A64A505B1E129413818E2E025BD75BB14BE41EC8C3`。
+
+--------------------------------------------------------------------------------
+
+[0989] 你 | 2026-06-11 19:09:43 Asia/Shanghai
+挑刺F8
+
+--------------------------------------------------------------------------------
+
+[0990] Codex | 2026-06-11 19:09:53 Asia/Shanghai
+我来审 F8。它目前应该还是导师大纲级别，风险点会更集中在“单基因深度分析容易过度解释成机制”、虚拟敲除是否方法学成立、以及 CellChat 分组是否会被样本量和组成差异带偏。
+
+--------------------------------------------------------------------------------
+
+[0991] Codex | 2026-06-11 19:10:41 Asia/Shanghai
+F8 现在仍是导师大纲级，不能直接给 Biomni 执行。最大问题是：它把“表达展示、自然共表达、虚拟扰动、通讯差异”混在一起，容易把观察性单细胞结果写成机制因果。
+
+**总体问题**
+1. 缺少 F8.0 输入准入。
+   F8 必须只分析 `F5_core_gene_selection.tsv` 中 `allowed_for_F8 = TRUE` 的核心基因。还应读取 F1 恶性上皮对象、F2 MLMOD 标签、F5 解释边界、F6/F7 claim control。若 F5 失败或没有 allowed gene，F8 不得临时换基因。
+
+2. 缺少解释边界。
+   F8 不能证明“核心基因驱动亚群形成”“核心基因诱导通讯变化”。最多是单细胞层面的表达定位、共表达、状态关联和机制假设。除非有真实扰动实验，否则不能写因果。
+
+3. 缺少分阶段 gate。
+   F8 风险很高，建议拆成：
+   - F8.0 输入准入
+   - F8.1 单细胞表达定位
+   - F8.2 核心基因与 MLMOD/通路状态关联
+   - F8.3 条件性 in silico perturbation
+   - F8.4 单基因高低表达 CellChat
+   - F8.5 综合解释和 gate
+
+**F8.1 表达特征问题**
+1. FeaturePlot/VlnPlot 只是可视化，不是统计证据。
+   必须输出样本级或 cluster-level 统计表，不能只看图。
+
+2. 跨细胞类型比较不能用 cell-level p 值。
+   应使用 sample-level pseudobulk 或至少按 sample 聚合，避免把几万个细胞当独立样本。
+
+3. 要区分“恶性上皮表达”和“TME细胞表达”。
+   若核心基因主要表达在免疫/基质细胞，F8 不能写成恶性上皮内在标志基因。
+
+4. 与 MLMOD_Score 共表达有循环风险。
+   如果核心基因属于 MLMOD signature 或高 MLMOD marker 来源，相关性可能是定义驱动。必须做 leave-one-out score 或标记 circularity warning。
+
+**F8.2 虚拟敲除问题**
+1. “Seurat 中把表达置零”不严谨。
+   这不能模拟真实基因敲除，只是人为改矩阵；不能重新解释为细胞状态改变，更不能当作扰动实验。
+
+2. MAST 不能分析“敲除后差异表达”。
+   没有真实 KO 细胞时，MAST 只能比较自然高/低表达细胞，仍是关联分析。
+
+3. CellOracle 有前提。
+   需要可用 GRN、TF-motif、表达矩阵和合适物种数据库。若没有 ATAC 或可靠先验网络，结果只能是低强度预测。
+
+4. 建议把“虚拟基因敲除”改名。
+   更严谨叫 `in_silico_perturbation_hypothesis`。如果工具和前提不满足，F8.2 应为 not_evaluable，而不是强行做。
+
+**F8.3 CellChat 问题**
+1. 高低表达分组不能简单全局 median。
+   全局 median 可能把不同样本、组织部位、PM/Primary 差异混进去。应默认在 Primary_Tumor 恶性上皮中做主分析，tumor-all 或 PM 只做敏感性/方向性。
+
+2. 需要样本覆盖门槛。
+   高表达组和低表达组必须都有足够 sample 覆盖，不能一个组主要来自少数患者。否则 CellChat 差异只是样本组成差异。
+
+3. CellChat 是细胞群通信推断，不是样本层统计。
+   需要配套 sample-level ligand/receptor pseudobulk 验证。否则不能说“核心基因高表达增强某通讯轴”。
+
+4. 高低组细胞数量差异要处理。
+   需要 downsampling、min.cells、bootstrap 或敏感性分析，否则通讯强弱会被细胞数影响。
+
+5. F4 已经做过主 CellChat。
+   F8 应定位为“围绕核心基因的单基因补充通讯分析”，不能与 F4 主通讯机制重复或冲突。若冲突，应降级。
+
+**建议重写结构**
+F8 应整体重写为 SOP：
+
+- `F8.0 输入准入、核心基因和解释边界`
+- `F8.1 核心基因单细胞表达定位和样本级统计`
+- `F8.2 核心基因与 MLMOD/通路状态关联，含循环定义控制`
+- `F8.3 条件性 in silico perturbation，仅在前提满足时执行`
+- `F8.4 核心基因高低表达 CellChat 和样本层 LR 验证`
+- `F8.5 综合解释、claim control、Gate 和交付文件`
+
+我的判断：F8 需要像 F7 一样从大纲扩成 SOP，而且“虚拟敲除”这一节必须大幅降权。现在直接执行会非常容易过度解释。
+
+--------------------------------------------------------------------------------
+
+[0992] 你 | 2026-06-11 19:27:13 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[0993] Codex | 2026-06-11 19:27:39 Asia/Shanghai
+我会把 F8 从导师大纲扩成可执行 SOP，并把“虚拟敲除”改成受条件限制的 `in silico perturbation hypothesis`。重点是：表达展示要有样本级统计支撑，CellChat 要有样本覆盖和 LR pseudobulk 验证，所有机制语言都要被 claim control 控住。
+
+--------------------------------------------------------------------------------
+
+[0994] Codex | 2026-06-11 19:30:03 Asia/Shanghai
+我先把刚改过的 F8 同步到 WPS 路径，并做一次结构校验。这个点很关键，F8 刚经历了整节替换，先确认表格闭合和双路径一致，再继续往后推进。
+
+--------------------------------------------------------------------------------
+
+[0995] Codex | 2026-06-11 19:30:24 Asia/Shanghai
+已按前面挑刺意见重写并收紧 F8，已同步到两处路径：
+
+- [主仓库 TXT](<D:\胃癌线粒体亚群\胃癌MLMOD亚群主线研究方案.txt>)
+- [WPS 同步 TXT](<D:\software\wps\云盘缓存\807350289\WPS云盘\LRY\0Ting\胃癌线粒体死亡亚群方案\胃癌MLMOD亚群主线研究方案.txt>)
+
+主要改动：把 F8 从“单基因展示/虚拟敲除/CellChat补充”改成了有 gate、有输入准入、有样本级统计、有循环定义控制、有条件扰动边界、有 CellChat 样本层验证的完整 SOP。尤其明确了：不能把简单表达置零叫敲除；cell-level p 值不能作为主证据；只有 F5 允许进入 F8 的基因才能分析；机制性措辞必须受 `F8_final_claim_control_table.tsv` 限制。
+
+校验结果：`[TABLE]` / `[/TABLE]` = `17 / 17`，两份文件 SHA256 一致：
+
+`338360BC77B2C21970ACE3000BFE94004607195C28352BA6E063A22832A507E2`
+
+--------------------------------------------------------------------------------
+
+[0996] 你 | 2026-06-11 19:32:23 Asia/Shanghai
+挑刺F8.0
+
+--------------------------------------------------------------------------------
+
+[0997] Codex | 2026-06-11 19:32:33 Asia/Shanghai
+我先把 F8.0 原文再读一遍，只盯输入准入、核心基因边界、审批暂停和交付文件这几个容易埋雷的点。F8.0 是后面单基因分析的闸门，如果这里松了，后面很容易把探索性结果写成机制结论。
+
+--------------------------------------------------------------------------------
+
+[0998] Codex | 2026-06-11 19:32:50 Asia/Shanghai
+我已经看到 F8.0 的核心结构是对的，但我还要查一下它引用的上游文件名是否真的在前文出现过。这里如果文件名对不上，Biomni 会很容易“脑补文件”或者临时造表。
+
+--------------------------------------------------------------------------------
+
+[0999] Codex | 2026-06-11 19:33:35 Asia/Shanghai
+F8.0 总体方向是对的，但我会挑出 8 个需要再收紧的点。这里建议改，因为这些问题会直接影响后面 F8.1-F8.4 能不能被审计。
+
+1. **缺少 `08_malignant_epithelial_MLMOD_labeled.rds` 作为推荐输入**
+现在只要求读 `06a/06b` 和 `MLMOD_high_cell_assignment.tsv`。理论上可以重建标签，但更稳妥是优先读取 F2 已输出的 `08_malignant_epithelial_MLMOD_labeled.rds`，再用 `MLMOD_high_cell_assignment.tsv` 校验一致性。否则 Biomni 可能自己临时 merge，造成细胞 ID 对不上。
+
+2. **F8_core_gene_usage 需要的部分字段，在当前必读文件里未必有**
+例如 `TME_expression_warning`、bulk 混杂信息、候选来源、gene symbol 映射，很多是在 `F5_candidate_gene_pool.tsv`、`F5_integrated_gene_scoring.tsv`、`F5_candidate_gene_mapping.tsv` 里，而不一定完整存在于 `F5_core_gene_selection.tsv`。
+建议 F8.0 把这三个文件加入必读或条件必读，至少用于审计，不然 F8_core_gene_usage 的字段来源不闭合。
+
+3. **需要明确“没有 allowed_for_F8 = TRUE 基因”时怎么办**
+现在只说只有 `allowed_for_F8 = TRUE` 能进 F8，但没说如果一个都没有怎么办。应写明：输出空 `F8_core_gene_usage.tsv` 和 `F8_gate_single_gene_report.md`，gate = `not_evaluable` 或 `FAIL`，不得临时改用 allowed_for_F8 = FALSE 的基因。
+
+4. **allowed_for_F8 不等于主线单基因叙事资格**
+有些基因可能 `allowed_for_F8 = TRUE`，但 selection_class 是 `mechanistic_anchor_not_primary_marker` 或 `exploratory_candidate`。F8.0 应明确：
+`core_primary_marker` 才可能进入主线单基因叙事；`mechanistic_anchor_not_primary_marker` 只能做机制锚点；`exploratory_candidate` 只能探索；`sensitivity_only` 只能敏感性分析。
+否则 Biomni 可能把“允许分析”误解成“允许写成主线发现”。
+
+5. **基因符号映射还不够严**
+F8.0 现在只有 `gene_detected_in_scRNA`，但没有要求记录：F5基因名、批准后的gene symbol、scRNA对象feature名、alias转换来源、是否一对一匹配。
+建议在 `F8_core_gene_usage.tsv` 加字段：`gene_symbol_approved`、`scRNA_feature_id`、`alias_mapping_source`、`gene_mapping_status`、`mapping_warning`。
+
+6. **06a/06b/MLMOD标签对象的一致性需要硬校验**
+应明确检查：`06a_malignant_epithelial_main.rds` 的细胞 ID 是否全部能在 `MLMOD_high_cell_assignment.tsv` 找到；`08_malignant_epithelial_MLMOD_labeled.rds` 与 assignment 表是否一致；`sample_id/patient_id/group_analysis` 是否一致。
+否则后面所有高低表达、MLMOD high/low、CellChat分组都有风险。
+
+7. **F4/F6/F7 的“不是 FAIL 就读”还不够精确**
+F6 有两个 gate，F7 有多个 sub-status。建议 F8.0 不只读 claim table，还读对应 gate report 和 integrated summary：
+`F6_gate_immunity_report.md`、`F6_integrated_immunity_summary.tsv`、`F7_gate_multiomics_report.md`、`F7_integrated_multiomics_summary.tsv`。
+F8 不需要依赖它们启动，但需要继承它们的解释上限。
+
+8. **F8_method_execution_plan 的审批要求可以再硬一点**
+现在说“等待研究者批准”，但建议写成：只有 `researcher_approval_status = approved` 后才允许进入 F8.1-F8.4；若为 pending/revise/rejected，不得运行正式分析。这样 Biomni 不会自动往下跑。
+
+我的建议是：F8.0 需要改，但不是大改结构，而是补上 **输入闭环、基因资格分层、对象一致性校验、无可用基因时的阻断规则**。这几条补进去后，F8.0 才算真正能作为单基因分析的 gate。
+
+--------------------------------------------------------------------------------
+
+[1000] 你 | 2026-06-11 19:34:33 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[1001] Codex | 2026-06-11 19:34:52 Asia/Shanghai
+我会把 F8.0 直接收紧成“输入文件闭环 + 基因资格分层 + 对象一致性校验 + 审批硬暂停”。这里不改 F8 的整体设计，只补掉会让 Biomni 误解或临时造表的缝。
+
+--------------------------------------------------------------------------------
+
+[1002] Codex | 2026-06-11 19:35:41 Asia/Shanghai
+F8.0 已补完，我现在同步到 WPS 路径并做结构校验。重点看三件事：表格闭合、双路径 hash 一致、F8.0 新增文件名和 gate 规则有没有落在原文里。
+
+--------------------------------------------------------------------------------
+
+[1003] Codex | 2026-06-11 19:35:53 Asia/Shanghai
+已按你的要求修改 F8.0，并同步到两个路径。
+
+这次主要补强了四块：加入 `08_malignant_epithelial_MLMOD_labeled.rds` 作为 F8 主推荐对象；补齐 F5 的候选池、映射表、综合评分表作为必读输入；新增 `F8_object_consistency_check.tsv`，强制校验 06a、08对象、assignment表和metadata的一致性；明确 `allowed_for_F8 = TRUE` 只是允许分析，不等于允许写成主线单基因发现。
+
+还加了硬阻断规则：如果没有任何 `allowed_for_F8 = TRUE` 基因，F8 直接输出空表和 gate 报告，`F8_single_gene_gate = FAIL`，不能临时拿别的基因顶上。`F8_method_execution_plan.tsv` 也改成只有 `researcher_approval_status = approved` 才能进入 F8.1-F8.4。
+
+校验通过：`[TABLE]` / `[/TABLE]` = `17 / 17`，两份文件 SHA256 一致：
+
+`2E5C5DC30AA0ED44F2DF2E35BFF634CC60EFC5563F82E7C2E2AB782AE779C675`
+
+--------------------------------------------------------------------------------

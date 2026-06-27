@@ -1,0 +1,214 @@
+# Codex修改指令：F2 MLMOD签名特异性对照模块与纯度混杂硬决策节点 Round 1
+
+## 背景
+
+第三方审查者完成F0-F8全局审查后，识别出一个此前所有增量审核（含F8.0、F8.5、S1三轮）均未捕捉到的核心方法学风险：**MLMOD签名特异性问题**。
+
+导师的目标是在胃癌上皮中找到"功能独特的亚群"。MLMOD签名来自小鼠BMDM的mitoxyperiosis模型（GSE235046），但线粒体功能异常和氧化应激在几乎所有实体瘤中普遍存在。当前F2.1 Step 7b的跨系统验证（模块共变性、随机基因集对照、功能富集）只回答"签名基因是否作为模块协同工作"，不回答"这个模块代表MLMOD特异性生物学还是通用线粒体应激"。如果MLMOD_Score与Hallmark OXIDATIVE_PHOSPHORYLATION评分的Spearman相关系数r > 0.8，则高MLMOD亚群本质上就是高OXPHOS亚群的另一种标签，"功能独特"的核心声称不成立，项目无法达到导师期望的核心目标。
+
+这不是事后补丁——它决定了F2-F8全部后续分析的解释强度上限。F2是检验特异性的最佳时机：签名已冻结（F2-Gate1后），评分已完成（F2-Gate2后），高低组已定义（F2.3），还没有投入F2.4 bulk验证和F3-F8的工作量。
+
+同时，F2.4的纯度/TME混杂审计（第七步）当前只说"标记warning并在多变量模型或限制中处理"。但如果MLMOD_BulkScore的预后效应在调整肿瘤纯度后消失（HR方向翻转或变为不显著），这不是warning——这说明bulk预后信号可能主要由肿瘤纯度而非MLMOD活性驱动，是核心结论被推翻的强信号。需要硬决策节点。
+
+第三方审查者已在CLAUDE.md和conventions.txt（Section 7）中加入了"反事实前提检查"规则。本prompt是该规则在F2中的首次具体落地。
+
+发现2个Warning、0个Suggestion。
+
+---
+
+## Warning 修改（必须完成）
+
+### W1. F2新增MLMOD签名特异性对照分析
+
+**问题**：F2.2完成MLMOD多算法打分后，F2.3定义高低组并做pseudobulk DE，但整个F2从未将MLMOD_Score与已知通路签名对比。如果MLMOD_Score与通用OXPHOS/缺氧/ROS签名高度共线，"功能独特的MLMOD亚群"这一核心声称不成立，后续F3-F8的全部工作都需要降级措辞。
+
+**后果**：高风险。这是"项目能否达到导师核心目标"的前提条件。如果在F2.4 bulk验证甚至论文写作阶段才发现MLMOD无特异性，前面所有工作的claim强度都要推倒重来。
+
+**修改涉及四处**：F2.2新增步骤、F2-Gate2更新、F2.3新增步骤、F2-Gate3更新。
+
+---
+
+#### W1a. F2.2新增第九步：参照通路签名打分与特异性初步评估
+
+**精确位置**：F2.2第八步（分布和样本层汇总，当前第530行）之后、F2.2输出清单（当前第531行"必须输出MLMOD_single_cell_scores.tsv..."）之前插入新段落。
+
+**新增第九步内容要求**（Codex按主线方案现有写作风格撰写，以下为必须包含的全部要点，不得遗漏）：
+
+第九步：参照通路签名打分与特异性初步评估。为评估MLMOD_Score是否捕捉到独立于通用线粒体/应激程序的转录变异，Biomni必须在06a_malignant_epithelial_main.rds中，使用与MLMOD综合打分相同的至少一种rank-based方法（默认UCell；若UCell不可用，改用AUCell）对以下六个参照签名分别打分：
+
+1. HALLMARK_OXIDATIVE_PHOSPHORYLATION（MSigDB H集合）
+2. HALLMARK_HYPOXIA（MSigDB H集合）
+3. HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY（MSigDB H集合）
+4. HALLMARK_APOPTOSIS（MSigDB H集合）
+5. HALLMARK_MTORC1_SIGNALING（MSigDB H集合）
+6. general_mitochondrial_score：基于MitoCarta3.0人类线粒体基因清单中在06a恶性上皮中检出率>10%的基因构建。若MitoCarta3.0资源未由研究者上传，Biomni须先提交下载计划（来源：Broad Institute MitoCarta3.0 Human Inventory）并获研究者批准后再下载。若MitoCarta3.0确实不可用且研究者未批准下载，改用GO:0005739（mitochondrion）基因集从MSigDB C5中获取，但必须在输出中标注reference_source = GO_0005739_fallback。
+
+所有参照签名必须使用与MLMOD相同的assay/layer和score_object（06a）。参照签名打分与MLMOD打分使用相同方法（如都用UCell），以确保相关性比较不受算法差异影响。
+
+完成打分后，Biomni必须计算MLMOD_Score与每个参照签名分数之间的Spearman rank相关系数，并统计MLMOD签名基因与每个参照签名基因集的交集。
+
+必须输出两个新文件：
+
+（1）MLMOD_specificity_reference_scores.tsv——逐细胞记录，字段至少包括：cell_id_final、MLMOD_Score、OXPHOS_score、Hypoxia_score、ROS_score、Apoptosis_score、mTORC1_score、general_mito_score、score_method、score_object和note。
+
+（2）MLMOD_specificity_correlation.tsv——参照签名级汇总，每行一个参照签名，字段至少包括：reference_signature_name、reference_source（MSigDB_Hallmark或MitoCarta3.0或GO_0005739_fallback）、n_reference_genes、n_reference_genes_detected_in_06a、n_cells、correlation_method（固定为Spearman）、rho、p_value、gene_overlap_count（MLMOD签名基因与参照签名基因的交集数）、gene_overlap_fraction_of_MLMOD（交集数/MLMOD签名基因总数）、gene_overlap_fraction_of_reference（交集数/参照签名基因总数）、specificity_interpretation和note。
+
+specificity_interpretation规则（逐参照签名判定，写入每行）：
+- 若rho < 0.5：good_specificity——MLMOD_Score与该参照签名之间的转录变异共享程度低
+- 若0.5 <= rho < 0.7：moderate_overlap——存在非trivial共享，需F2.3残差分析进一步判断
+- 若rho >= 0.7：high_overlap——MLMOD_Score与该参照签名高度共线，"功能独特"声称对该维度显著削弱
+
+此外，Biomni须在F2_gate2_scoring_report.md中新增"签名特异性初步结论"段落，汇总：(a) 与MLMOD_Score相关性最高的参照签名及其rho值，(b) 基因水平重叠最大的参照签名及其overlap fraction，(c) overall_specificity_preliminary：若所有参照签名rho均<0.5记为good；若任一rho>=0.5但均<0.7记为moderate_overlap_detected；若任一rho>=0.7记为high_overlap_detected。该初步结论供F2.3残差分析使用。
+
+---
+
+#### W1b. F2-Gate2新增特异性初步评估作为通过前提
+
+**精确位置**：F2-Gate2（当前第532行），在"协变量偏倚审计完成、分布和样本层汇总完成后"之前插入。
+
+**具体修改**：在F2-Gate2的通过条件列表中，"协变量偏倚审计完成"之后追加"参照签名打分和特异性初步评估完成（或有获批的资源不可用说明）"。即修改后F2-Gate2应为：
+
+> F2-Gate2：只有06a主对象打分完成、06b敏感性对象打分完成或有获批的失败说明、打分基因使用审计完成、算法参数和版本记录完成、分数方向检查完成、算法一致性评估完成、协变量偏倚审计完成、**参照签名打分和特异性初步评估完成（或有获批的资源不可用说明）**、分布和样本层汇总完成后，才允许进入F2.3高MLMOD亚群鉴定。F2-Gate2 warning不自动阻断F2.3，但必须说明对高MLMOD定义和后续临床解释的影响。**若overall_specificity_preliminary为high_overlap_detected，F2-Gate2报告必须明确记录该发现，F2.3和F2.4的解释语言上限将受到限制（见F2-Gate3 specificity_status规则）。**
+
+---
+
+#### W1c. F2.3新增步骤：签名特异性残差分析
+
+**精确位置**：F2.3第八步（亚群特征基因和伪重复控制，当前第541行）之后、F2.3输出清单（当前第542行"必须输出MLMOD_score_distribution_diagnostics.tsv..."）之前插入新段落。
+
+**新增步骤内容要求**：
+
+第九步：签名特异性残差分析。基于F2.2第九步的参照签名打分结果，若MLMOD_Score与任一参照签名的Spearman rho >= 0.5（即overall_specificity_preliminary为moderate_overlap_detected或high_overlap_detected），Biomni必须完成以下残差分析：
+
+（a）在MLMOD_high_vs_low_pseudobulk_markers.tsv中，为每个基因新增标注：is_in_top_correlated_reference列，标记该基因是否属于rho最高的参照签名基因集（TRUE/FALSE）。同时新增top_correlated_reference_name列，记录该参照签名名称。
+
+（b）定义残差基因集：从pseudobulk DE显著基因（adjusted_p_value < 0.05且|log2FC_high_vs_low| > 0.25）中，排除(i)MLMOD打分签名基因（is_MLMOD_scoring_signature_gene = TRUE）和(ii)rho最高参照签名基因（is_in_top_correlated_reference = TRUE），剩余基因为残差基因集。
+
+（c）对残差基因集执行GO BP和MSigDB Hallmark ORA富集分析（背景集为pseudobulk DE中所有tested基因）。
+
+（d）评估残差基因集的功能主题是否仍然指向MLMOD相关的独特功能——例如膜脂质代谢/脂质过氧化（lipid peroxidation, phospholipid metabolism）、线粒体外膜通透化/MOMP（BAX, BAK1, VDAC相关）、线粒体膜结构重塑、细胞死亡调控中与mitoxyperiosis有区分度的子通路——还是失去了coherent功能主题而仅剩散在基因。
+
+若overall_specificity_preliminary为good_specificity（所有参照签名rho < 0.5），残差分析不是必须的，但Biomni仍应输出MLMOD_specificity_residual_analysis.tsv，在specificity_status字段填functionally_distinct，其余字段可填NA_not_required。
+
+必须输出MLMOD_specificity_residual_analysis.tsv，字段至少包括：analysis_triggered（yes/no）、trigger_reason（rho>=0.5的参照签名列表或all_rho_below_0.5）、top_correlated_reference_name、top_correlated_reference_rho、n_pseudobulk_DE_significant_genes（adjusted_p<0.05且|log2FC|>0.25）、n_scoring_genes_removed、n_reference_overlap_genes_removed、n_residual_genes、residual_GO_BP_top5_terms（前5个adjusted_p < 0.05的terms，用分号分隔；若无显著term填no_significant_terms）、residual_Hallmark_top5_terms（同上）、residual_contains_MLMOD_distinctive_biology（yes/no/not_assessed，基于上述(d)的评估）、residual_functional_coherence_interpretation（free text，一句话总结残差基因的功能主题情况）、specificity_status和specificity_note。
+
+specificity_status允许值和定义：
+- functionally_distinct：所有参照签名rho < 0.5，或rho >= 0.5但残差基因仍有coherent MLMOD相关功能主题（residual_contains_MLMOD_distinctive_biology = yes）
+- partially_overlapping：rho 0.5-0.7，残差基因有部分但不强的独特功能信号（residual_contains_MLMOD_distinctive_biology = no，但residual_GO_BP或Hallmark仍有显著terms）
+- largely_redundant：rho >= 0.7且残差基因失去coherent功能主题（residual_contains_MLMOD_distinctive_biology = no，且residual无显著enrichment或仅剩非特异性terms）
+- not_assessed：参照签名打分失败、资源不可用且未获批替代方案、或分析因技术原因未完成
+
+---
+
+#### W1d. F2-Gate3新增特异性状态作为通过前提和解释语言上限
+
+**精确位置**：F2-Gate3（当前第543行），需修改通过条件列表和warning处理规则。
+
+**具体修改**：F2-Gate3通过条件追加"签名特异性对照完成（或有获批的不可用说明）且specificity_status已记录"。并在F2-Gate3 warning处理规则之后追加解释语言上限。修改后F2-Gate3应为：
+
+> F2-Gate3：只有分布诊断完成、全局阈值定义完成、敏感性阈值比较完成、高组稳定性检查完成、sample/patient层比例统计完成、pseudobulk marker分析完成、signature leakage标记完成、**签名特异性对照完成（或有获批的不可用说明）且specificity_status已记录**、08_malignant_epithelial_MLMOD_labeled.rds与MLMOD_high_cell_assignment.tsv一致后，才允许进入F2.4临床意义验证。F2-Gate3 warning不自动阻断F2.4，但必须说明高MLMOD定义是天然离散亚群、操作性高活性分组还是探索性Q3分组，并据此降低或限定后续结论强度。
+>
+> **签名特异性对照结果对全项目解释语言的上限约束**：specificity_status必须写入F2_gate3_high_group_report.md，并影响F2-Gate4和所有后续F节（F3-F8）的解释语言上限——
+> - functionally_distinct：可使用"MLMOD-associated functionally distinct subgroup"
+> - partially_overlapping：最高只能使用"mitoxyperiosis-derived transcriptional program, partially overlapping with [最高相关参照签名名称]"；不得使用"functionally distinct"
+> - largely_redundant：最高只能使用"mitochondrial stress-associated subgroup scored using mitoxyperiosis-derived signature"；不得使用"MLMOD subgroup"或"functionally distinct"；必须在论文讨论中作为主要局限之一说明
+> - not_assessed：解释语言上限暂定为partially_overlapping，直到特异性对照完成后上调或下调
+
+**F2.3输出清单更新**：在当前第542行的输出文件列表中追加MLMOD_specificity_residual_analysis.tsv。同时确认F2.2输出清单（第531行）已包含MLMOD_specificity_reference_scores.tsv和MLMOD_specificity_correlation.tsv。
+
+---
+
+### W2. F2.4纯度混杂硬决策节点
+
+**问题**：F2.4第七步（纯度/TME和常见混杂审计，当前第551行）当前只说"若高度相关，需标记warning，并在多变量模型或限制中处理"。但如果bulk预后效应在调整肿瘤纯度后消失，这不是可以"在限制中处理"的warning——这是bulk层面"MLMOD活性具有独立临床意义"的核心前提被挑战的强信号。
+
+**后果**：中高风险。如果纯度调整后结论翻转，但只标记为warning，审稿人会质疑整个bulk验证部分的可信度。需要明确的决策规则而不是模糊的"在限制中处理"。
+
+**修改涉及两处**：F2.4第七步追加硬决策规则、F2-Gate4追加specificity_status和purity交叉约束。
+
+---
+
+#### W2a. F2.4第七步追加纯度混杂硬决策规则
+
+**精确位置**：F2.4第七步（当前第551行），在现有文字"若MLMOD_BulkScore与纯度/TME或增殖高度相关，需标记warning，并在多变量模型或限制中处理。"这句话之后追加新段落。
+
+**新增内容要求**：
+
+硬决策规则：若TCGA-STAD主队列中，多变量Cox在纳入tumor_purity（ESTIMATE推断纯度或等价指标）后MLMOD_BulkScore_z的HR发生以下任一情况——(i) HR方向翻转（原risk factor变为protective或反之），或(ii) HR变为不显著（p > 0.10）而unadjusted HR显著（p < 0.05）——Biomni必须在F2_gate4_clinical_validation_report.md中标注purity_confounding_critical_warning，并单独成段记录以下信息：unadjusted_HR及其95%CI和p值、purity_adjusted_HR及其95%CI和p值、purity_coefficient及其95%CI和p值、完整多变量模型specification（纳入的所有协变量）、样本数、事件数和每变量事件数。
+
+当purity_confounding_critical_warning触发时，F2-Gate4的interpretation_level不得高于exploratory_only，除非研究者审查后提供明确的生物学理由认为纯度调整构成了过度校正（例如：肿瘤纯度本身是MLMOD活性的下游结果而非独立混杂因素，且有文献或数据支持该因果方向），并经研究者明确批准后可将interpretation_level上调至limited_support，但不得上调至strong_support。
+
+必须在bulk_score_confounding_audit.tsv中新增以下字段：purity_adjusted_HR、purity_adjusted_HR_CI_lower、purity_adjusted_HR_CI_upper、purity_adjusted_p_value、HR_direction_change_after_purity_adjustment（yes_reversed/no_same_direction/not_applicable）、purity_confounding_critical_warning（yes/no）。
+
+---
+
+#### W2b. F2-Gate4追加specificity和purity交叉约束
+
+**精确位置**：F2-Gate4（当前第556行），在现有通过条件和warning处理规则之后追加交叉约束。
+
+**具体修改**：F2-Gate4通过条件中"纯度/TME混杂审计完成"之后追加"含纯度调整硬决策评估"。在F2-Gate4 warning处理（"应采用'强支持''有限支持'还是'探索性继续'的解释等级"）之后追加如下约束：
+
+> F2-Gate4的interpretation_level受F2-Gate3 specificity_status和F2.4 purity_confounding_critical_warning的双重约束。下限规则：
+> - specificity_status = largely_redundant 或 purity_confounding_critical_warning = yes → interpretation_level最高为exploratory_only（探索性继续）
+> - specificity_status = partially_overlapping → interpretation_level最高为limited_support（有限支持）
+> - specificity_status = not_assessed → interpretation_level最高为limited_support，直到特异性对照完成
+> - 只有specificity_status = functionally_distinct且purity_confounding_critical_warning = no时，interpretation_level才允许达到strong_support（强支持），具体是否给出strong_support仍需根据跨队列一致性、效应量、PH假设检验等全部证据综合判定
+>
+> interpretation_level必须写入F2_gate4_clinical_validation_report.md，并作为F3-F8全部后续F节的解释语言上限。进入F3前研究者必须明确知晓和批准当前interpretation_level。
+
+---
+
+## 修改后确认清单
+
+Codex完成修改后，请逐项检查以下内容：
+
+### W1确认项
+
+1. [ ] F2.2中第八步之后、输出清单之前，存在新的"第九步"，标题包含"参照通路签名打分"或"参照签名"
+2. [ ] 第九步中明确列出6个参照签名：HALLMARK_OXIDATIVE_PHOSPHORYLATION、HALLMARK_HYPOXIA、HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY、HALLMARK_APOPTOSIS、HALLMARK_MTORC1_SIGNALING、general_mitochondrial_score（MitoCarta3.0或GO:0005739 fallback）
+3. [ ] 第九步要求使用与MLMOD综合打分相同的rank-based方法（默认UCell）
+4. [ ] 第九步包含三档specificity_interpretation规则：rho<0.5(good_specificity)、0.5-0.7(moderate_overlap)、>=0.7(high_overlap)
+5. [ ] F2.2输出清单中新增MLMOD_specificity_reference_scores.tsv和MLMOD_specificity_correlation.tsv
+6. [ ] F2_gate2_scoring_report.md要求新增"签名特异性初步结论"段落
+7. [ ] F2-Gate2通过条件中新增"参照签名打分和特异性初步评估完成"
+8. [ ] F2.3第八步（pseudobulk DE）之后、输出清单之前，存在新步骤"签名特异性残差分析"
+9. [ ] 残差分析包含四个子步骤：(a)标注is_in_top_correlated_reference、(b)定义残差基因集、(c)GO BP和Hallmark ORA、(d)评估残差功能主题
+10. [ ] F2.3输出清单中新增MLMOD_specificity_residual_analysis.tsv
+11. [ ] specificity_status四种允许值（functionally_distinct、partially_overlapping、largely_redundant、not_assessed）均有明确定义
+12. [ ] F2-Gate3通过条件中新增"签名特异性对照完成且specificity_status已记录"
+13. [ ] F2-Gate3之后存在完整的"签名特异性对照结果对全项目解释语言的上限约束"段落，四种状态对应的语言上限均明确
+14. [ ] specificity_status = largely_redundant时明确要求"在论文讨论中作为主要局限之一说明"
+
+### W2确认项
+
+15. [ ] F2.4第七步中，现有"标记warning"描述之后，存在新增的纯度混杂硬决策规则
+16. [ ] 硬决策规则的触发条件明确：HR方向翻转或HR变为不显著(p>0.10)而unadjusted显著(p<0.05)
+17. [ ] 触发时要求单独记录unadjusted HR、adjusted HR、purity coefficient、模型specification、样本数、事件数
+18. [ ] 触发时interpretation_level不得高于exploratory_only，除非研究者提供过度校正理由并批准
+19. [ ] bulk_score_confounding_audit.tsv新增字段：purity_adjusted_HR、purity_adjusted_HR_CI_lower、purity_adjusted_HR_CI_upper、purity_adjusted_p_value、HR_direction_change_after_purity_adjustment、purity_confounding_critical_warning
+20. [ ] F2-Gate4中存在specificity_status和purity_confounding_critical_warning的双重约束规则
+21. [ ] 双重约束明确：largely_redundant或purity_critical→最高exploratory_only；partially_overlapping→最高limited_support；只有functionally_distinct且无purity_critical才允许strong_support
+
+### 全局确认项
+
+22. [ ] F2.1内容（MLMOD三层基因集构建、DE方法决策、跨系统验证三项）未被误改
+23. [ ] F2.2已有内容（Step 1-8：五算法打分、方向检查、综合打分、一致性评估、协变量偏倚审计、分布和样本层汇总）未被误改
+24. [ ] F2.3已有内容（Step 1-8：Gate检查、分布诊断、阈值定义、稳定性检查、组间比较边界、比例统计、高低组标签、pseudobulk DE）未被误改
+25. [ ] F2.4已有内容（Step 1-10：Gate检查、签名冻结、队列审计、覆盖审计、打分、终点审计、混杂审计现有部分、预后统计、一致性判定、总判断）未被误改——只有第七步追加了内容
+26. [ ] `[TABLE]` / `[/TABLE]` 配平检查（修改前17/17，修改后应仍为17/17，因为本次不新增TABLE）
+27. [ ] 两个路径（项目目录和WPS云盘路径）内容同步，SHA256一致（case-insensitive比对）
+
+---
+
+## 注意事项
+
+1. **不要修改CLAUDE.md或conventions.txt**——第三方审查者已直接完成这两个文件的反事实前提检查规则更新。
+2. **不要新增TABLE**——本次修改是在现有F2.2、F2.3、F2.4内部追加步骤和更新gate条件，不涉及新的预期图表区。
+3. **步骤编号**——F2.2新增为"第九步"，F2.3新增为"第九步"。如果Codex认为在F2.3中用"第九步"会与F2.2的"第九步"产生阅读混淆，可考虑用"补充步骤A"等替代编号，但必须保持步骤有序可引用。
+4. **输出文件命名必须严格一致**——prompt中给出的tsv文件名是最终名称，不得自行改名。
+5. **本prompt未涉及的其他审查建议**——以下问题已在第三方全局审查中识别，但不在本prompt范围内，将在后续prompt中处理：
+   - PM分析在F2-F8中的定位（从假设检验降级为数据描述/方向性观察）
+   - F3-F8范围分级（核心 vs 推荐 vs 扩展）和条件执行规则
+   - F3.2拟时序分析的条件执行前提
+   - F8.3 CellOracle证据等级硬上限
+   - 假设预注册/分析计划锁定机制

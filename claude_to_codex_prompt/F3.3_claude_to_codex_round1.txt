@@ -1,0 +1,180 @@
+# Codex修改指令：F3.3 第三方审查修订 Round 1
+
+## 背景
+
+第三方审查者对 F3.3 SCENIC regulon 分析完成了 12 维度审核。F3.3 整体框架好，但存在 3 个 Blocking、5 个 Warning、4 个 Suggestion 问题。核心风险是：regulon 靶基因与 MLMOD 打分基因重叠导致循环混杂膨胀、关键统计阈值无量化定义、以及与 F3.2 的接口表字段缺失。
+
+以下修改请在 `胃癌MLMOD亚群主线研究方案.txt` 的 F3.3 部分执行。修改后需同步 WPS 路径并验证 `[TABLE]` 标签平衡和 SHA256 一致。
+
+---
+
+## Blocking 修改（必须完成）
+
+### B1. 新增 regulon-MLMOD 循环混杂控制
+
+**问题**：如果 regulon 靶基因中包含大量 MLMOD scoring signature 基因，regulon AUC 与 MLMOD_Score 的相关性存在机械性膨胀——不是 TF 真的调控 MLMOD 状态，而是 AUC 和 Score 共享了同一批基因的表达信号。当前方案只在基因过滤层标记了 `is_MLMOD_scoring_signature_gene`，但在 regulon 解释层没有对应控制。
+
+**修改内容**：
+
+1. 在第560行（第七步统计部分）`F3_SCENIC_high_MLMOD_regulon_results.tsv` 的字段列表中，新增：
+   - `n_targets_overlap_with_MLMOD_scoring_signature`
+   - `fraction_targets_overlap_with_MLMOD_scoring_signature`
+   - `scoring_gene_overlap_inflation_warning`（TRUE/FALSE）
+
+2. 在第561行（第八步候选TF筛选）`F3_SCENIC_candidate_TF_biological_review.tsv` 的字段列表中，新增：
+   - `n_targets_overlap_with_MLMOD_scoring_signature`
+   - `fraction_targets_overlap_with_MLMOD_scoring_signature`
+
+3. 在第561行 Tier 1 高可信候选TF标准中，在"regulon活性与MLMOD_Score/MLMOD_high_label方向一致"之后，新增条件：
+   > 且 regulon 靶基因与 MLMOD_human_scoring_signature 重叠率不超过 30%；若重叠率 >30%，该 regulon 必须标记 `scoring_gene_overlap_inflation_warning = TRUE`，其与 MLMOD_Score 的关联不得直接作为 Tier 1 方向一致证据；Biomni 必须额外检查排除重叠靶基因后 regulon 剩余靶基因活性是否仍区分高低 MLMOD（可使用 reduced regulon AUCell 或仅对 non-overlap targets 计算模块分数），并将结果记录在 `F3_SCENIC_candidate_TF_biological_review.tsv` 的 `reduced_regulon_still_discriminates_MLMOD` 字段（TRUE/FALSE/not_assessed）。
+
+4. 在第560行统计分层解释之后，新增一条规则：
+   > 对所有 regulon，必须计算其靶基因与 MLMOD_human_scoring_signature.tsv 中基因的重叠数和重叠率；若 fraction_targets_overlap_with_MLMOD_scoring_signature > 0.30，标记 scoring_gene_overlap_inflation_warning = TRUE，该 regulon 的 MLMOD 关联结果在解释中必须注明循环混杂风险。
+
+### B2. 定义"效应量明确"的量化标准
+
+**问题**：多处写"效应量明确"，但无具体阈值。Biomni 无法判定。
+
+**修改内容**：
+
+1. 在第560行 statistical_support 定义处（"adjusted_p_value < 0.05且效应方向稳定为statistical_support"），将"效应方向稳定"改为具体定义，并新增效应量指标：
+   > 效应量指标主线使用 Cliff's delta（非参数效应量，适合小样本 sample-level 比较）或 rank-biserial correlation r；Biomni 必须在 F3_SCENIC_high_MLMOD_regulon_results.tsv 中新增 `effect_size_metric` 字段记录实际使用的指标。statistical_support 定义为 adjusted_p_value < 0.05 且 |Cliff's delta| >= 0.33 或 |r| >= 0.33（对应中等效应）；directional_support 为未达 FDR<0.05 但跨样本方向一致且 |Cliff's delta| >= 0.20 或 |r| >= 0.20（小效应）；|效应量| < 0.20 为 negligible，归入 exploratory_only。
+
+2. 在第561行 Tier 1 标准中的"效应量明确"替换为：
+   > |Cliff's delta| >= 0.33 或 |r| >= 0.33
+
+3. 在第561行 Tier 2 标准中新增：
+   > 效应量 |Cliff's delta| >= 0.20 或 |r| >= 0.20
+
+4. `F3_SCENIC_high_MLMOD_regulon_results.tsv` 字段中新增 `effect_size_metric`。
+
+### B3. 补全 `F3_SCENIC_pseudotime_regulon_association.tsv` 字段定义
+
+**问题**：该表是 F3.3 与 F3.2 的唯一接口文件，但字段从未定义。
+
+**修改内容**：
+
+在第561行"Biomni必须输出F3_SCENIC_candidate_TF_prioritization.tsv、F3_SCENIC_candidate_TF_biological_review.tsv和F3_SCENIC_pseudotime_regulon_association.tsv"之后（或附近合适位置），新增该表的字段定义：
+
+> F3_SCENIC_pseudotime_regulon_association.tsv 字段至少包括：regulon、tf_name、pseudotime_method（Monocle3或Slingshot）、n_cells_with_pseudotime、cor_pseudotime_regulon_auc_spearman、cor_p_value、cor_adjusted_p_value、primary_root_direction（positive/negative/ns）、sensitivity_root_A_direction、sensitivity_root_B_direction、root_direction_consistent（TRUE/FALSE）、branch_id、branch_enrichment_test、branch_enrichment_p、pseudotime_available（TRUE/FALSE）和note。若 F3.2 结果为 negative/unstable pseudotime result，该表仍应输出，但所有方向性字段填 not_assessed，pseudotime_available = FALSE，并在 note 中记录原因。
+
+---
+
+## Warning 修改
+
+### W1. F3.2 阴性结果对 Tier 1 标准的影响
+
+**问题**：Tier 1 要求"沿F3.2 pseudotime方向稳定或至少不冲突"，但 F3.2 允许 negative/unstable 结果。此时该条件无法评估。
+
+**修改内容**：
+
+在第561行 Tier 1 标准的 pseudotime 条件后新增条件分支：
+> 若 F3.2 结果为 negative/unstable pseudotime result，Tier 1 不强制要求 pseudotime 一致性，`pseudotime_consistency` 字段填 `not_assessed_pseudotime_unstable`，但该 TF 的 `biological_rationale` 中必须注明"未能获得拟时序交叉验证，F3.2为阴性/不稳定结果"；此时 Tier 1 判定仍需其余全部条件满足。
+
+### W2. Preflight regulon 数量阈值从 20 降至 10
+
+**问题**：500-1000 细胞的 preflight 样本，GRN 推断基因对数减少，ctx 过滤后 regulon 数可能远低于 20，导致 preflight 误判失败。
+
+**修改内容**：
+
+在第557行 preflight 通过标准中，将：
+> 至少产生20个regulons或Biomni给出合理低数量解释
+
+改为：
+> 至少产生 10 个 regulons 或 Biomni 给出合理低数量解释（preflight 使用 500-1000 细胞，regulon 产量预期低于正式运行；20 个 regulon 作为正式运行的期望下限参考，不作为 preflight 的硬阻断标准）
+
+### W3. 新增 ctx 步骤内存需求和降级策略
+
+**问题**：两个 feather ranking databases 各约 310MB，ctx 峰值内存可达 8-15GB。Biomni 环境中若 R/Seurat 大对象未释放，可能内存不足。
+
+**修改内容**：
+
+1. 在第558行 ctx/motif pruning 部分，在"必须记录rank_threshold、auc_threshold、nes_threshold"之后新增：
+   > 两个 hg38 ranking databases 各约 310MB，ctx 步骤峰值内存估计 8-15GB；Biomni 执行 ctx 前应释放 R session 中不再需要的大对象（如 Seurat 主对象），仅保留导出后的表达矩阵和必要 metadata。
+
+2. 在第562行失败路径的"数据库或ctx失败时"部分新增：
+   > 若 ctx 因 MemoryError 或 pyarrow 加载 feather 失败，先释放其他大对象后重试；若仍失败，可降级为只使用一个 ranking database（优先 hg38_10kbp_up_10kbp_down_full_tx_v10_clust），并在 F3_SCENIC_ctx_parameter_log.tsv 中记录 `databases_used`（one_db_fallback）和 `peak_memory_estimate_GB`。
+
+3. 在 `F3_SCENIC_ctx_parameter_log.tsv` 字段中新增：`databases_used`（both/one_db_fallback）、`peak_memory_estimate_GB`。
+
+### W4. 指定 Seurat v5 → pySCENIC 输入的转换方法
+
+**问题**：方案要求从 Seurat v5 RDS 导出 csv/loom，但未指定用什么函数/工具。Seurat v5 的 layer 结构与 v4 不同。
+
+**修改内容**：
+
+在第555行（第二步输入矩阵导出）"pySCENIC可接受csv或loom"之后，新增转换规则：
+> 从 Seurat v5 对象导出 counts 层时，推荐使用 `LayerData(obj, assay = "RNA", layer = "counts")` 或 `GetAssayData(obj, assay = "RNA", layer = "counts")` 获取稀疏矩阵，再转为 dense matrix 写出 csv（cells × genes）。若需 loom 格式，可使用 SeuratDisk::SaveLoom、通过 reticulate 写入 AnnData 再转 loom、或直接用 Python loompy 从 csv 构建。Biomni 必须在 F3_SCENIC_input_matrix_audit.tsv 的 `export_command_or_script` 字段中完整记录转换命令链和所用包版本，确保可复现。不得使用 `obj@assays$RNA@data`（v4旧式slot直接访问），应使用正式 accessor 函数。
+
+### W5. 新增 sample-level 统计功效限制说明
+
+**问题**：约 13 组配对样本的 Wilcoxon 检验力有限，中等效应可能漏检。
+
+**修改内容**：
+
+在第560行统计分层解释末尾，新增功效限制段落：
+> Sample-level regulon 比较受限于可用样本数：Primary_Tumor 约 26 个样本按高低 MLMOD 分组后每组约 13 个，配对 Wilcoxon 对中等效应（|Cliff's delta| ~ 0.33）的检验力有限；Peritoneal_Metastasis 仅 3 个样本无法支持正式统计。因此 Tier 2 directional_support 不应被视为弱证据，而应结合效应量大小、跨样本方向一致性比例和生物学一致性综合判断。F3_gate3b_SCENIC_report.md 必须报告实际参与比较的高/低 MLMOD 样本数、paired_design 可用的样本对数、以及按当前样本量可检测的最小效应量估计。
+
+---
+
+## Suggestion 修改
+
+### S1. 新增 AUCell 二值化/阈值规则
+
+**修改内容**：
+
+在第559行 AUCell 部分末尾（"必须输出F3_SCENIC_AUCell_audit.tsv"之后），新增：
+> 主线统计使用连续 AUC 值，不使用二值化 regulon on/off 替代 sample-level 统计检验。若需二值化用于可视化（如 regulon on/off 细胞比例图），使用 pySCENIC 默认自动阈值并在 F3_SCENIC_AUCell_audit.tsv 中新增字段：`binarization_threshold_per_regulon`、`n_cells_on`、`fraction_cells_on`。二值化结果只能用于描述性展示，不作为 Tier 分级依据。
+
+### S2. 要求保存 pySCENIC 原始中间文件
+
+**修改内容**：
+
+在第558行正式 GRN/ctx 步骤输出列表中（"必须输出F3_SCENIC_grn_links.tsv、F3_SCENIC_regulons.tsv"之后），新增：
+> 同时必须保存 pySCENIC 命令的原始输出文件：GRN 步骤的原始 adjacency 文件（命名为 F3_SCENIC_raw_grn_adjacency.tsv 或 .csv）和 ctx 步骤的原始 regulon 输出（命名为 F3_SCENIC_raw_ctx_regulons.csv），与整理后 tsv 并存，用于复现验证。
+
+并在第563行 F3.3 必须输出文件列表中追加：`F3_SCENIC_raw_grn_adjacency.tsv`、`F3_SCENIC_raw_ctx_regulons.csv`。
+
+### S3. 限定文献证据字段的使用边界
+
+**修改内容**：
+
+在第561行 biological_review 表的 `known_gastric_cancer_or_metastasis_relevance_if_available` 和 `known_mitochondrial_stress_or_cell_death_relevance_if_available` 字段之后，新增使用规则：
+> 文献证据字段的使用边界：这两个字段仅用于辅助解释候选 TF 的生物学合理性，不能单独升级 Tier；无文献支持不降级 Tier；Biomni 必须对所有 Tier 1 和 Tier 2 候选 TF 均填写该字段，包括"未找到直接相关证据"的情况，不得仅选择性填写有利证据。文献检索范围限定为 PubMed/Google Scholar 中该 TF 与胃癌、转移、线粒体应激或细胞死亡的已发表关联；不要求系统综述级别检索，但不得编造引用。
+
+### S4. 定义 F3.3 → F5-F8 接口和 F3-Gate3 失败时的替代方案
+
+**修改内容**：
+
+在第563行 F3-Gate3 通过条件之后（F3.3 末尾、`[TABLE 10]` 之前），新增一段接口定义：
+> F3.3 → F5-F8 交接规则：F3 完成后，候选 TF 的标准输入为 F3_SCENIC_candidate_TF_prioritization.tsv 中 `final_include_for_F5_F8 = TRUE` 的条目。若 F3-Gate3 结果为 PASS 或 PASS_WITH_NOTED_LIMITATIONS，按该表提供 Tier 1 和获批 Tier 2 候选 TF。若 F3-Gate3 结果为 FAIL（SCENIC 完全失败），F5-F8 的 TF 候选来源降级为 F2.3 pseudobulk DE 中 is_TF = TRUE 且 adjusted_p_value < 0.05 的差异表达转录因子，标记来源为 `DE_based_not_SCENIC_validated`，且 F5-F8 中涉及 regulon-target 层面的分析必须跳过或标记为不可用。
+
+---
+
+## 修改后确认清单
+
+完成所有修改后，请逐项验证：
+
+1. [ ] B1: grep `scoring_gene_overlap_inflation_warning` 确认出现在 F3.3 文本中
+2. [ ] B1: grep `reduced_regulon_still_discriminates_MLMOD` 确认新字段存在
+3. [ ] B1: grep `fraction_targets_overlap_with_MLMOD_scoring_signature` 确认两个表中都有
+4. [ ] B2: grep `Cliff's delta` 或 `Cliffs_delta` 确认效应量定义存在
+5. [ ] B2: grep `effect_size_metric` 确认新字段出现
+6. [ ] B2: grep `0.33` 确认 Tier 1 效应量阈值
+7. [ ] B3: grep `cor_pseudotime_regulon_auc_spearman` 确认 pseudotime 接口表字段已定义
+8. [ ] B3: grep `pseudotime_available` 确认 F3.2 阴性时该表的处理规则存在
+9. [ ] W1: grep `not_assessed_pseudotime_unstable` 确认条件分支存在
+10. [ ] W2: grep `10 个 regulons` 或类似表述确认 preflight 阈值已降低
+11. [ ] W3: grep `peak_memory_estimate_GB` 确认 ctx 内存相关字段
+12. [ ] W3: grep `one_db_fallback` 确认单数据库降级策略
+13. [ ] W4: grep `LayerData` 确认 Seurat v5 转换方法
+14. [ ] W5: grep `可检测的最小效应量` 或类似表述确认功效说明存在
+15. [ ] S1: grep `binarization_threshold` 确认 AUCell 二值化规则
+16. [ ] S2: grep `F3_SCENIC_raw_grn_adjacency` 确认原始中间文件保存要求
+17. [ ] S2: grep `F3_SCENIC_raw_ctx_regulons` 确认
+18. [ ] S3: grep `不能单独升级 Tier` 或类似表述确认文献字段边界
+19. [ ] S4: grep `DE_based_not_SCENIC_validated` 确认 F3-Gate3 失败时替代方案
+20. [ ] S4: grep `final_include_for_F5_F8` 确认接口字段
+21. [ ] `[TABLE]` 标签配平检查
+22. [ ] 两个路径 SHA256 一致
+23. [ ] 无旧版内容残留（如旧的"至少产生20个regulons"未被替换干净）

@@ -1,0 +1,512 @@
+# Codex修改指令：方法学定稿前14项结构性修订 Round 1
+
+## 背景
+
+Codex完成了全案复审，暴露了大量"看似具体、实际仍靠执行时临场判断"的伪具体规则。第三方审核（Claude Code）对Codex提出的14条建议逐条验证后，确认大部分方向正确。用户已对三项关键决策做出裁定：
+1. F2.1签名构建：批准下载~31GB SRA从FASTQ重跑（STAR+RSEM+tximport+DESeq2）作为最严谨主路线。
+2. F5核心基因选择：先用层级门控替代加权评分，如结果不理想再调整。
+3. F4样本层LR统计模型：edgeR QL配对设计为主模型，混合效应仅在数据结构不满足配对条件时自动替补，不存在"根据结果选择模型"的环节。
+
+本prompt覆盖14项修订，涉及 `胃癌MLMOD亚群主线研究方案.txt`（当前926行）及 `conventions.txt`、`AGENT.md`、`project_overview.txt` 的必要同步。
+
+**核心原则**：每项规则标明来源——`L`（原始论文或官方工具规范）、`D`（由本项目数据审计决定）、`O`（本研究预注册的操作性阈值，不伪装成文献共识，并做敏感性分析）。
+
+---
+
+## 第1条：F1 QC与doublet判定规则
+
+**问题**：当前F1.2仍有"根据分布决定""明显异常""doublet-enriched cluster"等笼统表述，不可复现。
+
+**修改要求**：
+
+在F1.2 QC段落中，将现有QC和doublet判定规则替换为以下可执行规则：
+
+1. **二次QC规则**：
+   - 保留作者原始QC（`500 <= nFeature < 6000`、`percent.mt <= 20%`）作为基线`[D]`。
+   - 增加极端下限安全网：`nFeature >= 100`（防止空细胞/碎片残留）`[O]`。
+   - 每个样本用 `scater::isOutlier(..., nmads=3)` 标记 nCount、nFeature、percent.mt、percent.hb 异常值`[L: OSCA手册, Lun et al. F1000Research 2016]`。
+   - 二次删除需满足至少两个独立QC指标被isOutlier标记，单独一个指标异常只标记warning不删除`[O, 敏感性：单指标删除]`。
+
+2. **Doublet判定**：
+   - `scDblFinder` 作为唯一主doublet判定方法，按样本运行`[L: Xi & Li Cell Systems 2021 benchmark显示scDblFinder综合最优]`。
+   - 预期doublet率优先使用10x上样/回收细胞数对应值；化学版本不明时采用scDblFinder自动估计，并做0.5倍和1.5倍敏感性`[L: scDblFinder Bioconductor文档]`。
+   - DoubletFinder只做敏感性，不再要求两种工具投票`[L: 同上benchmark]`。
+   - 谱系marker冲突只标记 `mixed_lineage_suspect`，不能单独删除；只有scDblFinder阳性或doublet cluster显著富集时才删除`[O]`。
+   - Doublet cluster显著富集定义：该cluster doublet比例相对其他cluster Fisher检验BH<0.05且OR>2，触发人工复核，但不能自动删除整个cluster`[O]`。
+
+---
+
+## 第2条：F1细胞注释置信度决策表
+
+**问题**：当前F1.4使用`high/medium/low`、`weak/moderate/strong`和"marker证据很强"等主观标签，没有可执行赋值规则。
+
+**修改要求**：
+
+在F1.4注释段落中，将置信度判定改为以下决策表：
+
+1. **Marker支持证据定义**`[O]`：
+   - marker被视为cluster支持证据需同时满足：`pct.1 >= 0.25`、`pct.1 - pct.2 >= 0.10`、`avg_log2FC >= 0.25`、BH < 0.05。
+
+2. **竞争谱系冲突规则**`[O]`：
+   - 负marker冲突不能由单基因触发；只有竞争谱系也满足其完整marker minimum_rule时才算强冲突。
+
+3. **置信等级判定**`[O]`：
+   - `high`：marker panel minimum_rule满足；无竞争谱系完整规则满足；至少两个marker在不少于50%贡献样本中方向一致；自动参考注释大类一致。
+   - `medium`：minimum_rule满足但样本覆盖不足、自动注释不一致或存在弱污染。
+   - `low/Uncertain`：minimum_rule不满足，或两个互斥谱系同时满足。
+
+4. **稀有cluster报告要求**`[O]`：
+   - 稀有cluster必须同时报告细胞数和患者覆盖；不足2个患者时只能称"样本特异候选"，不能称稳定细胞类型。
+
+5. **辅助参考注释**`[D]`：
+   - 可使用GSE206785的Type/Annotation标签按Patient × Platform × Type聚合构建参考谱，用SingleR cluster mode辅助注释。GSE206785仅有log1p矩阵，足以做参考注释，但不适合raw-count QC或pseudobulk count模型。
+
+---
+
+## 第3条：F1整合与resolution选择
+
+**问题**：当前整合和resolution选择仍是"综合考虑"，且把恶性上皮的样本间分离默认视为欠整合。
+
+**修改要求**：
+
+在F1.3整合段落中，将整合策略改为以下规则：
+
+1. **Embedding三选一框架**`[O]`：
+   - 固定比较三个embedding：未整合PCA、Harmony默认参数、保守Harmony（较低theta或较少变量）。
+
+2. **恶性上皮特殊处理**`[L: Harmony Nature Methods 2019; scIB benchmark Nature Methods 2022]`：
+   - 全细胞注释可使用Harmony。
+   - 恶性上皮分析必须同时保留未整合结果作为主分析或至少等权敏感性，因为sample_id同时代表患者生物学（CNV、克隆状态），不能视为纯技术批次。
+
+3. **整合质量评价标准**（交叉验证表）`[O, 综合自Codex建议和用户补充]`：
+
+   判断分离是否合理的维度：
+   - 影响范围：仅恶性上皮按样本分离而免疫/基质混合良好 → 指向合理生物学分离。几乎所有细胞类型都按样本分离 → 指向整合不足。
+   - CNV/突变信号：分离群有明确患者特异CNV（inferCNV结果对应）→ 合理。无清晰CNV模式 → 可疑。
+   - 标记基因与功能：高表达肿瘤特异/谱系标志/增殖/干性基因 → 合理。高表达线粒体/核糖体/解离应激基因或双细胞特征 → 质量问题。
+   - 同一患者内部一致性：恶性细胞聚集但内部有亚结构 → 合理。极度致密的球状cluster → 可疑批次效应。
+   - 外部数据比较：其他相同癌种数据集也观察到类似分离 → 支持合理性。
+
+4. **Pareto选择规则**`[O]`：
+   - 只允许选择能改善非恶性谱系样本混合、同时不降低主要谱系marker清晰度和cell-type ASW的最弱校正方案。
+   - Resolution候选0.2-1.0。入选必须同时满足：主要谱系无混合、bootstrap聚类稳定、marker可解释、不是QC/应激驱动。多个resolution均满足时选较低者，避免过度拆分`[L: Kiselev et al. Nature Reviews Genetics 2019]`。
+
+---
+
+## 第4条：F2.1 MLMOD signature重建
+
+**问题**：当前Tier A/B、10/20/150基因数限制、检出率10%均为人为构造，无原始研究支持。GSE235046公开表含5.85%非整数RSEM expected counts。
+
+**修改要求**：
+
+将F2.1 signature构建规则改为以下方案：
+
+1. **最严谨主路线（SRA重处理）**`[L: Cell 2025原文; tximport Bioconductor文档]`：
+   - 从SRA下载GSE235046的15个paired-end RNA-seq样本（SRP444325，约31GB压缩）。
+   - 使用STAR 2.7 + RSEM 1.3.1 + GENCODE vM22（与原文一致的pipeline），生成完整RSEM结果。
+   - 经tximport进入DESeq2，获得基于offset的精确差异表达。
+   - 服务器最低配置：16核CPU、64GB RAM、400GB磁盘；推荐：16核CPU、128GB RAM、500GB磁盘。
+   - SRA重处理结果为正式主分析输入。
+
+2. **备选路线（GEO公开表）**`[L: limma-voom, Law et al. Genome Biology 2014]`：
+   - 若SRA重处理因资源或技术原因无法完成，当前GEO公开表（含5.85%小数RSEM expected counts）使用TMM + limma-voom作为conditional fallback。
+   - 此路线不得声称完整复现原文分析，必须在方法部分标注数据来源差异。
+
+3. **主signature定义**`[L: Cell 2025原文三比较标准]`：
+   - 严格复现原文：LPS+CS分别对Media、LPS、CS三个比较均满足FC>2且BH<0.05的基因。
+   - 删除Tier A必须≥20、总数20-150、超过150取前150等人为基因数限制。保留所有符合原文三比较标准的基因。
+   - Factorial interaction和Torin rescue方向作为annotation字段（`interaction_class`、`rescue_direction`），用于解释时提供方向一致性支持，但不决定主signature成员准入`[O]`。
+   - 若最终可评分基因过少（如<5），应报告跨系统迁移失败，不得放宽阈值凑基因。
+
+---
+
+## 第5条：人类映射与AUCell主分数
+
+**问题**：当前五种算法等权平均是人为构造，不增加证据独立性。UCell/AUCell的"80%基因进入截断秩"规则不符合工具设计原理。
+
+**修改要求**：
+
+1. **主评分方法**`[L: Aibar et al. Nature Methods 2017; SCENIC原始论文]`：
+   - AUCell作为预注册主分数（`AUCell_MLMOD_AUC`），因其基于细胞内基因秩排序、对稀疏性鲁棒、是SCENIC生态系统标准。
+   - UCell、AddModuleScore、singscore作为敏感性分析。ssGSEA如可运行亦为敏感性。
+   - 共识分数仅作稳健性摘要展示，不作为主统计输入。
+
+2. **AUCell参数**`[L: AUCell官方教程]`：
+   - 主参数冻结：`aucMaxRank = ceiling(0.05 × nGenes)`。
+   - 敏感性参数：3%和10%。
+   - 不得根据MLMOD分组清晰度择优选参数。
+
+3. **跨物种映射**`[L: Ensembl Compara]`：
+   - 主映射只保留Ensembl Compara一对一ortholog。
+   - 一对多映射单独做敏感性分析。
+
+4. **目标数据过滤**`[D]`：
+   - 基因在不少于3个Primary_Tumor患者的恶性上皮中可检出，且总计不少于20个细胞表达。
+   - 10%全局检出率作为严格敏感性筛选，不作主筛选。
+
+5. **签名内部一致性评估**`[O, 替代旧的固定rho阈值]`：
+   - 删除平均pairwise rho的0.05/0.10绝对门槛。
+   - 改为与1000个按基因数、平均表达、检出率和方差匹配的随机基因集比较，使用经验百分位判断真实signature是否超出随机期望。
+
+6. **删除旧的80%基因覆盖率规则**`[L: UCell/AUCell设计原理——这些算法本来只使用细胞内高排名基因]`：
+   - 删除"若>20%细胞签名基因覆盖率<80%则调高maxRank"的规则。
+   - 替代为：比较不同maxRank下的细胞排序稳定性（Spearman rank correlation）和生物学区分度（AUCell分数与已知恶性/正常状态的区分能力）。
+
+---
+
+## 第6条：高MLMOD亚群定义
+
+**问题**：直接对全部细胞做dip test会因大样本放大任何微小分布差异；混合模型成分可能只是患者或上皮状态差异。
+
+**修改要求**：
+
+在F2.3中，将高MLMOD定义改为以下规则：
+
+1. **主变量始终为连续分数**`[O]`：
+   - 连续 `MLMOD_Score`（即AUCell主分数）始终是主统计变量，用于Cox回归、相关分析和功能关联。
+   - 离散high标签是次级操作性工具，用于可视化和分组描述。
+
+2. **天然亚群判定必须使用患者平衡bootstrap**`[O, 基于Squair et al. 2021伪重复警告]`：
+   - 不得直接对全部细胞做dip test或mixture model。
+   - 200次等患者权重重采样（从每个患者随机抽取相同数量细胞），在每次重采样中比较1-3成分mixture model。
+   - 天然亚群（`natural_discrete_subgroup`）需同时满足：双成分模型在≥80%重采样中优于单成分、ΔBIC≥10、较小成分≥10%、阈值稳定且覆盖≥5个患者`[O, BIC差异10对应强证据参考Kass & Raftery 1995]`。
+   - 不满足时统一使用全局Q3，名称必须是 `operational_high_activity_group`，不能称天然亚群。
+
+3. **外部队列不迁移绝对AUCell阈值**`[L: AUCell值受测序深度和基因空间影响，不能跨数据集直接比较]`：
+   - 外部队列验证使用队列内连续分数、排序或队列内标准化。
+   - 只有通过预设校准检查（如分布形状对齐）后才允许探索性迁移阈值。
+
+---
+
+## 第7条：MLMOD特异性判定
+
+**问题**：当前"rho<0.5即functionally distinct"的自动结论过于简化。
+
+**修改要求**：
+
+将F2.3特异性判定改为以下规则：
+
+1. **删除简单rho阈值自动结论**`[O]`。
+
+2. **多层评估框架**`[O]`：
+   - 对MLMOD及每个参照签名（OXPHOS、hypoxia、ROS、apoptosis、mTORC1、general_mito）同时做原始版本和去重叠基因版本。
+   - 始终完成：患者内相关、sample固定效应（或混合效应，视患者数）模型、matched-random null和去除参照分数后的残差分析。
+
+3. **特异性判定规则**`[O]`：
+   - `functionally_distinct`：去重叠后仍有稳定分数；参照签名不能在交叉验证中近乎完全预测MLMOD（R²<0.8）；残差仍与预注册、非重叠的MLMOD机制模块关联。
+   - `largely_redundant`：参照签名对MLMOD的交叉验证R²≥0.8且残差无可复现功能信号。
+   - `partially_overlapping`：介于以上两者之间。
+   - R²=0.8标记为项目操作阈值，做0.7/0.9敏感性`[O]`。
+
+---
+
+## 第8条：F3拟时序root
+
+**问题**：root候选要求最低MLMOD分数后再检验MLMOD随拟时序升高，方向部分已被预设。
+
+**修改要求**：
+
+在F3.2中，将root选择规则改为：
+
+1. **MLMOD信息全程屏蔽**`[O]`：
+   - 先学习无方向图（Monocle3 learn_graph），再选择root。
+   - MLMOD_Score、MLMOD_high_label、高低组差异结果全程不参与root选择。
+
+2. **主root候选标准**`[O, 综合自Puram Cell 2017 early-lineage概念和Monocle3官方文档]`：
+   - 依次满足：高置信恶性；至少5个患者覆盖；单患者占比<60%（主规则），<50%为高置信`[O]`；低CNV分位；early-lineage/normal-like marker分数最高。
+   - 排除：高percent.mt、高FOS/JUN/HSP应激、高doublet风险、marker不清、技术批次驱动的cluster。
+
+3. **CytoTRACE2角色**：只提供独立敏感性root参考，不作为主root真值`[O]`。
+
+4. **无合格root的处理**：主结果改为无方向状态拓扑图，不强行生成"发育起点"`[O]`。
+
+5. **Monocle3与Slingshot一致性判定**`[O, 参考Saelens et al. Nature Biotechnology 2019 trajectory benchmark]`：
+   - 终末cluster Jaccard ≥ 0.5、方向统一后pseudotime Spearman ≥ 0.6为操作性一致标准。
+   - 不一致时只能作为状态拓扑展示，不支持方向性结论。
+
+6. **解释边界**`[L: 横断面scRNA-seq不能证明真实发育/演化]`：
+   - 无论通过与否，都只能写"横断面转录状态梯度"，不能写"发育进程"或"肿瘤演化"。
+
+---
+
+## 第9条：SCENIC
+
+**问题**：按MLMOD标签平衡抽样会改变基因协方差；两个seed不足以证明稳定；dense CSV存在内存风险。
+
+**修改要求**：
+
+在F3.3 SCENIC段落中，修改为：
+
+1. **输入格式**`[L: pySCENIC支持--sparse]`：
+   - 删除dense CSV主路线。优先导出loom或稀疏格式（--sparse）。
+
+2. **基因过滤**`[L: SCENIC协议论文 PMID:32561888]`：
+   - 按SCENIC标准流程：至少1%细胞表达且总counts ≥ 阈值。不另行发明过滤规则。
+
+3. **GRNBoost2运行次数**`[L: pySCENIC FAQ建议10-100次运行]`：
+   - 至少运行10个seed。
+   - 超过80%运行中重复出现的边作为高置信关系。
+   - 主候选TF需regulon在≥8/10运行出现，且MLMOD高低方向在≥8/10运行一致`[O]`。
+
+4. **训练抽样规则**`[O]`：
+   - GRN训练应按患者/cluster覆盖抽样，不按MLMOD标签强制平衡。
+   - 需与自然频率抽样比较，确认regulon排名稳定。
+   - 若高低MLMOD细胞比例极端不平衡（如>9:1），在interpretation中注明训练数据组成偏倚。
+
+5. **regulon AUC差异统计**`[L: pseudobulk原则]`：
+   - 样本感知统计：不能拿数万细胞的p值作主证据。
+
+6. **SCENIC仍保留技术smoke test**`[O]`：
+   - 即使使用服务器运行正式SCENIC，仍保留小规模smoke test用于抓出矩阵方向、数据库兼容和空regulon等技术错误。smoke test不决定是否抽样或租服务器，只负责技术前提验证。
+
+---
+
+## 第10条：F4样本感知LR主证据
+
+**问题**：CellChat和LIANA共享同一表达矩阵和数据库，不能算独立重复。当前"中等效应""多数样本支持"等表述未量化。
+
+**修改要求**：
+
+在F4中，重构证据层级：
+
+1. **主统计模型**`[L: pseudobulk基准 Squair et al. 2021; edgeR用户指南Section 3.5配对设计]`：
+   - 预注册主模型：edgeR quasi-likelihood，`~patient_id + MLMOD_state`（配对pseudobulk设计）。
+   - 每个患者内MLMOD-high和MLMOD-low恶性上皮分别聚合为pseudobulk。
+   - 使用 `glmTreat(lfc=log2(1.5))` 直接检验是否超过具有生物学意义的效应量`[L: edgeR glmTreat]`。
+
+2. **条件性替补模型的触发规则**`[O]`：
+   - F2.3确定MLMOD-high后，统计有多少患者在两组都有≥10个细胞做pseudobulk。
+   - 若>30%的患者只有单侧细胞（只有high或只有low），导致配对模型可用患者数大幅缩减，则启用dream/limma-voom混合效应（`~MLMOD_state + (1|patient_id)`）作为主模型替代。
+   - 触发条件在看到LR结果之前已确定，不是结果导向选择。
+
+3. **配对Wilcoxon的角色**`[O]`：
+   - 只作为sanity check：若edgeR配对设计得到显著结果但简单配对Wilcoxon完全不显著，说明结果可能依赖分布假设，需审查。不作为主证据或敏感性。
+
+4. **最少配对数**`[O]`：
+   - 先用实际dispersion针对1.5倍变化做功效模拟，要求功效≥80%。
+   - 绝对下限：8对。6-7对只能标记方向性。
+
+5. **Partner复合体可用标准**`[O]`：
+   - 每个必需亚基通过 `filterByExpr`，且在至少2/3可评估同一样本中CPM≥1。50%和80%作为敏感性。
+
+6. **LOSO（Leave-One-Sample-Out）**`[O]`：
+   - 至少80%留一结果方向一致。
+
+7. **混杂评估**`[O]`：
+   - 删除"混杂变量rho达到某阈值即降级"的旧规则。
+   - 改为逐一增加CNV、cluster组成、QC等协变量；方向翻转或效应衰减>50%才标记强混杂。
+
+8. **CellChat和LIANA角色降级**`[O]`：
+   - CellChat降为网络背景/候选发现工具，不作为主统计证据。
+   - LIANA多方法聚合作为方法稳健性验证，不算独立重复。
+   - 主证据只来自上述sample-aware pseudobulk LR统计模型。
+
+---
+
+## 第11条：F5核心基因证据分级
+
+**问题**：35/20/20/15/10加权评分无文献依据；外部队列参与选择后又被称为external validation存在验证集泄漏。
+
+**修改要求**：
+
+将F5.3综合评分体系替换为层级门控：
+
+1. **删除加权评分体系**：
+   - 删除35%/20%/20%/15%/10%权重及`final_score >= 0.65`等规则。
+   - 删除`F5_weight_sensitivity_analysis.tsv`（不再需要权重敏感性分析）。
+   - 删除`F5_score_formula_registry.tsv`中的weight字段。
+
+2. **第一层：硬性准入**`[O]`：
+   - 不属于MLMOD_human_scoring_signature（除非标记为mechanistic_anchor_not_primary_marker）。
+   - 高MLMOD恶性上皮中有足够表达：`pct_high >= 0.10`，覆盖≥3个sample_id。
+   - F2 pseudobulk DE支持：`log2FC_high_vs_low > 0.25`且`FDR < 0.05`（或作为获批探索候选标记）。
+   - 能映射到bulk队列基因ID。
+   - 无强TME/纯度混杂（或混杂后解释已降级）。
+   - 不是线粒体编码基因、核糖体基因、明显环境RNA/应激伪影基因（除非有特别生物学理由并获批）。
+
+3. **第二层：临床证据门控**`[O]`：
+   - TCGA-STAD连续表达Cox方向明确（HR per SD, 95%CI, p值, PH检验）。
+   - 至少一个外部独立队列方向一致。
+   - PH检验失败不直接硬排除；应检查Schoenfeld图并拟合时间变化系数或分段HR`[L: survival analysis best practice]`。
+
+4. **第三层：生物学支持分层**`[O]`：
+   - 不是"加分"，而是分层描述：F3_support、F4_support、F6/F7_support、novelty（只作描述）。
+
+5. **最终候选分级**`[O]`：
+   - `Tier 1 core_primary_marker`：硬性准入通过；单细胞来源清楚；TCGA和至少一个外部队列方向一致；纯度/TME混杂未推翻；有至少一个生物学支持。
+   - `Tier 2 exploratory_candidate`：单细胞和部分临床支持，但外部验证不足或混杂较重。
+   - `Tier 3 mechanistic_anchor_not_primary_marker`：可能有机制意义，但存在scoring gene/circularity风险或临床证据不足。
+   - `reject/not_evaluable`：硬性准入失败或数据不足。
+
+6. **同Tier内排序（字典序）**`[O]`：
+   先按独立队列支持数量 → meta HR方向和效应量 → pseudobulk效应量 → 生物学支持数量 → 最后才看novelty。
+
+7. **队列角色冻结**`[D]`：
+   - TCGA-STAD：发现队列。
+   - GSE84437：外部OS候选（GSE84426是其子集，不能重复计权）。
+   - GSE62254/GSE66229：同一ACRG体系，只能算一个独立队列。
+   - GSE26253：主要是RFS，不能算OS验证。
+   - GSE15459：需获得正式临床表后才能确定角色，不得预设为OS验证。
+   - 外部验证必须在冻结候选后进行，且在冻结候选集合内校正多重比较`[O]`。
+
+8. **删除候选池50-200目标数量**`[O]`：
+   - 所有满足冻结规则的基因都进入，靠BH和外部验证控制，不为得到方便数量人为筛选。
+
+---
+
+## 第12条：F6 BayesPrism和免疫模块
+
+**问题**：同一表达矩阵上两种方法只算稳健性不算独立验证。BayesPrism gate没有数值化通过标准。
+
+**修改要求**：
+
+1. **BayesPrism reference构建**`[L: BayesPrism Nature Cancer 2022]`：
+   - `cell.type.labels`：广义cell type（T/NK、B/Plasma、Myeloid、Fibroblast、Endothelial、Epithelial_malignant、Epithelial_normal等）。
+   - `cell.state.labels`：恶性细胞按`patient × malignant_cluster`细分。正常上皮单列。
+
+2. **模拟pseudobulk基准**`[O]`：
+   - 至少1000个模拟pseudobulk（从scRNA-seq按已知比例混合）。
+   - 必须包含LOPO（leave-one-patient-out）患者外推评估。
+   - BayesPrism必须与MuSiC比较，而不是只与自身阈值比较`[O]`。
+
+3. **MLMOD-high fraction单独设gate**`[O]`：
+   - 若高低恶性状态在模拟pseudobulk中无法可靠区分，只允许报告总恶性比例，不得在TCGA声称推断出MLMOD-high比例。
+
+4. **免疫signature使用原版**`[L]`：
+   - T-cell-inflamed：Ayers 18-gene GEP`[L: Ayers et al. JCI 2017]`。
+   - CYT：GZMA/PRF1几何均值`[L: Rooney et al. Cell 2015]`。
+   - TIDE：使用其原始模型`[L: Jiang et al. Nature Medicine 2018]`。
+   - 不得自行拼接基因集或统一改成z-score均值。
+
+5. **方法稳健性vs独立验证**`[O]`：
+   - 同一表达矩阵上BayesPrism与MCP-counter/ESTIMATE只算方法稳健性，不能在gate中算作两个独立支持。
+   - 独立验证需要不同队列。
+
+---
+
+## 第13条：WGCNA
+
+**问题**：当前只说记录soft power、网络类型和模块参数，没有选择规则、稳定性标准和fallback。
+
+**修改要求**：
+
+在F7.5 WGCNA段落中，将参数选择改为：
+
+1. **输入**`[D]`：
+   - TCGA-STAD star_counts反变换后DESeq2 VST。
+   - 过滤规则：`count >= 10`且至少10%样本表达`[L: WGCNA官方FAQ建议]`。
+
+2. **主参数冻结**`[L: Langfelder & Horvath BMC Bioinformatics 2008, 2012; WGCNA官方FAQ]`：
+   - `signed`网络、`bicor`相关、`maxPOutliers = 0.05`。
+   - `minModuleSize = 30`、`mergeCutHeight = 0.25`。
+
+3. **Soft power选择规则**`[L: WGCNA FAQ]`：
+   - 取首次达到signed R²≥0.8且平均连接度未塌陷的最小值。
+   - 若1-30均不达到，先查异质性（如分子亚型混合）；无法解释时对>40样本的signed网络使用官方建议power=12并标记限制`[L: WGCNA FAQ]`。
+
+4. **核心基因与eigengene关联**`[O, 修正Codex发现的part-whole相关问题]`：
+   - 核心基因参与模块后，关联模块eigengene与该核心基因时，必须使用移除核心基因后重算的eigengene，避免part-whole相关。
+
+5. **模块保存验证**`[L: WGCNA preservation]`：
+   - 优先在独立ACRG队列（GSE62254/GSE66229作为一个）测试，报告Zsummary和medianRank。
+
+6. **解释边界**`[O]`：
+   - WGCNA始终是共表达支持，不能升级为调控因果。
+
+---
+
+## 第14条：F8 CellOracle
+
+**问题**：当前未区分核心基因是否适合in silico perturbation。
+
+**修改要求**：
+
+在F8.3 CellOracle段落中，增加以下准入和解释规则：
+
+1. **CellOracle准入条件**`[L: CellOracle Nature Communications 2023]`：
+   - 核心基因必须是TF或调控因子才进入CellOracle扰动分析。
+   - 轨迹必须通过F3 gate。
+   - 在至少5个患者且目标细胞≥10%可检出。
+
+2. **不适用基因的处理**`[O]`：
+   - 受体、配体、代谢酶、结构蛋白默认标记`not_applicable_for_perturbation`，不能为完成F8强行虚拟敲除。
+
+3. **负对照要求**`[O]`：
+   - 必须使用表达匹配（表达水平和检出率相近）的非候选基因作为负对照。
+
+4. **解释上限**`[O]`：
+   - 最高解释为`model_supported_hypothesis`，已在现有方案中确认（F8.3 interpretation_level上限为model_supported_hypothesis）。
+
+---
+
+## 全局一致性同步
+
+完成以上14条修改后，必须同步以下文件中的相关表述：
+
+1. **conventions.txt**：
+   - 更新F5相关段落，删除"加权评分"相关表述，替换为"层级门控与证据分级"。
+   - 更新F6描述（若仍有旧编号或"bulk signature"等旧表述）。
+   - 确认F4证据层级表述与本prompt第10条一致。
+
+2. **AGENT.md**：
+   - 同步AUCell主分数、CellChat角色降级、BayesPrism基准等表述。
+   - 清除"F6 bulk biomarker""F3互作分析"等旧编号（如仍存在）。
+
+3. **project_overview.txt**：
+   - 更新"分析管线"描述，反映AUCell主分数、层级门控等核心变更。
+
+4. **主方案目录引用**：
+   - 若主方案仍引用`logs/F7_multiomics_pathway`但实际目录为`F7_genomics_pathway`，统一修正。
+
+5. **乱码修复**：
+   - 检查并修复主方案中已知的乱码（如之前报告的"必须���时保存"等）。
+
+---
+
+## 修改后确认清单
+
+1. [ ] 第1条：F1.2中doublet主方法为scDblFinder，DoubletFinder为敏感性
+2. [ ] 第1条：二次QC使用isOutlier(nmads=3) + 至少两个指标异常才删除
+3. [ ] 第2条：F1.4置信度有可执行决策表（pct.1/pct.2/log2FC/BH阈值）
+4. [ ] 第3条：恶性上皮必须保留未整合结果，整合质量交叉验证表存在
+5. [ ] 第3条：Pareto选择规则存在
+6. [ ] 第4条：F2.1主路线为SRA重处理（STAR+RSEM+tximport+DESeq2），GEO表为conditional fallback
+7. [ ] 第4条：主signature定义为原文三比较标准（FC>2, BH<0.05），无人为基因数限制
+8. [ ] 第4条：Torin rescue方向为annotation字段，不决定准入
+9. [ ] 第5条：AUCell为预注册主分数，UCell/AddModuleScore/singscore为敏感性
+10. [ ] 第5条：aucMaxRank冻结为ceiling(0.05×nGenes)，3%/10%为敏感性
+11. [ ] 第5条：签名一致性用1000个matched random gene sets比较，无固定rho阈值
+12. [ ] 第6条：连续分数为主变量，high标签为次级操作性工具
+13. [ ] 第6条：天然亚群判定使用200次患者平衡bootstrap
+14. [ ] 第6条：外部队列不迁移绝对AUCell阈值
+15. [ ] 第7条：特异性判定使用交叉验证R²替代简单rho阈值
+16. [ ] 第8条：root选择全程屏蔽MLMOD信息
+17. [ ] 第8条：无合格root时转为无方向状态拓扑，不强行生成起点
+18. [ ] 第9条：GRNBoost2至少10个seed，80%重复出现的边为高置信
+19. [ ] 第9条：删除dense CSV主路线，改用loom/稀疏格式
+20. [ ] 第10条：F4主模型为edgeR QL配对设计（~patient_id + MLMOD_state）
+21. [ ] 第10条：混合效应替补触发条件为>30%患者单侧，写在看到LR结果之前
+22. [ ] 第10条：CellChat降为网络背景/候选发现，不作主统计证据
+23. [ ] 第11条：F5加权评分体系已删除，替换为层级门控
+24. [ ] 第11条：候选分级为Tier 1/2/3/reject，有明确定义
+25. [ ] 第11条：队列角色冻结，GSE84426/GSE84437不重复计权，ACRG算一个
+26. [ ] 第12条：BayesPrism模拟至少1000个pseudobulk + LOPO
+27. [ ] 第12条：免疫signature使用原版（Ayers 18-gene, CYT, TIDE）
+28. [ ] 第13条：WGCNA参数冻结（signed, bicor, minModuleSize=30, mergeCutHeight=0.25）
+29. [ ] 第13条：核心基因eigengene关联使用移除核心基因后的重算eigengene
+30. [ ] 第14条：CellOracle准入限于TF/调控因子，受体/配体/酶标记not_applicable
+31. [ ] 全局：conventions.txt、AGENT.md、project_overview.txt同步更新
+32. [ ] 全局：无残留"加权评分""投票平均""CellChat主机制"等旧表述
+33. [ ] 全局：`[TABLE]` / `[/TABLE]` 配平
+34. [ ] 全局：已知乱码修复
+
+---
+
+## 注意事项
+
+1. **不要修改CLAUDE.md**。
+2. **每项规则保留`[L]`/`[D]`/`[O]`来源标注**，写入方案正文时可简化为括号注释。
+3. **第4条SRA重处理**：实际执行在F0阶段完成，本prompt只修改方案文本中的规则描述和路线优先级。不需要现在运行pipeline。
+4. **第11条删除加权评分**：这会影响之前Claude Code添加的`F5_weight_sensitivity_analysis.tsv`和权重设计依据段落。需要同步删除或替换这些内容。
+5. **修改量大**：建议Codex按F节顺序逐条修改（F1→F2→F3→F4→F5→F6→F7→F8→全局同步），每完成一个F节后做一次`[TABLE]`配平检查和旧关键词扫描。
+6. **来源标注不伪装**：操作性阈值（`[O]`）不得写成"文献推荐"或"共识标准"。明确标注为项目预注册阈值并做敏感性分析。

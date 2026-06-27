@@ -1,0 +1,75 @@
+# Codex修改指令：F0-F4全局通读审查修订 Round 2
+
+## 背景
+
+第三方审查者完成了F0（第0行）至F4（第649行）的完整通读，逐维度交叉检查跨节一致性。结构层面（RDS对象命名链、gate状态词汇、效应量体系、PM 3样本限制、cell_id_final、正常上皮不混入06a、random_seed=42、签名泄漏追踪链F2→F3→F4、跨F依赖链、TABLE 16/16、跨节文件引用）全部通过，无断裂无矛盾。
+
+内容审核发现 0 个 Blocking、1 个 Warning、2 个 Suggestion。核心问题是 F4.0 未像 F3.0 那样承接 F2-Gate4 解释等级以限制 F4 结论强度；两个 Suggestion 分别涉及 F4.6 gate 报告补充上游信息和 F2-Gate1 签名冻结显式声明。
+
+修改涉及 F4.0、F4.6 和 F2-Gate1 三处。修改后需同步 WPS 路径并验证 `[TABLE]` 标签平衡和 SHA256 一致。
+
+---
+
+## Warning 修改（必须完成）
+
+### W1. F4.0 承接 F2-Gate4 解释等级——与 F3.0 对齐
+
+**问题**：F3.0（第533行）明确写了"若F2-Gate4为阴性或方向不一致，F3仍可作为机制探索继续，但不得写成已验证预后特异亚群的机制解析"，这限定了 F3 在 F2 bulk 验证弱/负面时的结论强度上限。F4.0（第588行）只要求 F2-Gate4 报告"存在"和"已获研究者批准"，但没有说 F2-Gate4 的解释等级（"强支持"/"有限支持"/"探索性继续"）如何影响 F4 的结论强度。后果是：若 F2 bulk 验证方向不一致但研究者批准探索性继续，Biomni 可能在 F4 中把 CellChat 结果写成"高MLMOD亚群与TME具有特异通讯模式"，越界程度高于 F3 允许的同等条件下的表述。此外，F4.6 gate 报告必述内容（第635行）也没有要求包含 F2-Gate4 解释等级信息，导致 F4 gate 审阅者无法快速判断 F4 结论是否在 F2 支持范围内。
+
+**修改涉及两处**：
+
+#### W1a. F4.0 第588行——插入 F2-Gate4 解释等级约束
+
+**精确位置**：第588行，"且F2高MLMOD定义已获研究者批准。"这句句号之后、"F3.1功能富集和F3.3 SCENIC结果可用于"之前。
+
+**新增内容**（插在两句之间，作为独立一句）：
+> 若F2-Gate4 bulk验证为阴性或方向不一致，F4仍可作为通讯层面机制探索继续，但不得写成已验证预后意义亚群的TME通讯机制解析；F4报告和F4_final_candidate_communication_axes.tsv中的final_interpretation必须注明F2-Gate4解释等级（强支持、有限支持或探索性继续），且结论措辞强度不得超越该解释等级允许的上限。
+
+#### W1b. F4.6 第635行——gate 报告必述内容追加上游解释等级
+
+**精确位置**：第635行，"PM比较解释边界、"之后、"缺失条件文件原因、"之前。
+
+**新增内容**（插在逗号分隔列表中）：
+> F2-Gate4解释等级和F2.3 MLMOD_high_definition_status（natural_discrete_subgroup或operational_high_activity_group或exploratory_Q3_group）、
+
+---
+
+## Suggestion 修改
+
+### S1. F4.6 gate 报告与 F4.1 Q3 注释的协调确认
+
+**问题**：F4.1（第594行）已写"若F2.3将高MLMOD定义为exploratory_Q3_group，标签名称仍可使用high，但F4报告必须说明这是操作性高活性分组，不是天然离散亚群"。W1b 在 gate 报告中追加了 MLMOD_high_definition_status 要求。这两处在逻辑上互补但措辞侧重不同：F4.1 说的是"F4报告必须说明"，W1b 说的是"gate 报告必须汇总"。需确认 W1b 落地后，F4.1 的"F4报告"与 F4.6 的"F4_gate_cellchat_report.md"在 MLMOD_high_definition_status 的交代上不冲突、不遗漏。
+
+**修改**：无需额外改动方案文字。Codex 在落地 W1b 后，请通读 F4.1 第594行和 F4.6 第635行，确认两处对 MLMOD_high_definition_status 的要求可以由同一份 F4_gate_cellchat_report.md 同时满足，不存在矛盾定义或重复标准。若发现措辞冲突，请自行微调至一致并在回复中说明。
+
+### S2. F2-Gate1 签名冻结显式声明——跨节补充
+
+**问题**：CLAUDE.md 已约定"签名冻结在bulk验证前"。F2-Gate1（第467行）要求 MLMOD_human_scoring_signature.tsv 存在且满足规则才能进入 F2.2，因此签名在实质上于 F2-Gate1 后冻结。但方案文本没有一句显式的冻结声明，相比 F2.4（第501行）对 bulk 迁移签名的显式冻结说明，F2-Gate1 的 scoring 签名冻结只是隐含的。后续 F2.2 打分、F2.3 亚群定义、F2.4 bulk 验证、F3 和 F4 均依赖这个签名不被修改；若缺少显式声明，Biomni 可能在后续步骤中尝试"优化"签名基因集。
+
+**修改位置**：第467行，"跨系统验证warning本身不自动阻断F2.2，但必须说明其对主评分可信度的影响。"这句句号之后，F2.2标题"F2.2 多算法并行打分"之前。
+
+**新增内容**（作为独立一句追加在第467行末尾）：
+> MLMOD_human_scoring_signature.tsv在F2-Gate1通过后即冻结，后续F2.2多算法打分、F2.3亚群定义、F2.4 bulk验证、F3和F4均不得修改该文件内容或基因列表，以防止p-hacking和循环优化；若后续分析中发现签名存在严重问题需要回退，必须重新从F2.1开始并重新通过F2-Gate1。
+
+---
+
+## 修改后确认清单
+
+完成所有修改后，请逐项验证：
+
+1. [ ] W1a: grep `F2-Gate4 bulk验证为阴性或方向不一致` 或类似表述，确认在 F4.0 第588行附近存在
+2. [ ] W1a: grep `F2-Gate4解释等级` 确认在 F4.0 出现，且限定了 final_interpretation 必须注明
+3. [ ] W1a: grep `结论措辞强度不得超越该解释等级` 确认上限约束存在
+4. [ ] W1a: 确认新增内容位于"F2高MLMOD定义已获研究者批准"之后、"F3.1功能富集"之前，不破坏原有句子
+5. [ ] W1b: 确认第635行 gate 报告必述列表中出现 `F2-Gate4解释等级` 和 `MLMOD_high_definition_status`
+6. [ ] W1b: 确认 `natural_discrete_subgroup` `operational_high_activity_group` `exploratory_Q3_group` 三个允许值均出现
+7. [ ] W1b: 确认新增项位于"PM比较解释边界"和"缺失条件文件原因"之间，逗号分隔格式正确
+8. [ ] S1: 确认 F4.1 第594行的 MLMOD_high_definition_status 说明与 W1b 的 gate 报告要求不矛盾
+9. [ ] S2: grep `F2-Gate1通过后即冻结` 确认冻结声明在 F2-Gate1 段落（第467行附近）存在
+10. [ ] S2: grep `不得修改该文件内容或基因列表` 确认禁止范围覆盖 F2.2-F4
+11. [ ] S2: grep `必须重新从F2.1开始` 确认回退规则存在
+12. [ ] S2: 确认新增内容位于 F2-Gate1 段落末尾、F2.2 标题之前，不破坏 Gate1 条件和报告要求
+13. [ ] F3.0 第533行的 F2-Gate4 表述保持不变，未被误改
+14. [ ] F4.1 第594行的 exploratory_Q3_group 注释保持不变，未被误改
+15. [ ] `[TABLE]` / `[/TABLE]` 配平检查（应仍为 16/16）
+16. [ ] 两个路径 SHA256 一致

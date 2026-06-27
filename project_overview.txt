@@ -16,14 +16,17 @@
 ## 数据集
 
 ### 单细胞
-* GSE183904（Cancer Discovery 2022），40 样本（26 Primary_Tumor, 10 Normal_Gastric, 3 Peritoneal_Metastasis, 1 Normal_Peritoneum），158,641 细胞，26,571 基因，processed count-like CSV 矩阵（非 FASTQ）
+* GSE183904（Cancer Discovery 2022），40 样本（26 Primary_Tumor, 10 Normal_Gastric, 3 Peritoneal_Metastasis, 1 Normal_Peritoneum），158,641 细胞，26,571 基因，作者提供的 Cell Ranger-derived、Seurat 基础 QC 过滤后的 raw gene count CSV 矩阵（非 FASTQ，非 Cell Ranger raw/filtered feature-barcode 目录，无 empty-droplet 背景）
+* 外部验证候选GSE239676（Gastroenterology 2024）：20例未经治疗IV期胃腺癌，含原发、肝转移和腹膜癌播散，GEO提供count_matrix.mtx与metadata；须在F2.4专项审计后使用，且不得参与signature/参数/阈值选择
+* 外部验证候选GSE206785（Genome Biology 2022）：24例配对肿瘤-正常、111,140细胞；本地为log1p(count)-like processed矩阵，无PM分组，只能做处理后表达层迁移验证
+* GSE237876为整体转录组而非单细胞数据，不得误列为外部单细胞验证
 
 ### MLMOD 基因集来源
 * GSE235046（Cell 2025，小鼠 BMDM bulk RNA-seq），需跨物种（mouse→human）跨细胞类型（macrophage→epithelial）迁移
 * MLMOD 三层基因集：seed_mechanistic → mouse_DE_signature → human_scoring_signature
 
 ### Bulk
-* 训练集：TCGA-STAD
+* 训练集：TCGA-STAD；当前本地已准备Xena star_counts/star_tpm、Xena survival、GDC/cBioPortal clinical、cBioPortal GISTIC/log2 CNA、434个经官方MD5和本地SHA256/gzip校验的GDC masked somatic mutation MAF，以及486,427个CpG乘397个样本的完整Xena 450K beta矩阵。Xena star_counts以log2(count+1)存储；全流验证确认27,175,680个值均可通过round(2^x-1)重建整数counts（最大误差8.38e-09），经F7基因/样本审计后允许用于DESeq2 VST/WGCNA，但不因此自动获准用于DESeq2差异表达。MAF集合仍需样本合并、重复事件处理和TMB分母定义；450K矩阵仍需probe注释/过滤、缺失率和表达样本交集审计。文件已下载不等于已通过对应F节分析准入。
 * 验证集：GSE15459 / GSE66229 / GSE84426（根据实际可用性调整）
 * SuperSeries 确认：GSE62254 ⊂ GSE66229，GSE84426 ⊂ GSE84437
 
@@ -39,12 +42,22 @@ GSE183904 的 Peritoneal_Metastasis 仅 3 样本。所有涉及 PM 的分析遵�
 恶性上皮为主线，免疫细胞 / 成纤维细胞作为微环境互作对象
 
 ## 执行环境
-Linux 服务器，Ubuntu 22.04 Server 64-bit，Intel CPU 3.4GHz，16 核，64GB RAM。
-Codex 控制服务器运行 R/Python/Bash 代码；Claude Code 在用户授权后审核服务器配置、代码和执行结果。
-所有中间文件持久保存在磁盘上；git 管理方案、脚本、小型文本输出和审计记录，大型数据与对象通过 manifest + SHA256 追踪。
+执行采用“本地优先、临时服务器按需补充”原则。Codex负责在获批后执行本地或服务器代码；Claude Code在用户授权后审核环境计划、代码和执行结果；用户批准后才进入下一gate。
+
+默认本地设备：`laptop_thinkbook16p`，ThinkBook 16P，AMD Ryzen 9 8945HX with Radeon Graphics（2.50 GHz），32.0 GB RAM（当前报告约27.8 GB可用），NVIDIA GeForce RTX 5060 Laptop GPU，1 TB硬盘。除非资源、兼容性、预计运行时间或设备可用性审计不通过，当前gate默认优先在该设备执行。
+
+备用本地设备：`desktop_i5_14600kf`，Windows台式机，Intel Core i5-14600KF，32 GB RAM，NVIDIA GeForce RTX 4060 Ti，1 TB硬盘。当默认笔记本不适合运行某个模块时，必须先评估该台式机是否可行，再决定是否需要临时服务器。切换前还需确认仓库、输入数据、锁文件和上游对象可用且SHA256一致。
+
+正式执行优先级为：默认笔记本 → 备用台式机 → 临时Linux服务器。每个gate执行前必须重新读取候选设备的实际可用内存、物理/逻辑核心数、GPU显存和剩余磁盘，不得把标称容量当作当前可用资源，也不得因两台机器均为32 GB RAM就假定性能、可用资源或兼容性等价。GPU仅在所用软件明确支持、版本和结果可复核时启用；Seurat、Harmony、inferCNV、CopyKAT、CellChat、WGCNA、Monocle3和常规pySCENIC流程不得仅因存在GPU就假定会自动加速。
+
+当基于真实输入规模的资源评估或必要的技术smoke/pilot显示默认笔记本不合适时，先评估备用台式机；只有两条本地路径均不适合、备用设备当前不可用且等待不合理，或用户基于完整评估明确批准时，才提出租用临时Linux服务器。若静态估算已明确超过某台设备的安全线，不要求在该设备上冒险运行资源pilot。服务器规格由当前gate评估产生并经用户批准，不预设固定配置。技术smoke test仍可用于检查输入方向、数据库/接口兼容和最小命令链，但不能为了省服务器而改变生物学输入。
+
+两台Windows本地设备均可在需要Linux依赖或需要与服务器统一用户态时使用WSL；优先复用经验证的同一WSL2 Ubuntu 22.04环境、Linux容器镜像或可审计锁文件。WSL是本地设备上的运行时，不是额外算力，资源评估仍使用宿主机当时可分配给WSL的RAM、CPU和磁盘。原生Windows能够稳定支持且结果可审计的模块可在原生环境运行；涉及Linux-only依赖、编译链或服务器迁移一致性的模块优先使用WSL。至少固定R、Python、关键包、命令行工具和数据库版本。Windows原生与Linux底层系统库可能不同，即使包版本号相同也不得宣称二进制环境完全一致；任何跨平台差异必须记录并评估是否影响结果。
+
+所有中间文件最终持久保存在本地仓库或本地登记的数据目录中；git管理方案、脚本、小型文本输出和审计记录，大型数据与对象通过manifest + SHA256追踪。服务器运行结束前必须把代码、日志、参数、版本、seed、关键中间文件和结果文件全部下载到本地并校验完整性。
 
 ## 分析管线
-Seurat v5 + Harmony 整合，inferCNV + CopyKAT 恶性判定，多算法 MLMOD 打分（AddModuleScore / AUCell / ssGSEA / singscore / UCell，秩归一化），staged gate 系统
+Seurat v5 + Harmony分谱系整合审计；F1完全不使用MLMOD分数、基因集或预后信息参与聚类、注释和恶性判定；inferCNV按sample_id × epithelial_cluster_id解释，CopyKAT逐样本运行并分别报告；F2.1优先按获批SRA重处理构建GSE235046/SRP444325主signature，GEO公开小数count-like表仅作limma-voom条件fallback；F2采用两层筛选，先在全细胞主要大类中筛查MLMOD信号并输出F2_candidate_cell_class_decision.tsv等待批准，再在获批候选大类内部定义MLMOD-high/low，当前优先假设为malignant_epithelial_main但必须接受反证；单细胞MLMOD使用UCell唯一主分数（MLMOD_Score = UCell_MLMOD_score，主maxRank = 1500），AUCell为关键rank-based敏感性（aucMaxRank = ceiling(0.05×nGenes)），AddModuleScore/singscore及条件性ssGSEA/JASMINE作其他敏感性，不平均、不投票；MLMOD-high/low主定义优先patient-stratified top/bottom 20%，patient_id不可用时sample-stratified top/bottom 20%，主对照为MLMOD_low_reference，中间60%为intermediate且不进入主high-vs-low DE；ferroptosis/lipid oxidation/lipid peroxidation为主机制支持模块，cuproptosis、pyroptosis、apoptosis、stress、cell cycle、ribosomal、MT_transcript_burden等为对照/混杂模块；主分析不默认删除MT-encoded genes，但必须计算MLMOD_Score_no_MT_encoded和MT_transcript_burden_score，并由MLMOD_mechanism_interpretation_matrix.tsv约束最高表述；bulk临床验证使用GSVA单一主分数、ssGSEA作敏感性；F4以样本感知pseudobulk LR为主、CellChat/LIANA为同矩阵网络敏感性；F5使用层级门控与证据分级，不使用人为加权评分；所有最终验证队列与候选筛选/参数调优隔离，采用staged gate系统
 
 ## 语言约定
 * 日常沟通：中文

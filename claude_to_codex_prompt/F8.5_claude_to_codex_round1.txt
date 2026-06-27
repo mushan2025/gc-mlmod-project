@@ -1,0 +1,48 @@
+# Codex修改指令：F8.1-F8.5自主挑刺第三方审查修订 Round 1
+
+## 背景
+
+第三方审查者完成了对Codex F8.0 round 1 prompt执行结果的验证（12项清单全部通过），以及对Codex F8.1-F8.5两轮自主挑刺修改的全面12维度审核。
+
+F8.0 round 1 prompt验证：W1a（F4 celltype文件追加）和W1b（TME分组来源规定）均正确落地。Codex超出最低要求的扩展也合理（CellChat解释等级上限、F4 gate FAIL显式降级）。
+
+F8.1-F8.5自主挑刺审核：Codex在消息1013-1028中对F8.1-F8.5进行了两轮自主挑刺，覆盖assay/layer规则、sample-level统计、circularity/selection_bias/evidence_reuse三分法、混杂审计、CellOracle基因类型限制、CellChat门槛和gate sub-status拆分。F8从38行大纲级扩展为40行极密集可执行规范，28个输出文件、三层审批gate。
+
+12维度审核全部通过。发现0个Blocking、0个Warning、1个Suggestion。核心问题是F8.2引用F3通路分数作为可检验状态，但F8.0输入读取清单中未包含任何F3输出文件。
+
+修改仅涉及F8.0第840行一处。修改后需同步WPS路径并验证`[TABLE]`标签平衡和SHA256一致。
+
+---
+
+## Suggestion 修改
+
+### S1. F8.0条件性读取清单追加F3通路分数来源
+
+**问题**：F8.2（849行）将"F3已通过gate或获批继续的少数关键通路分数"列为默认可检验状态，且明确"F3单细胞通路分数可做cell-level visualization"。但F8.0（840行）输入读取清单的条件性读取只覆盖F4、F6、F7——没有任何F3输出文件。F3信息通过F5 gene-level表格间接传递，但F5只携带基因级筛选结果，不携带cell/sample级通路分数。
+
+后果为低风险：F8_method_execution_plan.tsv和F8_state_association_plan.tsv会在执行前暴露数据缺口（planned_input_objects字段），研究者可在审批时指定F3数据来源。此外F8.2主证据要求sample-level聚合，cell级通路分数仅用于visualization，即使不可用也不影响主结论。
+
+但如果F8.0读取清单不提及F3，Biomni可能直接跳过F3通路分数相关分析，而不是在method_execution_plan中主动提出读取方案。显式列出可减少这种遗漏风险。
+
+**修改位置**：第840行，条件性读取F4/F6/F7文件的句子"若F4、F6或F7已完成且gate不是FAIL，还应读取..."。
+
+**修改方式**：在该句之前插入一句关于F3的条件性读取。
+
+**新增内容**（插在"若F4、F6或F7已完成且gate不是FAIL"之前，作为独立一句）：
+> 若F3-Gate1已通过或获批带限制继续，还应读取F3_pathway_score_by_sample.tsv用于F8.2 sample级通路状态关联分析；若F8.2需使用cell级F3通路分数进行可视化，Biomni必须在F8_method_execution_plan.tsv中指明cell级分数来源对象（F3中间Seurat对象或重新计算），并获研究者批准。
+
+---
+
+## 修改后确认清单
+
+完成所有修改后，请逐项验证：
+
+1. [ ] S1: grep `F3_pathway_score_by_sample.tsv` 确认在第840行附近存在
+2. [ ] S1: grep `F3-Gate1已通过` 确认条件性读取的前提条件存在
+3. [ ] S1: 确认新增内容位于F5输入文件列表之后、F4/F6/F7条件性读取之前，不破坏既有读取逻辑
+4. [ ] S1: 确认cell级F3通路分数不是硬性要求读取，而是通过method_execution_plan审批决定
+5. [ ] F8.0其他内容（核心基因准入、对象一致性、F4/F6/F7条件读取）未被误改
+6. [ ] F8.1-F8.4未被误改
+7. [ ] F8.5 gate条件、sub-status定义和输出清单未被误改
+8. [ ] `[TABLE]` / `[/TABLE]` 配平检查（应仍为17/17）
+9. [ ] 两个路径SHA256一致

@@ -1,0 +1,140 @@
+# Codex修改指令：F4 第三方审查修订 Round 1
+
+## 背景
+
+第三方审查者对 F4 整体（F4.0-F4.6）完成了 12 维度综合审核。F4 经过 Codex 三轮自审后质量已显著提升，但仍存在 2 个 Blocking、5 个 Warning、4 个 Suggestion。最核心的系统性问题是：F4.5 的效应量指标与 F3.3 已建立的 Cliff's delta 体系脱节，以及 CellChat RDS 对象在 F4.6 输出清单中遗漏。
+
+以下修改涉及 F4.2、F4.3、F4.4、F4.5、F4.6 多个子节。修改后需同步 WPS 路径并验证 `[TABLE]` 标签平衡和 SHA256 一致。
+
+---
+
+## Blocking 修改（必须完成）
+
+### B1. F4.5 效应量指标和阈值定义——与 F3.3 体系对齐
+
+**问题**：F4_sample_level_LR_support.tsv 包含 `effect_size_metric` 和 `effect_size` 字段，但从未定义使用什么指标或阈值。F3.3 已统一使用 Cliff's delta（非配对）/ matched rank-biserial r（配对），≥0.33 中等、≥0.20 小效应、<0.20 negligible。F4.5 留空会导致 Biomni 自由选择指标，且与 F3.3 不一致。
+
+**修改位置**：第619行，F4_sample_level_LR_support.tsv 字段列表之后
+
+**新增内容**：
+> 效应量指标与 F3.3 保持一致：非配对 sample-level 比较使用 Cliff's delta，配对设计使用 matched rank-biserial r。|Cliff's delta| >= 0.33 或 |r| >= 0.33 为中等效应支持；>= 0.20 为小效应/方向性支持；< 0.20 为 negligible。F4.5 的 interpretation_level 与效应量联动：中等以上效应 + adjusted_p_value < 0.05 可支持 candidate_main_supported 级别的样本层确认；小效应或方向一致但未达显著性为 directional_support；negligible 效应或方向不一致为 exploratory_only 或 not_interpretable。
+
+### B2. CellChat RDS 对象补入 F4.6 必须输出清单
+
+**问题**：第605行明确要求"所有CellChat对象必须保存为RDS"，但第622行必须输出文件列表中没有任何 RDS 对象。Biomni 可能只交付 TSV/MD 而不保存对象，导致后续无法复查 centrality/network 层级数据。
+
+**修改位置**：第622行，F4 必须输出列表
+
+**修改内容**：在 `F4_CellChat_parameters.tsv` 之后追加：
+> 所有已构建的 CellChat 对象 RDS 文件（至少包括 primary_tumor_CellChat.rds 和 tumor_main_CellChat.rds，以及实际构建的 peritoneal_metastasis_CellChat.rds、primary_tumor_low_reference_sensitivity_CellChat.rds 和其他敏感性对象 RDS）
+
+---
+
+## Warning 修改
+
+### W1. CellChat 版本兼容性检查
+
+**问题**：CellChat v1 和 v2 存在显著 API 差异。方案全部使用 v1 风格函数名。若 Biomni 安装 v2，函数签名和内部结构可能不同。当前 preflight 只检查"包及版本"，没有说遇到不兼容版本怎么办。
+
+**修改位置**：第603行，preflight 部分
+
+**新增内容**（在现有 preflight 检查列表末尾追加）：
+> Biomni 必须检查 CellChat 主版本号并记录在 software_versions.tsv 和 F4_CellChat_parameters.tsv 中。若安装的是 CellChat v2（>= 2.0.0），函数接口和内部数据结构可能与方案描述的 v1 流程不同；Biomni 必须在 preflight 中确认关键函数（computeCommunProb、filterCommunication、subsetCommunication、netAnalysis_computeCentrality）可正常调用且参数兼容；若不兼容，必须报告具体差异并等待研究者批准是否降级安装 v1、调整参数或使用 v2 等价接口。不得在版本不兼容时强行运行并忽略报错。
+
+### W2. CellChatDB 类别分批运行策略
+
+**问题**：CellChatDB.human 包含 Secreted Signaling、ECM-Receptor、Cell-Cell Contact 三大类。对大对象全量跑所有类别的 computeCommunProb 可能超时或内存不足。CellChat 官方教程支持按类别子集分批运行。方案未提及此策略。
+
+**修改位置**：第604行，CellChat 流程步骤中，`subsetData()` 之前或附近
+
+**新增内容**：
+> 默认使用 CellChatDB.human 全库（Secreted Signaling、ECM-Receptor、Cell-Cell Contact）；若全库 computeCommunProb 因资源不足或超时失败，可按三大类别分批运行（每类单独 subsetDB -> subsetData -> ... -> computeCommunProb）并合并结果，但必须在 F4_CellChat_parameters.tsv 中记录分批策略和合并方法。不得只运行 Secreted Signaling 就声称完成全量通讯分析。
+
+### W3. 细胞比例混杂注释
+
+**问题**：即使 `population.size = FALSE`，高/低 MLMOD 组内细胞数量差异仍可能通过平均表达估计和过表达基因识别间接影响通讯推断。方案没有提醒这一点。
+
+**修改位置**：第604行，`population.size = FALSE` 解释之后
+
+**新增内容**：
+> 即使 population.size = FALSE，高/低 MLMOD 组内的细胞数量差异仍可能通过平均表达估计和 identifyOverExpressedGenes 间接影响通讯推断结果。F4_confounding_audit.tsv 必须检查各 communication_celltype 的细胞数比例是否与关键通讯强度排名强相关；若相关，应在 F4_gate_cellchat_report.md 中标记 cell_proportion_confounding_warning。
+
+### W4. netAnalysis_computeCentrality 输出表定义
+
+**问题**：第604行列出 netAnalysis_computeCentrality 作为必做步骤，但整个 F4 没有为其定义输出 TSV。Biomni 可能只画图不输出可审计数据。
+
+**修改位置**：第610行附近（F4_high_MLMOD_sender_receiver_summary.tsv 前后均可）
+
+**新增内容**：
+> Biomni 必须输出 F4_CellChat_centrality.tsv，字段至少包括 analysis_object、object_role、communication_celltype、outdeg_sender_total_weight、indeg_receiver_total_weight、hub_score、authority_score、info_flow、n_interactions_as_sender、n_interactions_as_receiver、pathway_name_if_pathway_level 和 note。该表用于辅助判断高 MLMOD 恶性上皮在通讯网络中的全局角色，并可与 F4_high_MLMOD_sender_receiver_summary.tsv 交叉验证。
+
+同时在第622行输出清单中追加 `F4_CellChat_centrality.tsv`。
+
+### W5. LR support score 解释边界
+
+**问题**：`source_ligand_mean * target_receptor_mean` 或几何均值是 ad hoc 描述性指标，没有标准统计分布。方案没有说明其解释限制。
+
+**修改位置**：第618行，LR support score 定义之后
+
+**新增内容**：
+> LR support score 是描述性样本层通讯潜力估计，不等于 CellChat 通讯概率，也不等于真实通讯强度。正式高低 MLMOD 差异应体现在 lr_support_score 的 sample-level 比较上（配对或非配对检验），score 本身的绝对值不直接用于判定通路是否成立。Biomni 必须固定一种 score 计算方法作为主线（推荐几何均值），另一种作为敏感性；若两种方法给出方向冲突的结果，应报告冲突并降级该通讯轴的解释。
+
+---
+
+## Suggestion 修改
+
+### S1. F4 → F5 交接接口
+
+**修改位置**：第623行 gate 条件末尾，`[TABLE 11]` 之前
+
+**新增内容**：
+> F4 → F5 交接规则：F4 的候选通讯轴（F4_candidate_pathway_review.tsv 中 result_tier 为 candidate_main_supported 或 directional_support 的通路及 LR 对）可供 F5-F8 交叉验证参考，但 F5 不直接依赖 F4 某个特定文件作为必需输入。若 F4 gate = FAIL，F5 可正常启动，但不得引用 F4 通讯结果作为 bulk 层面分析的先验筛选依据。
+
+### S2. Normal_reference_CellChat 用途明确化
+
+**修改位置**：第601行末尾
+
+**新增内容**：
+> 若构建 Normal_reference_CellChat，其用途仅限于展示正常胃上皮通讯 landscape 作为定性背景参考（例如哪些通路在正常组织存在或缺失），不能与 primary_tumor_CellChat 或 tumor_main_CellChat 做直接差异检验，因为正常组织没有高 MLMOD 恶性上皮对应物。
+
+### S3. liftCellChat 异常处理
+
+**修改位置**：第615行，celltype_absent_or_underpowered 标记规则之后
+
+**新增内容**：
+> 若 liftCellChat 产生的空群导致后续 compareInteractions、rankNet 或其他比较函数报错或结果异常（如空矩阵、NaN 值），Biomni 不得继续使用 merged 对象做比较，应降级为逐对象独立描述和手动方向性对比，并在 F4_primary_vs_PM_directional_comparison.tsv 中标记 merge_failed_independent_comparison_used。
+
+### S4. 先验重点通路面板与 F3.1 结果联动
+
+**修改位置**：第613行，先验面板列表之后
+
+**新增内容**：
+> 除上述通用先验通路外，Biomni 应检查 F3.1 的 F3_GSEA_results.tsv 和 F3_ORA_results.tsv 中 FDR < 0.05（high-confidence）且与细胞通讯相关的通路是否对应 CellChatDB 中的通讯类别；若有，应加入 F4_candidate_pathway_review.tsv 并标记 prior_reason = F3_function_enrichment_supported。同理，F3.3 SCENIC 候选 TF 的 regulon targets 若包含 CellChatDB 配体或受体，可标记 prior_reason = F3_SCENIC_TF_target_overlap。这不改变全量输出要求，只是丰富候选审查面板。
+
+---
+
+## 修改后确认清单
+
+完成所有修改后，请逐项验证：
+
+1. [ ] B1: grep `Cliff.s delta` 确认 F4.5 中效应量指标已定义（应在 F4.5 段落中出现，而非只在 F3.3）
+2. [ ] B1: grep `0.33` 确认 F4.5 效应量阈值存在
+3. [ ] B1: grep `interpretation_level.*效应量` 或类似联动规则确认存在
+4. [ ] B2: grep `primary_tumor_CellChat.rds` 确认出现在 F4.6 输出文件清单中
+5. [ ] B2: grep `tumor_main_CellChat.rds` 确认同上
+6. [ ] W1: grep `CellChat v2` 或 `>= 2.0.0` 确认版本兼容性规则存在
+7. [ ] W2: grep `Secreted Signaling.*ECM-Receptor.*Cell-Cell Contact` 或 `分批` 确认 DB 分类运行策略
+8. [ ] W3: grep `cell_proportion_confounding_warning` 确认细胞比例混杂检查存在
+9. [ ] W4: grep `F4_CellChat_centrality.tsv` 确认 centrality 输出表定义存在
+10. [ ] W4: grep `hub_score` 或 `authority_score` 确认 centrality 字段
+11. [ ] W4: `F4_CellChat_centrality.tsv` 出现在 F4.6 输出清单中
+12. [ ] W5: grep `LR support score 是描述性` 或类似解释边界确认存在
+13. [ ] W5: grep `几何均值` 确认主线 score 方法推荐
+14. [ ] S1: grep `F4.*F5.*交接` 确认接口规则存在
+15. [ ] S1: grep `F4 gate = FAIL.*F5 可正常启动` 或类似逻辑
+16. [ ] S2: grep `定性背景参考` 或类似 Normal reference 用途描述
+17. [ ] S3: grep `merge_failed_independent_comparison_used` 确认 liftCellChat 异常处理
+18. [ ] S4: grep `F3_function_enrichment_supported` 确认 F3→F4 面板联动
+19. [ ] `[TABLE]` / `[/TABLE]` 配平检查（应仍为 16/16）
+20. [ ] 两个路径 SHA256 一致
+21. [ ] 无旧版内容残留冲突（如 F4.5 中旧的空 effect_size_metric 定义）

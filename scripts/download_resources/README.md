@@ -1,0 +1,55 @@
+# Download Resources
+
+This folder contains resumable download scripts for large public resources.
+
+Rules:
+
+1. Run these scripts as standalone tasks, not mixed with plan editing.
+2. Keep logs under `logs/download_resources/`.
+3. Keep download manifests under `reports/download_resources/`.
+4. Do not mark a large resource as ready for analysis until size and checksum validation pass.
+5. For GEO files without upstream MD5, record local SHA256 and gzip readability.
+6. For ENA FASTQ files, validate both expected byte size and ENA MD5.
+
+Examples:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\download_resources\download_gse239676.ps1 -PlanOnly
+powershell -ExecutionPolicy Bypass -File scripts\download_resources\download_gse239676.ps1
+powershell -ExecutionPolicy Bypass -File scripts\download_resources\download_srp444325_fastq.ps1 -PlanOnly
+powershell -ExecutionPolicy Bypass -File scripts\download_resources\download_srp444325_fastq.ps1
+```
+
+`download_gse239676.ps1` downloads GEO supplementary files:
+
+- `GSE239676_barcodes.tsv.gz`
+- `GSE239676_features.tsv.gz`
+- `GSE239676_meta.tsv.gz`
+- `GSE239676_count_matrix.mtx.gz`
+
+`download_srp444325_fastq.ps1` reads:
+
+- `data/public_downloads/SRP444325/SRP444325_ENA_read_run.tsv`
+
+and downloads the main paired-end R1/R2 FASTQ files using resume mode.
+
+SRP444325 note:
+
+- The ENA table contains one extra 115-byte `SRR24947498.fastq.gz` entry in addition to the expected paired-end `SRR24947498_1.fastq.gz` and `SRR24947498_2.fastq.gz`.
+- The extra non-R1/R2 file is recorded in the plan but excluded from the main download by default.
+- Use `-IncludeNonPairedArtifacts` only if an audit later decides this placeholder file must be fetched for provenance.
+
+Useful options:
+
+```powershell
+# Write URL/size/checksum plan without downloading.
+powershell -ExecutionPolicy Bypass -File scripts\download_resources\download_srp444325_fastq.ps1 -PlanOnly
+
+# Smoke test: process only the first two FASTQ files.
+powershell -ExecutionPolicy Bypass -File scripts\download_resources\download_srp444325_fastq.ps1 -MaxFiles 2
+```
+
+Completion criteria:
+
+- GSE239676 is usable only after `reports/download_resources/GSE239676_download_manifest.tsv` shows `size_ok` and `gzip_read_ok` for all four supplementary files.
+- SRP444325 is usable for F2.1 raw reprocessing only after `reports/download_resources/SRP444325_fastq_download_manifest.tsv` shows `size_ok` and `md5_ok` for all 30 main paired FASTQ files.

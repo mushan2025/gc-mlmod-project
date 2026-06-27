@@ -1,0 +1,481 @@
+﻿Codex 会话增量上下文导出
+文件用途：before_F2.1_round
+会话 ID：019e68d9-9638-7951-8246-0187f2d19091
+源文件：C:\Users\14799\.codex\sessions\2026\05\27\rollout-2026-05-27T17-52-30-019e68d9-9638-7951-8246-0187f2d19091.jsonl
+指定文件名：before_F2.1_round.txt
+基准已有消息最大编号：450
+当前可见消息总数：503
+本次增量消息数：53（你 9 条，Codex 44 条）
+导出时间：2026-06-06 18:41:51 Asia/Shanghai
+
+整理说明：仅保留你和 Codex 在界面中可见的新增消息；已排除系统/开发者指令、environment_context、工具调用与输出。
+
+================================================================================
+
+[451] 你 | 2026-06-04 22:21:25 Asia/Shanghai
+检查一遍F0和F1看看有无问题
+
+--------------------------------------------------------------------------------
+
+[452] Codex | 2026-06-04 22:21:52 Asia/Shanghai
+我来做一次 F0+F1 的“交付前审计”：先查结构和同步状态，再看 F0/F1 内部逻辑、跨节衔接、文件名一致性、会不会让 Biomni 误解。重点找 blocker，不为了挑刺而挑刺。
+
+--------------------------------------------------------------------------------
+
+[453] Codex | 2026-06-04 22:22:38 Asia/Shanghai
+结构检查通过，但我发现一个小而实在的问题：Seurat v5 那句“layer 替代 assay 子对象”不够准确。官方说法更接近“Seurat v5 的 Assay5 在 assay 内用 layers 存 raw counts、normalized data、scale.data”。我会把这句改得更准确，避免 Biomni 或后续审稿人抓住措辞。
+
+--------------------------------------------------------------------------------
+
+[454] Codex | 2026-06-04 22:23:02 Asia/Shanghai
+我已经修正了 Seurat v5 的措辞。接下来再跑一遍机械检查和关键一致性检查，确认没有因为这次小改动引入新问题。
+
+--------------------------------------------------------------------------------
+
+[455] Codex | 2026-06-04 22:23:12 Asia/Shanghai
+修正后检查通过：旧文件名无残留，表格仍配平，F0-F1 边界也没有错位。现在把这一版同步到 WPS 路径并校验哈希。
+
+--------------------------------------------------------------------------------
+
+[456] Codex | 2026-06-04 22:23:40 Asia/Shanghai
+检查完了。F0 和 F1 没发现新的 blocker，可以继续交 Claude 或准备给 Biomni。
+
+我只改了一处小问题：F1.1 里 Seurat v5 的表述原来有点不够准确，我已改成“Seurat v5 仍保留 assay 概念，但 Assay5 内用 layers 存储 counts/data/scale.data 等矩阵”。这个说法更贴近 Seurat 官方文档，避免后续执行或审稿时被抓措辞。
+
+检查结果：
+
+- `[TABLE]` / `[/TABLE]`：16/16 配平。
+- `06_malignant_epithelial`：无残留。
+- `06a/06b` 文件名在 Gate4、F1.6、F1.7 中一致。
+- F0 到 F1 的 gate 逻辑连贯。
+- F1 的四阶段 gate、输出清单、图表 source data、manifest、日志、版本记录要求一致。
+- 两个路径已同步，SHA256 一致：
+
+`F809C3A10147159775590592DF992E4F57986501B8078DA2BE96086B48929ED7`
+
+参考核查来源：Seurat 官方 v5 文档说明 Assay5 使用 layers 存储 `counts`、`data`、`scale.data` 等矩阵：[Seurat v5 essential commands](https://satijalab.org/seurat/articles/seurat5_essential_commands.html)。
+
+--------------------------------------------------------------------------------
+
+[457] 你 | 2026-06-06 14:12:59 Asia/Shanghai
+继续向前讨论
+
+--------------------------------------------------------------------------------
+
+[458] Codex | 2026-06-06 14:13:23 Asia/Shanghai
+好，我们继续往前走。按现在的结构，下一个大块就是 F2：MLMOD 基因集构建、单细胞打分和高活性亚群定义。这里风险会比 F1 更高，因为 F2 的核心依赖一个很新的机制和基因集来源，我会先读现有 F2，再核查关键事实是否真实、可执行。
+
+--------------------------------------------------------------------------------
+
+[459] Codex | 2026-06-06 14:15:15 Asia/Shanghai
+继续到 F2，我先挑 F2.1-F2.4。核心事实我查了一下：GSE235046 和 Cell 2025 这条线是真实存在的，但当前 F2 写法有几个关键问题，不能直接交给 Biomni 执行。
+
+**F2 主要问题**
+
+1. “MLMOD”不是原文标准术语
+Cell 2025 原文定义的是 `mitoxyperiosis` 和由此导致的 `mitoxyperilysis`。我们可以把 `MLMOD` 作为本课题内部的 operational score 名称，但必须写明：这是本研究为“mitochondria-localized membrane oxidative damage / mitoxyperiosis-related activity”构建的工作性评分，不是公共数据库已有通路名。
+
+2. F2.1 把“我们推导的基因集”写成了“原文定义的基因集”，这不严谨
+GSE235046 是小鼠 BMDM bulk RNA-seq，有 5 组：Media、LPS、CS、LPS+CS、LPS+CS+Torin，每组 3 个重复。我们可以基于它重做 DESeq2，构建“本研究定义的 mitoxyperiosis-related transcriptional signature”，但不能提前说“三组交集即原文定义的基因集”。这句话要改。
+
+3. 当前 F2 忽略了 Torin rescue 组
+GEO 设计明确有 `LPS+CS+Torin`。原文机制里 mTORC2/mTOR inhibition 是关键调控点，所以基因集构建不能只看 `LPS+CS vs Media/LPS/CS`，还应考虑 `LPS+CS+Torin vs LPS+CS` 的逆转/救援信息。否则基因集可能只是炎症+代谢应激泛反应，不够特异。
+
+4. 小鼠 BMDM 到人胃癌上皮存在跨物种和跨细胞类型问题
+GSE235046 是 `Mus musculus` BMDM，目标是人胃癌恶性上皮。必须增加 mouse-to-human ortholog mapping，并输出映射报告。不能直接拿小鼠 gene symbol 去给人类 scRNA 打分。
+
+5. “必须包含/必须排除”基因表不适合作为打分基因硬规则
+BAX、BAK1、BID、RICTOR、RHOA、NINJ1 是机制锚点，不一定都应该进入 transcriptional scoring gene set。比如有些是调控因子，不一定在 RNA 层面上调。更合理写法：它们是“mechanistic anchor genes”，用于质控、解释和方向检查，而不是无条件塞进打分基因集。
+
+6. “MSigDB/KEGG 不存在对应条目”需要执行时确认
+这可能现在成立，但公共数据库会更新。应要求 Biomni 在 F2.1 执行时检索 MSigDB/KEGG/GO/Reactome，若无条目则记录；不能把“永远不存在”写死。
+
+7. F2.3 说比较正常上皮、原发肿瘤、腹膜转移，但 F2 主对象只有恶性上皮
+F1 已规定 F2 主对象是 `06a_malignant_epithelial_main.rds`，不包含正常上皮。若要比较正常上皮，必须另建“上皮全景/敏感性对象”，不能在 F2 主对象里临时混入 normal epithelial。
+
+8. F2.4 “预后不显著则回调阈值”有 p-hacking 风险
+这个要改。预后验证不显著时，不能为了显著性调阈值。应改成：报告阴性结果，检查基因集是否过泛、跨物种映射是否差、bulk迁移是否合理；只有有生物学和方法学理由时才重新定义基因集，而且必须作为新一轮敏感性分析记录。
+
+**我建议的下一步**
+
+先重写 F2.1 的执行逻辑：
+从“直接构建一个核心基因集”改成“三层基因集”：
+
+- `MLMOD_seed_mechanistic_genes`：原文机制锚点，只用于解释和质控。
+- `MLMOD_mouse_DE_signature`：基于 GSE235046 DESeq2 得到的小鼠转录响应。
+- `MLMOD_human_scoring_signature`：小鼠 DE signature 经 human ortholog 映射、胃癌恶性上皮检出率过滤、去除泛炎症/低特异基因后得到的最终打分基因集。
+
+参考依据：
+[GSE235046 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE235046) 显示 5 组设计和 count table；[Cell 2025 / PubMed](https://pubmed.ncbi.nlm.nih.gov/41317732/) 记录 DOI `10.1016/j.cell.2025.11.002`；[ScienceDirect 页面](https://www.sciencedirect.com/science/article/pii/S0092867425012516) 给出题名、页码和摘要。
+
+--------------------------------------------------------------------------------
+
+[460] 你 | 2026-06-06 14:25:33 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[461] Codex | 2026-06-06 14:25:47 Asia/Shanghai
+我来直接改 F2.1-F2.4，把它从“假定已有MLMOD通路”改成“先构建、审计、再打分”的严谨流程。重点会处理 Torin rescue、跨物种映射、正常上皮比较边界和预后验证避免 p-hacking。
+
+--------------------------------------------------------------------------------
+
+[462] Codex | 2026-06-06 14:26:32 Asia/Shanghai
+我会把 F2 的核心逻辑改得更像一个可审计的分析模块：先锁定机制来源和表达签名，再做小鼠到人类映射，再进入恶性上皮对象打分，最后用预先冻结的签名做 bulk 验证。这样比原来“直接拿一个核心基因集打分”稳很多。
+
+--------------------------------------------------------------------------------
+
+[463] Codex | 2026-06-06 14:27:54 Asia/Shanghai
+F2.1-F2.4 已经重写。现在我会检查表格结构、F2段落连贯性，并顺手把 F2 预期图表也更新一下，不然图表清单还停留在旧逻辑。
+
+--------------------------------------------------------------------------------
+
+[464] Codex | 2026-06-06 14:28:08 Asia/Shanghai
+检查中看到两处需要顺手修：F2.1 的步骤编号还有一个旧的“第二步”，F2图表清单也还写着“对照/原发/转移”，和我们刚刚规定的 F2 主对象边界不一致。我把这两处同步掉。
+
+--------------------------------------------------------------------------------
+
+[465] Codex | 2026-06-06 14:28:32 Asia/Shanghai
+F2 的图表清单已经对齐新流程。现在做终检：旧风险词是否还残留、表格是否配平、两个路径是否同步。
+
+--------------------------------------------------------------------------------
+
+[466] Codex | 2026-06-06 14:28:42 Asia/Shanghai
+检查通过，F2 现在的主线逻辑已经和 F1 的恶性上皮对象边界一致。接下来同步到 WPS 路径并校验哈希。
+
+--------------------------------------------------------------------------------
+
+[467] Codex | 2026-06-06 14:29:01 Asia/Shanghai
+已按刚才说的方向改完 F2.1-F2.4，并同步到两个路径。
+
+这次主要改动：
+
+- 把 `MLMOD` 明确为本研究的工作性评分名称，不再写成公共数据库现成通路。
+- F2.1 改成三层基因集构建：
+  - `MLMOD_seed_mechanistic_genes`
+  - `MLMOD_mouse_DE_signature`
+  - `MLMOD_human_scoring_signature`
+- 加入 GSE235046 的 Torin rescue 设计，区分 Tier A 高特异候选和 Tier B 广义应激候选。
+- 增加 mouse-to-human ortholog 映射要求和输出表。
+- 机制锚点基因不再“强制塞进打分基因集”，只作为解释和质控锚点。
+- 明确 F2 主打分对象是 `06a_malignant_epithelial_main.rds`，`06b` 做敏感性。
+- 正常上皮只允许作为 `epithelial_panorama_sensitivity`，不能临时混入 F2 主对象。
+- 高MLMOD比例统计改为优先 sample/patient-level，避免把细胞当独立样本。
+- F2.4 去掉“预后不显著就回调阈值”的 p-hacking 风险，改成冻结签名后验证，阴性结果如实报告。
+- F2 图表清单更新到 12 张，加入 GSE235046、Torin rescue、ortholog mapping 和冻结 bulk signature 相关图。
+
+检查结果：
+
+- `[TABLE]` / `[/TABLE]` 仍为 16/16 配平。
+- 两个路径已同步，SHA256 一致：
+
+`718DE1AAFBCC8C37541386818C25CB4C693A8E86F2A118FDF6C8D32B8893727B`
+
+参考依据包括 [GSE235046 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE235046) 和 [Wang et al. Cell 2025 / PMID 41317732](https://pubmed.ncbi.nlm.nih.gov/41317732/)。
+
+--------------------------------------------------------------------------------
+
+[468] 你 | 2026-06-06 14:35:31 Asia/Shanghai
+你查一下有没有现成的mlmod基因集
+
+--------------------------------------------------------------------------------
+
+[469] Codex | 2026-06-06 14:36:38 Asia/Shanghai
+我来查现成资源，不只搜“MLMOD”，也搜原文术语 `mitoxyperiosis / mitoxyperilysis`，再看 MSigDB、KEGG、Reactome、GO 这类常用库有没有条目或可直接下载的 gene set。
+
+--------------------------------------------------------------------------------
+
+[470] Codex | 2026-06-06 14:38:25 Asia/Shanghai
+结论：**没有找到权威、可直接作为主分析的现成 `MLMOD` 基因集**。
+
+更准确地说：
+
+1. **`MLMOD` 这个名字本身不是标准通路名**
+我搜到的 `MLMOD` 多数是无关软件/游戏/建模包，不是生信通路或基因集。
+
+2. **MSigDB/KEGG/Reactome/GO 里没有检索到正式的 mitoxyperiosis / mitoxyperilysis gene set**
+MSigDB 有 ROS、OXPHOS、mTOR、apoptosis 等相关通路，但不是 mitoxyperiosis 专属基因集。MSigDB 浏览页能看到其主集合结构和相关 Hallmark 项，但没有这个新机制的命名条目。
+
+3. **有“别人临时整理的候选基因集”，但质量不足以做主线**
+我找到了几类：
+- Glioma 文章：先取 13 个 seed genes，再用 STRING PPI 扩展到 58 个 “mitoxyperiosis-related genes”。这是现成候选，但不是胃癌、不是单细胞机制签名，而且 PPI 扩展会引入泛炎症/凋亡/mTOR 网络。
+- Ototoxicity 预印本：声称用了 57 个 mitoxyperilysis-associated genes，但它是预印本，且从摘要看还包含 NLRP3/CASP1 这类我们本来要作为区分性锚点审慎处理的基因。
+- Melanoma 文章：用了 mitoxyperilysis-related score，但更像疾病特异模型框架，不是公共标准基因集。
+
+所以我的判断是：**可以把这些现成候选集作为 F2.1 的“外部候选集/敏感性对照”，但不能替代我们现在用 GSE235046 重建主基因集的方案。**
+
+建议在 F2.1 里加一条：Biomni 需要输出 `external_mitoxyperiosis_candidate_sets.tsv`，记录检索到的外部候选基因集来源、基因数、证据等级、是否 peer-reviewed、是否用于主分析。主分析仍以 `GSE235046 + Torin rescue + ortholog mapping + 胃癌恶性上皮检出率过滤` 为准。
+
+参考来源：
+[GSE235046 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE235046)
+[Wang et al., Cell 2025](https://www.sciencedirect.com/science/article/pii/S0092867425012516)
+[MSigDB Browse](https://www.gsea-msigdb.org/gsea/msigdb/human/genesets.jsp?collection=H)
+[glioma 58-gene candidate example](https://www.scirp.org/journal/paperinformation?paperid=149076)
+
+--------------------------------------------------------------------------------
+
+[471] 你 | 2026-06-06 16:45:36 Asia/Shanghai
+有无高质量期刊发表的相关文章定义了mitoxyperiosis / mitoxyperilysis gene set？仓库里那三篇导师给的参考文献有无提到？
+
+--------------------------------------------------------------------------------
+
+[472] Codex | 2026-06-06 16:46:31 Asia/Shanghai
+我会同时用 `life-science-research` 做文献/数据库核查，用 `pdf` 思路检查本地三篇参考文献。这个问题不能靠记忆拍板，因为“gene set 是否被正式定义”这种细节很容易被二手表述带偏。
+
+--------------------------------------------------------------------------------
+
+[473] Codex | 2026-06-06 16:47:19 Asia/Shanghai
+先把本地三篇 PDF 的题名和全文关键词扫一遍。我会重点找 “mitoxyperiosis / mitoxyperilysis / gene set / signature / oxidative damage / RhoA / Torin”等，不只看标题。
+
+--------------------------------------------------------------------------------
+
+[474] Codex | 2026-06-06 16:48:07 Asia/Shanghai
+本机没有 `pdftotext`，所以我改用 Python PDF 解析库做文本抽取。这里不做版面审稿，只需要确认正文里有没有明确 gene set/marker/signature 定义。
+
+--------------------------------------------------------------------------------
+
+[475] Codex | 2026-06-06 16:49:15 Asia/Shanghai
+我刚才用了类 Unix 的重定向写法，PowerShell 不吃这个。换成 PowerShell here-string 继续查。
+
+--------------------------------------------------------------------------------
+
+[476] Codex | 2026-06-06 16:49:36 Asia/Shanghai
+小修一下命令调用方式：PowerShell 里带空格/特殊字符的可执行文件路径要用 `&` 调用。
+
+--------------------------------------------------------------------------------
+
+[477] Codex | 2026-06-06 16:49:51 Asia/Shanghai
+刚才 Python 脚本没有吐出 PDF 列表，像是路径字符串没被按我预期解析。我先用更直接的方式枚举路径再抽正文。
+
+--------------------------------------------------------------------------------
+
+[478] Codex | 2026-06-06 16:50:10 Asia/Shanghai
+问题在于把中文路径硬写进 Python 管道时编码被替换成问号；用当前工作目录来避开路径编码问题。
+
+--------------------------------------------------------------------------------
+
+[479] Codex | 2026-06-06 16:50:30 Asia/Shanghai
+PDF 题名已经出来了一篇，输出被正文里的特殊连字卡住了。我把 Python 输出切到 UTF-8/替换不可编码字符后继续。
+
+--------------------------------------------------------------------------------
+
+[480] Codex | 2026-06-06 16:52:10 Asia/Shanghai
+本地三篇初步结论很清楚：它们分别是“高干性胃癌细胞”“黄韧带肥厚铁死亡”“脑出血氧化应激”，有 gene-set scoring 方法参考价值，但不像是在定义 MLMOD/mitoxyperilysis 基因集。我再做一次精确词频确认，避免漏掉术语。
+
+--------------------------------------------------------------------------------
+
+[481] Codex | 2026-06-06 16:53:44 Asia/Shanghai
+我还查到一个需要单独说明的边界：2026 年有黑色素瘤文章把 mitoxyperilysis 做成了 MRS 打分框架，但它是“疾病模型/预后模型”，不是 Cell 原文发布的通用标准 gene set。这个差别会影响我们是否能把它放进主线。
+
+--------------------------------------------------------------------------------
+
+[482] Codex | 2026-06-06 16:54:23 Asia/Shanghai
+NCBI 的 `efetch` 在 PowerShell 的 `Invoke-WebRequest` 上返回不稳定，我换成 `curl.exe` 拉 XML。这个只用于补足 PubMed 摘要元数据，不影响当前判断。
+
+--------------------------------------------------------------------------------
+
+[483] Codex | 2026-06-06 16:54:54 Asia/Shanghai
+结论：**目前没有我愿意当作“权威标准 MLMOD/mitoxyperiosis/mitoxyperilysis gene set”的高质量来源**。但有几个层级要分清：
+
+1. **最高质量根源文献是 Cell 2025**
+   Wang et al. 在 Cell 中正式定义了机制：BAX/BAK1/BID 依赖的线粒体氧化损伤、mTORC2 调控、线粒体-质膜长期接触，称为 mitoxyperiosis，随后膜裂解称为 mitoxyperilysis。它定义的是**细胞死亡机制和关键节点**，不是一个可直接拿来给单细胞打分的标准 gene set。对应数据集是 [GSE235046](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE235046)，包含 BMDM 的 Media、LPS、CS、LPS+CS、LPS+CS+Torin 等 RNA-seq 设计。
+
+2. **有一篇 Human Mutation 2026 做了“mitoxyperilysis-related score”**
+   这篇黑色素瘤文章声称用基于 Wang et al. 的 mitoxyperilysis-related gene set 构建 MRS，并进一步取 top 150 MRS 相关基因做预后模型。但我不建议把它当作我们的主线标准基因集，因为它是**黑色素瘤场景下的二次建模**，不是机制原文给出的通用 pathway gene set。可作为补充验证/敏感性参考，而不是主线依据。来源：[Human Mutation / Wiley](https://onlinelibrary.wiley.com/doi/10.1155/humu/9909803)。
+
+3. **SCIRP 那篇 glioma 文章不建议用于主线**
+   它把 13 个 seed 扩展到 58 个 STRING PPI gene，形式上像 gene set，但期刊质量和证据强度都不足，不能作为主线方法依据。最多记录进“外部候选集审计表”，作为低证据补充。来源：[SCIRP glioma article](https://www.scirp.org/journal/paperinformation?paperid=149076)。
+
+4. **导师给的三篇 PDF 没有提到 mitoxyperiosis / mitoxyperilysis / MLMOD**
+   我全文关键词查了：
+   - [s41698-025-01177-0.pdf](D:/胃癌线粒体亚群/s41698-025-01177-0.pdf)：0 次 mitoxyperiosis / mitoxyperilysis / MLMOD；是胃癌高干性 signature 方案参考。
+   - [打分+亚群方案 - 副本.pdf](</D:/胃癌线粒体亚群/打分+亚群方案 - 副本.pdf>)：0 次；主要可参考 ferroptosis scoring、MSigDB、AddModuleScore 等流程。
+   - [非肿瘤单细胞模仿1.pdf](D:/胃癌线粒体亚群/非肿瘤单细胞模仿1.pdf)：0 次；主要可参考 OS gene set scoring + bulk + ML 的分析套路。
+
+我的建议很明确：**主线仍然用 Cell 2025 + GSE235046 自行重建 MLMOD scoring signature**。Human Mutation 2026 和 SCIRP 这类“外部候选集”可以作为 F2 的补充敏感性分析，但不能直接替代主线。这个方向更严谨。
+
+--------------------------------------------------------------------------------
+
+[484] 你 | 2026-06-06 17:01:04 Asia/Shanghai
+同意自行重建 MLMOD scoring signature。开始挑刺F2.1
+
+--------------------------------------------------------------------------------
+
+[485] Codex | 2026-06-06 17:01:24 Asia/Shanghai
+我先把当前主线 TXT 里 F2.1 的原文取出来，按“能不能让 Biomni 正确执行、能不能经得起审计、会不会把机制证据和打分基因混在一起”三个角度挑刺。
+
+--------------------------------------------------------------------------------
+
+[486] Codex | 2026-06-06 17:01:33 Asia/Shanghai
+取段落时出现了编码显示问题，`rg` 的定位是对的，但 PowerShell 默认编码把中文打乱了。我用 UTF-8 重新读取原文。
+
+--------------------------------------------------------------------------------
+
+[487] Codex | 2026-06-06 17:02:43 Asia/Shanghai
+可以，F2.1 我先挑第一轮，而且有一处我认为**必须改**。
+
+**F2.1 主要问题**
+
+1. **NINJ1 放在“机制锚点基因”里不严谨**
+   这是当前 F2.1 最大问题。Cell 2025 及后续 Cell Research/Nature Cell Biology 解读里，BAX/BAK1/BID、mTORC2、RhoA/细胞骨架、线粒体-质膜接触是核心；但 NINJ1 更像是“被排除的经典膜破裂相关因子/区分性锚点”，不是 mitoxyperilysis 的正向执行锚点。
+   所以我建议：**把 NINJ1 从机制锚点移到阴性/区分性锚点**，和 GSDMD/GSDME/MLKL 一类放在一起。
+
+2. **“三组比较均上调”还不够证明协同效应**
+   现在写的是 `LPS+CS vs Media`、`LPS+CS vs LPS`、`LPS+CS vs CS` 均上调。这个能证明联合处理更高，但还没明确检验“LPS 与 CS 是否协同”。
+   我建议加一个 2x2 factorial DESeq2 模型：Media、LPS、CS、LPS+CS 四组编码成 `LPS`、`CS`、`LPS:CS`，检测正向 interaction term。这样更贴近 Cell 原文“innate immune activation + metabolic disruption synergism”。
+
+3. **Torin rescue 的“部分逆转”需要量化**
+   现在“显著下调或部分逆转”太模糊，Biomni 可能随意解释。建议定义：
+   - 显著 rescue：`LPS+CS+Torin vs LPS+CS` 中 log2FC < 0 且 padj < 0.1；
+   - 方向性 rescue：log2FC < 0 但 padj 未显著；
+   - rescue ratio 作为连续指标记录。
+   不要只用 p 值硬筛，因为每组 n=3，统计功效有限。
+
+4. **Tier A “足够”需要给数字**
+   现在写“若 Tier A 基因数足够”，但没说多少算够。建议：
+   - 最终主评分基因集默认至少 20 个基因；
+   - 若 Tier A 经过 ortholog 和胃癌表达过滤后 >=20，主线用 Tier A；
+   - 若 Tier A 为 10-19，允许 Tier A + Tier B，但必须标注特异性下降；
+   - 若 <10，暂停，不进入 F2.2。
+
+5. **需要防止“BMDM 签名直接外推到胃癌上皮”被质疑**
+   GSE235046 是小鼠 BMDM bulk RNA-seq，不是人胃癌上皮。我们可以用它重建机制相关转录响应，但不能写成“胃癌 MLMOD 原生基因集”。建议加一句：
+   **最终定义为 Cell 2025/GSE235046 推导、并经人胃癌恶性上皮表达适用性过滤的工作性 MLMOD scoring signature。**
+
+6. **ortholog 映射来源要固定**
+   现在只说输出 mapping_source，但没有默认来源。建议指定默认优先级：Ensembl BioMart/biomaRt 或 g:Profiler orthology，并记录数据库版本、查询日期、未映射原因。一对多不进入主线，除非研究者批准。
+
+7. **需要加“外部候选集审计”，但不进入主线**
+   既然我们已经查到 Human Mutation 2026 和低质量 SCIRP 有相关候选集，应让 Biomni 在 F2.1 输出 `external_mitoxyperilysis_candidate_sets.tsv`。字段记录来源、期刊、基因数、是否用于主线。默认：**use_in_main = false，最多 sensitivity = true**。
+
+8. **过大基因集也要有处理规则**
+   现在只管少于 20 个怎么办，没说太多怎么办。如果最后得到 300 个基因，AddModuleScore 会变成泛应激/炎症平均值。建议主评分基因集控制在大约 20-150 个；超过 150 时按 interaction evidence、Torin rescue、effect size、人胃癌检出率排序取前 150，并保留全量候选表。
+
+我的判断：F2.1 方向是对的，但需要把 **NINJ1 位置、协同效应检验、Torin rescue 量化、Tier 数字阈值、跨物种跨细胞类型外推边界** 这几处补严。尤其 NINJ1 那个，我建议必须改。
+
+--------------------------------------------------------------------------------
+
+[488] 你 | 2026-06-06 17:28:38 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[489] Codex | 2026-06-06 17:28:57 Asia/Shanghai
+我按这一轮挑刺直接改 F2.1：主要会收紧“机制锚点 vs 区分性锚点”、补上协同效应模型、把 Torin rescue 和 Tier 阈值写成可执行规则，同时加外部候选集只做审计/敏感性的边界。
+
+--------------------------------------------------------------------------------
+
+[490] Codex | 2026-06-06 17:30:30 Asia/Shanghai
+F2.1 已经写进去。我现在做一遍结构检查和双路径同步，重点看表格标签、F2.1 关键输出名、以及 NINJ1 是否已经移到区分性锚点。
+
+--------------------------------------------------------------------------------
+
+[491] Codex | 2026-06-06 17:30:38 Asia/Shanghai
+结构检查通过，表格标签仍然配平。接下来同步到 WPS 云盘路径，确保你看到的两份是一致的。
+
+--------------------------------------------------------------------------------
+
+[492] Codex | 2026-06-06 17:30:52 Asia/Shanghai
+已按刚才的挑刺修改 F2.1，并同步到两个路径。
+
+主要改动：
+- 将 `NINJ1` 从正向机制锚点移到阴性/区分性锚点。
+- 增加 `2x2 factorial DESeq2` 协同效应模型。
+- 明确 Torin rescue 的量化字段和判定标准。
+- 明确 Tier A / Tier B 使用阈值，以及主评分基因集 `20-150` 个的规模规则。
+- 固定 ortholog 映射优先来源和记录字段。
+- 增加外部候选集审计表，但默认不进入主线评分。
+- 新增 F2.1 输出：`GSE235046_factorial_interaction_results.tsv`、`GSE235046_torin_rescue_results.tsv`、`external_mitoxyperilysis_candidate_sets.tsv`。
+
+检查结果：`[TABLE]` 标签仍然配平 `16/16`。
+同步后 SHA256 一致：`023FAC02AA83371CD480FC2ACF2D381B5216AE219A1EC7DB8E75758BCB138314`。
+
+--------------------------------------------------------------------------------
+
+[493] 你 | 2026-06-06 18:22:54 Asia/Shanghai
+再检查一下F2.1
+
+--------------------------------------------------------------------------------
+
+[494] Codex | 2026-06-06 18:23:25 Asia/Shanghai
+我再做一遍“执行审计式”检查：先看 F2.1 本身有没有歧义，再看它和 F2.2/F2.3 的输入输出有没有断层。重点找会让 Biomni 跑偏的句子。
+
+--------------------------------------------------------------------------------
+
+[495] Codex | 2026-06-06 18:25:07 Asia/Shanghai
+我重新看了一遍 F2.1。整体方向是对的，但我建议再补 5 个执行细节，不然 Biomni 仍可能跑偏。
+
+**需要再改的点**
+
+1. [F2.1 第437行](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:437) 里 `IIAMD` 没有定义。Cell 原文确实用它指代 innate immune activation and metabolic disruption，但方案里要写全称，避免 Biomni 把它当成另一个通路名。
+
+2. `CS` 也没有解释。GEO 只明确写了样本组为 Media、CS、LPS、LPS+CS、LPS+CS+Torin，BMDM 刺激 9 小时；方案应要求 Biomni 从 GEO/原文/supplement 中记录 `CS` 的确切含义，找不到就只保留原始 treatment label，不能自行猜测。
+
+3. `series matrix` 不能默认用于 DESeq2。F2.1 现在说 “count table 或 series matrix”，这容易误导。应该加硬规则：**DESeq2 只能用 raw/integer count-like 矩阵；若只有 normalized expression / TPM / FPKM / log expression，则暂停，不得强行 DESeq2。**
+
+4. `正向协同证据较强` 还不够可执行。建议定义：
+   - strong interaction：`interaction_log2FC > 0` 且 `padj < 0.1`
+   - directional interaction：`interaction_log2FC > 0` 但 `padj >= 0.1`
+   - no interaction：`interaction_log2FC <= 0`
+   由于每组只有 n=3，interaction 最好用于排序和分层，不要作为唯一硬筛。
+
+5. 输出表字段还不够明确。尤其 `MLMOD_human_scoring_signature.tsv` 必须要求逐基因记录：`human_gene`、`mouse_gene`、`tier`、三组主比较 log2FC/padj、interaction_log2FC/padj、torin_log2FC/padj、rescue_ratio、胃癌恶性上皮检出率、低特异性风险、最终排序、include_reason。否则 Biomni 可能只给一个基因列表，审计价值不够。
+
+我还建议加一个 `F2-Gate1`：只有 `MLMOD_human_scoring_signature.tsv`、DESeq2结果、interaction结果、Torin rescue结果、ortholog映射、特异性审计、外部候选集审计都完成，并且主签名基因数在规则范围内，才允许进入 F2.2 打分。
+
+依据核查：GEO 页面确认 [GSE235046](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE235046) 是 15 个 BMDM 样本、五组处理，并有 `GSE235046_Count_table.txt.gz`；Cell 页面也明确该机制来自 innate immune + metabolic synergy、BAX/BAK1/BID、mitochondria-plasma membrane contact 和 mTOR 调控：[ScienceDirect Cell 2025](https://www.sciencedirect.com/science/article/pii/S0092867425012516)。
+
+--------------------------------------------------------------------------------
+
+[496] 你 | 2026-06-06 18:34:31 Asia/Shanghai
+先按你说的改，另外你查一下CS的意思写进去
+
+--------------------------------------------------------------------------------
+
+[497] Codex | 2026-06-06 18:34:46 Asia/Shanghai
+我会先核实 `CS` 的全称和处理条件，再把刚才 5 条执行约束补进 F2.1。这个缩写如果写错，后面整个机制解释都会偏，所以先查证再落笔。
+
+--------------------------------------------------------------------------------
+
+[498] Codex | 2026-06-06 18:35:12 Asia/Shanghai
+我查到 `CS` 在可访问的论文副本里是 `carbon starvation media`。我再用本地 `curl` 抓 Cell/PMC 正文副本确认一次上下文，顺手把 F2.1 中容易误解的字段一起补进去。
+
+--------------------------------------------------------------------------------
+
+[499] Codex | 2026-06-06 18:36:02 Asia/Shanghai
+`CS` 已核到：在 Cell 正文/图注里是 `carbon starvation medium/media`，不是 complete starvation。现在我把这个写进 F2.1，并补上 DESeq2 输入、interaction 分类、签名表字段和 F2-Gate1。
+
+--------------------------------------------------------------------------------
+
+[500] Codex | 2026-06-06 18:37:01 Asia/Shanghai
+我会把“可执行字段”补得更硬一点，尤其是签名表字段。这样后面审计 Biomni 时，我们能从一个表里追溯每个基因为何进入或未进入主评分。
+
+--------------------------------------------------------------------------------
+
+[501] Codex | 2026-06-06 18:38:07 Asia/Shanghai
+F2.1 已补完。我现在检查是否有编号/表格问题，再清掉这次核查产生的临时 PDF/XML，最后同步两个路径。
+
+--------------------------------------------------------------------------------
+
+[502] Codex | 2026-06-06 18:38:29 Asia/Shanghai
+检查通过，临时文件也清掉了。现在做双路径同步和哈希确认。
+
+--------------------------------------------------------------------------------
+
+[503] Codex | 2026-06-06 18:38:45 Asia/Shanghai
+已修改并同步。
+
+我查到 `CS` 在 Cell 原文/图注中指 **carbon starvation medium/media**，也就是碳源饥饿培养基，不是 `complete starvation`。GEO 的 [GSE235046](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE235046) 页面确认 5 组、15 个 BMDM 样本、处理 9 小时；Cell/PMC 正文也把 CS 写作 carbon starvation，并说明这是 innate immune activation + metabolic disruption 的 IIAMD 模型来源：[Cell/PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC12875127/)。
+
+这次补进 F2.1 的内容：
+- 明确 `CS = carbon starvation medium/media`。
+- 明确 `IIAMD = innate immune activation and metabolic disruption` 模型。
+- 明确 `series matrix` 不能用于 DESeq2，DESeq2 只能用 raw/integer count-like 矩阵。
+- 明确 interaction 分类：`strong / directional / no positive interaction`。
+- 补充 `MLMOD_human_scoring_signature.tsv` 的逐基因字段。
+- 增加 `F2-Gate1`，只有签名构建全套审计通过后才进入 F2.2。
+
+检查结果：`[TABLE]` 标签仍为 `16/16` 配平。
+双路径已同步，SHA256 一致：`3269BD75F699A3658A4F3D97F300B9C020C5D2526CB58DABE1764EF13C128955`。
+
+--------------------------------------------------------------------------------

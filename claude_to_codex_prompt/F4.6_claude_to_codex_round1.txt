@@ -1,0 +1,85 @@
+# Codex修改指令：F4.4-F4.6 第三方审查修订 Round 1
+
+## 背景
+
+第三方审查者对 Codex 三轮自审修改后的完整 F4（F4.0-F4.6）进行了 12 维度综合验证。结构验证（TABLE 16/16、SHA256、28项关键术语落地）全部通过，所有先前 round 的修改均已正确落地。内容审核发现 0 个 Blocking、3 个 Warning、2 个 Suggestion。核心问题是：(1) signature leakage 的"严重"判定缺乏量化标尺；(2) 混杂审计列出了 11 个变量但没有统计阈值和行动规则；(3) preliminary_cellchat_tier 到 final_result_tier 的升降级映射规则分散且不完整。
+
+以下修改涉及 F4.3、F4.5、F4.6 三个子节。修改后需同步 WPS 路径并验证 `[TABLE]` 标签平衡和 SHA256 一致。
+
+---
+
+## Warning 修改（必须完成）
+
+### W1. signature_leakage_warning 严重性标尺——量化"严重"的含义
+
+**问题**：第613行 `cellchat_preliminary_candidate` 的条件之一是"无严重signature_leakage_warning"，但"严重"未量化。现有逐LR布尔字段（`ligand_is_MLMOD_signature_gene`、`receptor_is_MLMOD_signature_gene`、`ligand_or_receptor_is_F2_marker`）已记录，Biomni却不知道什么组合构成"严重"，可能自行判断。
+
+**修改位置**：第613行，`preliminary_cellchat_tier` 四值定义之后、`cellchat_preliminary_candidate表示...` 这段描述的尾部（"但仍需F4.5样本层确认后才可能升级为final candidate_main_supported"之后）
+
+**新增内容**：
+> signature_leakage_warning严重性按以下规则判定：severe——配体和受体均为MLMOD_human_scoring_signature成员，或一者为签名基因且另一者为F2高低MLMOD marker（ligand_is_MLMOD_signature_gene = TRUE且receptor_is_MLMOD_signature_gene = TRUE，或一者为TRUE且ligand_or_receptor_is_F2_marker = TRUE），该LR对不得标记为cellchat_preliminary_candidate，只能exploratory_only；moderate——仅配体或受体之一为签名基因，或仅一者为F2 marker，允许cellchat_preliminary_candidate但必须附moderate_signature_leakage标注，且F4_final_candidate_communication_axes.tsv中该轴须在signature_leakage_warning字段写明具体重叠基因和moderate等级；none——两者均不与签名或marker重叠。
+
+### W2. F4_confounding_audit.tsv 混杂审计——补入统计阈值和行动规则
+
+**问题**：第628行列出了11个混杂因素，但未定义检测方法、触发阈值和发现混杂后的行动。对比第605行的 `cell_proportion_confounding_warning` 至少有定性规则，F4.5的广义混杂审计完全空白，Biomni可能漏检或过度报警。
+
+**修改位置**：第628行，"输出F4_confounding_audit.tsv"之前，即"混杂审计至少检查候选通讯是否由..."这句话之后
+
+**新增内容**：
+> 混杂审计主线方法：对每个待评估候选通讯轴，计算其across-sample lr_support_score与每个潜在混杂变量（连续变量取样本中位数或均值）的Spearman秩相关。|ρ| >= 0.7且p < 0.05标记为confounding_detected，该轴在F4_final_candidate_communication_axes.tsv中confounding_summary写明具体变量，final_result_tier最高只能directional_support，不能candidate_main_supported；0.5 <= |ρ| < 0.7且p < 0.05标记为confounding_warning，写入confounding_summary但不自动降级；|ρ| < 0.5或p >= 0.05标记为no_confounding_detected。若可评估样本数少于8导致秩相关不可靠，标记insufficient_samples_for_confounding_test，不阻断但在F4_gate_cellchat_report.md的limitation中写明。分类变量（如sample_id、group_analysis、cell_cycle_phase）使用Kruskal-Wallis检验替代相关，p < 0.05且eta-squared >= 0.14标记confounding_detected，0.06 <= eta-squared < 0.14标记confounding_warning。F4_confounding_audit.tsv字段至少追加confounding_test_method、confounding_variable、test_statistic、effect_size_metric、effect_size、p_value、confounding_status和action_taken。
+
+### W3. preliminary→final tier 显式升降级映射表
+
+**问题**：F4.3输出 `preliminary_cellchat_tier`（4值），F4.5提供样本层支持证据，F4.6需要 `final_result_tier`（4值），但三层之间的映射规则分散且不完整。具体缺失：(1) `cellchat_directional_signal` + 中等效应能否升级为 `candidate_main_supported`？(2) `cellchat_preliminary_candidate` + negligible效应降级到哪一级？(3) `exploratory_only`（preliminary）能否升级？Biomni缺乏明确指引，F4_final_candidate_communication_axes.tsv 的 final_result_tier 可能出现不一致判定。
+
+**修改位置**：第627行，F4_LR_support_status_update.tsv 字段定义之后，"若主CellChat结果与样本层LR支持方向相反"之前
+
+**新增内容**：
+> preliminary_cellchat_tier到final_result_tier的升降级遵循以下映射规则。cellchat_preliminary_candidate加上中等以上效应（|Cliff's delta| >= 0.33或|r| >= 0.33）且adjusted_p_value < 0.05且敏感性至少一致且无confounding_detected，方可升级为candidate_main_supported；cellchat_preliminary_candidate加上小效应或方向一致但未达显著性，降级为directional_support；cellchat_preliminary_candidate加上negligible效应或方向冲突，降级为exploratory_only。cellchat_directional_signal最高只能升级为directional_support，即使样本层效应量达到中等以上也不可升级为candidate_main_supported，因为CellChat层面本身就有对象或覆盖限制；cellchat_directional_signal加上negligible效应或方向冲突，降级为exploratory_only。preliminary阶段已为exploratory_only的候选轴不可升级，final_result_tier维持exploratory_only。preliminary阶段已为not_interpretable的候选轴不可升级，final_result_tier维持not_interpretable。任何候选轴若在混杂审计中被标记confounding_detected，final_result_tier最高只能directional_support，无论preliminary tier和样本层支持如何。Biomni在F4_LR_support_status_update.tsv中必须记录升降级依据（upgrade_or_downgrade_reason字段）。
+
+---
+
+## Suggestion 修改
+
+### S1. interpretation_level 字段名改名避免跨表歧义
+
+**问题**：`interpretation_level` 在 F4_primary_vs_PM_directional_comparison.tsv（第620行，PM专用值：directional_observation等）和 F4_sample_level_LR_support.tsv（第626行，效应量联动值）中复用，允许不同值集，可能使 Biomni 混淆。
+
+**修改位置**：第626行，F4_sample_level_LR_support.tsv 的字段列表中
+
+**修改内容**：将 `interpretation_level` 改为 `sample_support_level`。同时在第626行效应量联动规则中，将所有 `interpretation_level` 替换为 `sample_support_level`。注意不要影响第620行 F4_primary_vs_PM_directional_comparison.tsv 中的 `interpretation_level`，该处保持原样。
+
+### S2. 配对LR support比较中partner表达共享的注释
+
+**问题**：第625行的配对设计中，同一sample_id内高/低MLMOD作为sender时，target（TME）侧receptor表达完全相同。因此配对差异本质上只反映source侧ligand表达差异，LR score的partner成分被消掉。不影响方法正确性，但应注明以防过度解读。
+
+**修改位置**：第625行，"若两种方法或复合体处理规则方向冲突，必须报告冲突并降级该通讯轴解释"之后
+
+**新增内容**：
+> 配对比较中partner celltype的表达在高低focus组间共享（例如sender-focus场景下，同一样本的TME receptor表达对高/低MLMOD sender相同），因此sample-level配对差异主要反映focus group内ligand或receptor的表达差异，不应把配对检验解释为综合了通讯双方独立变化的证据。
+
+---
+
+## 修改后确认清单
+
+完成所有修改后，请逐项验证：
+
+1. [ ] W1: grep `severe.*配体.*受体.*均为` 或类似描述，确认 signature leakage severity 规则存在于 F4.3 段落
+2. [ ] W1: grep `moderate_signature_leakage` 确认 moderate 标注规则
+3. [ ] W1: grep `不得标记为cellchat_preliminary_candidate.*只能exploratory_only` 确认 severe 的行动规则
+4. [ ] W2: grep `Spearman秩相关` 确认混杂审计统计方法在 F4.5 段落
+5. [ ] W2: grep `confounding_detected` 确认混杂状态标签存在
+6. [ ] W2: grep `0.7` 确认相关阈值（注意不要与其他数字混淆，应在混杂审计上下文中）
+7. [ ] W2: grep `eta-squared` 或 `eta.squared` 确认分类变量混杂检验
+8. [ ] W2: grep `insufficient_samples_for_confounding_test` 确认小样本降级
+9. [ ] W2: grep `confounding_test_method` 确认 F4_confounding_audit.tsv 新增字段
+10. [ ] W3: grep `cellchat_directional_signal.*最高只能.*directional_support` 确认 directional_signal 升级上限
+11. [ ] W3: grep `exploratory_only.*不可升级` 确认 exploratory 不可升级规则
+12. [ ] W3: grep `not_interpretable.*不可升级` 确认 not_interpretable 不可升级规则
+13. [ ] W3: grep `upgrade_or_downgrade_reason` 确认 F4_LR_support_status_update.tsv 新增字段
+14. [ ] S1: grep `sample_support_level` 确认字段名已更改，且仅出现在 F4_sample_level_LR_support.tsv 上下文
+15. [ ] S1: 确认第620行 F4_primary_vs_PM_directional_comparison.tsv 仍使用 `interpretation_level`（未被误改）
+16. [ ] S2: grep `partner celltype.*共享` 或 `partner.*表达.*共享` 确认配对注释存在
+17. [ ] `[TABLE]` / `[/TABLE]` 配平检查（应仍为 16/16）
+18. [ ] 两个路径 SHA256 一致
+19. [ ] 无旧版内容残留冲突（如 F4_sample_level_LR_support.tsv 字段列表中旧的 interpretation_level 未被替换）

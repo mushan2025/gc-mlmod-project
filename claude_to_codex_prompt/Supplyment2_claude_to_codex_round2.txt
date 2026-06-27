@@ -1,0 +1,58 @@
+# Codex修改指令：全局PM样本量限制规则与F8.3证据等级硬上限 Round 2
+
+## 背景
+
+S2 Round 1（MLMOD签名特异性对照 + 纯度混杂硬决策节点）已通过验证。本prompt处理第三方全局审查中剩余的2项Suggestion。原S3 prompt中的S1（F大节范围分级）和S3（F3.2轨迹合理性前置检查）经用户评估后撤回——范围分级应由用户在执行阶段决定而非方案硬编码，F3.2现有fallback机制已足够覆盖"数据不适合轨迹推断"的情况。
+
+保留的2项Suggestion涉及：全局文件头1处新增（PM规则）、F8.3一处小追加（证据等级硬上限）。
+
+---
+
+## Suggestion 修改
+
+### S1. 全局PM样本量限制规则
+
+**问题**：GSE183904中Peritoneal_Metastasis仅3个样本。当前F0.3（line 141）、F2.3 Step 6（line 540）、F2.4 Step 1（line 549）、F4.4（line 668）、F8.1（line 865）均单独标注了PM样本量限制，措辞基本一致但分散在各处。如果1b拆分方案时新增分析步骤或调整F节内容，可能遗漏PM限制。缺少一条全局兜底规则。
+
+**说明**：本规则不是新增限制，而是将已分散在各节的PM限制统一为一条全局兜底。各节中已有的PM标注继续保留，本规则仅确保任何未单独说明的场景也受约束。PM 3个样本在细胞层面可贡献数千至上万个细胞，用于描述性展示和方向性观察是有价值的；本规则限制的是sample-level假设检验，不是禁止一切PM分析。
+
+**精确位置**：当前第6行（"claim_evidence_matrix.tsv不要求在1a阶段..."）之后、第7行（"F0｜项目准备..."）之前，作为新段落插入。
+
+**新增内容要求**：
+
+全局PM样本量限制。GSE183904中Peritoneal_Metastasis仅有3个样本。以下规则适用于F0-F8所有节，不因个别节未单独重申而例外：(1) 任何涉及PM的样本层组间比较（包括但不限于比例统计、差异表达、通路分析、拟时序分支、通讯分析、免疫关联和临床关联）最高只能作为方向性观察或描述性数据展示，不得作为假设检验的主统计证据或独立验证来源。(2) PM相关图表和结果文字必须标注"Peritoneal_Metastasis n=3"。(3) 即使PM方向性观察与Primary_Tumor主分析方向一致，也不得将PM结果等同于独立队列验证；PM与Primary_Tumor方向一致只能表述为"方向性支持"，不能表述为"独立验证"。(4) PM样本在细胞层面的描述性展示（如UMAP可视化、细胞类型组成描述、基因表达模式展示）不受上述统计限制，但结果文字仍需标注样本数。(5) 各F节中已有的PM相关限制语句继续保留，本全局规则作为兜底。
+
+---
+
+### S2. F8.3证据等级硬上限
+
+**问题**：F8.3（条件性in silico perturbation）的claim控制已经严格——不允许写"敲除证明"，只允许写"预测/提示"（line 871-873），F8_in_silico_perturbation_claims.tsv要求列出allowed_claim和forbidden_claim。但interpretation_level字段没有设置形式化的最高允许值。在所有稳健性检查通过、负对照一致的最好情况下，Biomni可能给出较高的interpretation_level，但in silico perturbation在没有真实扰动训练数据时其可信度上限仍然只是计算假设，不等于单细胞层面的实验支持证据。
+
+**精确位置**：F8.3第一段（当前第871行"F8不得把'在Seurat矩阵中将核心基因表达置零'当作真实基因敲除..."）末尾，即"如果核心基因或数据不适合可靠建模，应标记not_evaluable，而不是换用低质量替代方法。"这句话之后、第二段（当前第872行"CellOracle或其他GRN扰动工具..."）之前，追加一句。
+
+**新增内容要求**（追加在第871行段落末尾）：
+
+F8.3所有结果的interpretation_level最高为model_supported_hypothesis，即使所有稳健性检查通过且负对照一致；对应的claim_evidence_matrix.tsv证据等级最高为mechanistic_hypothesis。不存在任何F8.3内部条件组合能使interpretation_level达到single_cell_supported或更高。
+
+---
+
+## 修改后确认清单
+
+1. [ ] S1: 第6行之后、F0标题行之前，存在"全局PM样本量限制"新段落
+2. [ ] S1: 包含五项规则：(1)样本层统计方向性上限、(2)n=3标注、(3)非独立验证、(4)细胞层描述不受限制但仍标注、(5)兜底条款
+3. [ ] S1: 明确"PM样本在细胞层面的描述性展示不受上述统计限制"
+4. [ ] S2: F8.3第一段末尾存在"interpretation_level最高为model_supported_hypothesis"
+5. [ ] S2: 明确"不存在任何F8.3内部条件组合能达到single_cell_supported"
+6. [ ] S2: 明确"claim_evidence_matrix.tsv证据等级最高为mechanistic_hypothesis"
+7. [ ] F8.3第二段（CellOracle前提，line 872）和第三段（执行规则，line 873）未被误改
+8. [ ] 全局头部原有6行（lines 0-6）内容未被破坏——只在第6行之后插入新段落
+9. [ ] `[TABLE]` / `[/TABLE]` 仍为17/17
+10. [ ] 两个路径SHA256一致
+
+---
+
+## 注意事项
+
+1. **不要修改CLAUDE.md或conventions.txt**。
+2. **不要新增TABLE**。
+3. **原S3 prompt文件（S3_claude_to_codex_round1.txt）已作废**——该文件包含4项Suggestion，其中S1和S3已被用户撤回。本prompt（Supplyment2_claude_to_codex_round2.txt）是S3 prompt的替代版本，只包含保留的S2和S4（在本prompt中重编号为S1和S2）。

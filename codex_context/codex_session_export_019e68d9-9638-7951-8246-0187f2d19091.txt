@@ -1,0 +1,5439 @@
+﻿Codex 会话上下文导出
+会话 ID：019e68d9-9638-7951-8246-0187f2d19091
+原标题：细化方案执行步骤
+源文件：C:\Users\14799\.codex\sessions\2026\05\27\rollout-2026-05-27T17-52-30-019e68d9-9638-7951-8246-0187f2d19091.jsonl
+导出时间：2026-06-01 21:47:27 Asia/Shanghai
+
+整理说明：
+1. 仅保留你和 Codex 在界面中可见的消息。
+2. 已排除 system/developer 指令、environment_context、工具调用、工具输出、隐藏 reasoning 和文件修改原始日志。
+3. 用户主动中断上一轮的记录已整理为简短事件说明。
+4. 共导出 310 条消息，其中你 73 条，Codex 237 条。
+
+================================================================================
+
+[001] 你 | 2026-05-27 17:52:36 Asia/Shanghai
+# Files mentioned by the user:
+
+## 方案设计.docx: D:\software\wps\云盘缓存\807350289\WPS云盘\LRY\0Ting\胃癌线粒体死亡亚群方案\方案设计.docx
+
+## 胃癌MLMOD亚群详细研究方案.docx: D:\software\wps\云盘缓存\807350289\WPS云盘\LRY\0Ting\胃癌线粒体死亡亚群方案\胃癌MLMOD亚群详细研究方案.docx
+
+## My request for Codex:
+这是导师给的方案设计大纲，和我的详细步骤，我们要做的是讨论出每个步骤的执行细节，你要以实现目的为导向，在这个过程中你可以随时反驳我，你可以提出任何意见，我写的和导师写得都不一定完全正常。直到我们讨论出及其详细的执行步骤，详细到没接触生信和代码的小白都可以完整执行。你理解我的意思了吗
+
+--------------------------------------------------------------------------------
+
+[002] Codex | 2026-05-27 17:52:49 Asia/Shanghai
+我理解你的意思：我们不是简单润色方案，而是把“目的-方法-执行-判断-记录”一路拆到可操作级别，必要时我会直接指出不合理、证据不足或容易踩坑的地方。 我先读一下两个 Word 文档，看看导师大纲和你的细化步骤分别长什么样，再把讨论框架搭起来。
+
+--------------------------------------------------------------------------------
+
+[003] Codex | 2026-05-27 17:52:55 Asia/Shanghai
+我会先做“内容抽取”，重点看标题层级、表格和步骤清单；这一步不改文件，只把文档里的结构读出来，方便我们后面逐段拆执行细节。
+
+--------------------------------------------------------------------------------
+
+[004] Codex | 2026-05-27 17:53:18 Asia/Shanghai
+刚才碰到一个很常见的 Windows 中文路径编码问题：路径传进 Python 后被替换成了问号，所以不是文件缺失。 我换一种不让中文路径经过管道编码的方式来读。
+
+--------------------------------------------------------------------------------
+
+[005] Codex | 2026-05-27 17:54:03 Asia/Shanghai
+理解，而且我已经读了这两个文档：
+
+[方案设计.docx](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/方案设计.docx>)
+[胃癌MLMOD亚群详细研究方案.docx](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群详细研究方案.docx>)
+
+我的理解是：我们要把导师的大纲和你写的详细方案，逐步变成一个“新手也能照着跑”的执行手册。不是只写“用 Seurat 做质控”“用 CellChat 做通讯”这种概念，而是要细到：
+
+- 每一步为什么做，目的是什么
+- 输入文件从哪里来，应该长什么样
+- 用什么软件/R包/函数/参数
+- 每一步具体运行顺序
+- 产生什么中间文件和结果图
+- 怎么判断结果合格或不合格
+- 如果结果不理想，怎么调整或替代
+- 哪些说法可能被审稿人质疑
+- 哪些分析逻辑可能不成立，需要提前修正
+
+我也会直接反驳。初看方案里已经有几个需要重点讨论的点：MLMOD 基因集来源是否可靠、F2 里“高 MLMOD 亚群”定义是否会循环论证、拟时序从正常上皮到恶性高 MLMOD 是否合理、虚拟敲除“直接把表达置零”是否过于粗糙、CellChat 分组后细胞数是否足够、Bulk 队列能否支持 TNM/转移/预后这些指标等。
+
+建议我们下一步按 `F1 -> F2 -> F3...` 一节一节讨论。每一节我会按“目的、输入、执行步骤、参数、质控、图表、风险、备选方案”拆开。最好先从 **F1 单细胞常规分析** 开始，因为后面所有分析都依赖它。
+
+--------------------------------------------------------------------------------
+
+[006] 你 | 2026-05-27 19:09:16 Asia/Shanghai
+开始讨论F1
+
+--------------------------------------------------------------------------------
+
+[007] Codex | 2026-05-27 19:09:46 Asia/Shanghai
+我先把 F1 当成“后续所有结果可信不可信的地基”来拆。这里我会顺手核一下 GSE183904 的数据形态，因为 F1 的执行细节很依赖它到底给的是 10x 原始矩阵、作者处理后的对象，还是只有表达矩阵。
+
+--------------------------------------------------------------------------------
+
+[008] Codex | 2026-05-27 19:11:14 Asia/Shanghai
+可以。F1 我们先把它定成“可靠地得到可用于后续 MLMOD 分析的恶性上皮细胞图谱”。
+
+我先核了一下 GSE183904：GEO 页面显示原始文件是 `GSE183904_RAW.tar`，格式是 **CSV**，不是标准 10x 的 `barcodes.tsv/features.tsv/matrix.mtx` 文件夹；原文数据是胃癌单细胞图谱，包含原发肿瘤、正常组织、腹膜转移等样本，最终 QC 后约 200,954 个细胞。也就是说，你方案里“读取 10x Genomics count 矩阵”这句话要改，不能默认用 `Read10X()`。来源：[GEO GSE183904](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183904)，[原文 PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/)。
+
+**F1 总目标**
+F1 不是为了“画几张 UMAP”，而是为了拿到 3 个可信对象：
+
+1. 全部细胞对象：用于展示整体细胞组成。
+2. 上皮细胞对象：用于区分正常上皮和肿瘤上皮。
+3. 恶性上皮细胞对象：用于后续 MLMOD 打分、亚群划分、拟时序、CellChat。
+
+如果 F1 的恶性细胞识别不稳，后面的 F2-F8 都会跟着歪。
+
+**我建议 F1 拆成 8 个小步骤**
+
+**F1-0｜建立项目结构和样本信息表**
+先不要急着跑 Seurat。第一步是做一个 `sample_info.tsv`，这是新手最容易漏、但后面最救命的文件。
+
+每一行一个样本，至少包含：
+
+```text
+sample_file
+sample_id
+patient_id
+group
+tissue
+is_tumor
+is_paired
+source
+```
+
+例如：
+
+```text
+sample7.csv    NGCII521_PT    NGCII521    Primary_Tumor        primary     yes    yes    GSE183904
+sample6.csv    NGCII521_PN    NGCII521    Primary_Normal       normal      no     yes    GSE183904
+sample38.csv   NGCII538_PM    NGCII538    Peritoneal_Tumor     metastasis  yes    yes    GSE183904
+sample37.csv   NGCII538_PN    NGCII538    Peritoneal_Normal    normal      no     yes    GSE183904
+```
+
+这里要先讨论一个关键点：
+导师大纲写“对照/原发/腹膜转移”，但 GSE183904 里有 `Primary_Normal`、`Primary_Tumor`、`Peritoneal_Tumor`、`Peritoneal_Normal` 等标签。我们不能粗暴写成“对照、原发、转移”三组，应该保留原始组织来源。后面画图时再按研究问题合并。
+
+我建议 F1 主分析分组为：
+
+```text
+Normal epithelial
+Primary tumor epithelial
+Peritoneal metastatic tumor epithelial
+```
+
+但在元数据里保留更细的原始标签。
+
+**F1-1｜数据导入**
+你的方案里写：
+
+> 读取10x Genomics count矩阵，使用 Seurat CreateSeuratObject
+
+这里我反驳一下：这对 GSE183904 不准确。
+
+GSE183904 的原始数据是 CSV，所以导入逻辑应该是：
+
+1. 下载 `GSE183904_RAW.tar`
+2. 解压得到多个 `sample*.csv`
+3. 逐个读取 CSV
+4. 判断 CSV 是“基因 × 细胞”还是“细胞 × 基因”
+5. 确认数值是否为原始 counts
+6. 每个样本单独 `CreateSeuratObject()`
+7. 给每个细胞名加样本前缀，避免不同样本 barcode 重名
+8. 合并所有 Seurat 对象
+
+新手执行时必须加一个检查：
+
+```r
+all(counts == round(counts))
+```
+
+如果大部分值不是整数，那可能不是 raw count，而是 normalized expression。这个时候不能完全照 raw count 流程走，尤其是 `SCTransform`、差异分析、InferCNV 都要谨慎。
+
+**F1-2｜单样本质控，而不是一刀切**
+你写的过滤条件：
+
+```text
+nFeature_RNA 200-6000
+percent.mt < 20%
+nCount_RNA 离群值过滤
+```
+
+这个可以作为初始值，但不能机械固定。我的建议是：
+
+基础过滤：
+
+```text
+nFeature_RNA >= 200
+nFeature_RNA <= 7500，或按样本分布设上限
+percent.mt <= 20%-25%
+nCount_RNA 不高于样本内 Q3 + 3*IQR
+```
+
+为什么我不建议死卡 `nFeature_RNA < 6000`？
+因为肿瘤上皮细胞、增殖细胞、本身 RNA 含量可能高，固定 6000 可能会误删真实肿瘤细胞。高 `nFeature` 更应该先怀疑 doublet，但最好交给 DoubletFinder/scDblFinder 辅助判断。
+
+所以 F1 里应该新增一步：
+
+```text
+每个样本单独做 doublet 检测。
+```
+
+推荐：
+
+```text
+scDblFinder
+```
+
+比 DoubletFinder 对新手更友好、参数少。
+
+最终保留：
+
+```text
+低质量细胞去除
+高线粒体比例细胞去除
+明显 doublet 去除
+```
+
+但要保存一张 QC 表：
+
+```text
+样本名
+过滤前细胞数
+低基因数去除数量
+高线粒体去除数量
+doublet 去除数量
+过滤后细胞数
+```
+
+这张表非常重要，论文方法和补图都能用。
+
+**F1-3｜标准化和整合**
+你方案写：
+
+```text
+NormalizeData
+FindVariableFeatures
+ScaleData
+PCA
+Harmony
+```
+
+可以，但这里要讨论一个选择：
+到底用 `LogNormalize + Harmony`，还是 `SCTransform + Harmony/integration`？
+
+我建议初学者主流程用：
+
+```text
+LogNormalize + Harmony
+```
+
+原因是更透明，后面 AddModuleScore、AUCell、CellChat、InferCNV 的兼容性也更直观。
+
+推荐主流程：
+
+```text
+NormalizeData
+FindVariableFeatures(nfeatures = 3000)
+ScaleData
+RunPCA(npcs = 50)
+RunHarmony(group.by.vars = "sample_id")
+RunUMAP(reduction = "harmony", dims = 1:30)
+FindNeighbors(reduction = "harmony", dims = 1:30)
+FindClusters(resolution = 0.2, 0.4, 0.6, 0.8, 1.0)
+```
+
+这里你原文写 `ScaleData` 回归线粒体比例和细胞周期分数。
+我不建议一开始就回归细胞周期。原因是肿瘤恶性上皮的一个重要特征就是增殖，回归掉可能把真实生物学信号削弱。我的建议是：
+
+```text
+主分析不回归细胞周期。
+补充分析可以测试回归后结果是否稳定。
+percent.mt 可以在 ScaleData 中回归，也可以不回归，先看数据。
+```
+
+**F1-4｜聚类分辨率选择**
+你写 `resolution 0.1-1.0 梯度测试` 是对的，但还不够新手可执行。
+
+建议固定流程：
+
+1. 依次跑 `0.2, 0.4, 0.6, 0.8, 1.0`
+2. 用 `clustree` 看 cluster 是否稳定
+3. 先选一个用于“大类细胞注释”的分辨率，通常 `0.4-0.6`
+4. 上皮细胞单独 subset 后，再重新聚类，用更高分辨率找亚群
+
+这里要明确：
+全细胞聚类的目的不是直接找 MLMOD 亚群，而是分出大类细胞。MLMOD 亚群应该在恶性上皮细胞中重新聚类和打分。
+
+**F1-5｜细胞类型注释**
+你写：
+
+```text
+SingleR + scType + 手动 marker
+```
+
+我同意，但顺序要改一下。
+
+推荐顺序：
+
+1. 先用经典 marker 手动初注释
+2. 再用 SingleR/scType 辅助验证
+3. 再和原文注释比对
+4. 冲突 cluster 人工核查
+
+不能反过来完全依赖 SingleR。胃癌样本里 CAF、髓系、肿瘤上皮状态复杂，自动注释容易把恶性上皮误判成正常上皮或干细胞样上皮。
+
+基础 marker 可以先用：
+
+```text
+Epithelial: EPCAM, KRT8, KRT18, KRT19, TACSTD2
+T cells: CD3D, CD3E, TRAC, CD8A, CD4
+B cells: MS4A1, CD79A, CD79B
+Plasma: MZB1, JCHAIN, IGKC
+NK: NKG7, GNLY, KLRD1
+Myeloid: LYZ, CD14, FCGR3A, S100A8, S100A9
+Mast: TPSAB1, TPSB2, CPA3
+Fibroblast: COL1A1, COL1A2, DCN, LUM, FAP
+Endothelial: PECAM1, VWF, KDR, ENG
+Pericyte/SMC: RGS5, ACTA2, TAGLN, MYH11
+Cycling: MKI67, TOP2A
+```
+
+注意：你写的 NK marker 里有 `CD56`，但在单细胞 RNA 里更常用基因名是 `NCAM1`。实际 NK 还是更推荐看 `NKG7/GNLY/KLRD1`。
+
+**F1-6｜提取上皮细胞并二次分析**
+这是你原方案里没有强调够的地方。
+
+完整 F1 应该不是全细胞注释完就 InferCNV，而是：
+
+1. 从全细胞对象中提取上皮细胞
+2. 对上皮细胞重新 Normalize、PCA、Harmony、UMAP、聚类
+3. 在上皮细胞内部区分正常上皮、恶性上皮、可能的污染/低质量 cluster
+4. 再做 InferCNV / CopyKAT
+
+原因：
+恶性细胞识别的对象主要是上皮细胞。如果在全部细胞里直接粗略判断，免疫和基质细胞会干扰上皮内部结构。
+
+**F1-7｜恶性细胞识别：InferCNV + CopyKAT + marker 交叉判断**
+你写：
+
+```text
+参考细胞：T/B/NK 等非上皮免疫细胞
+CNV score > 阈值归为恶性
+CopyKAT 辅助验证
+```
+
+大方向对，但有两个问题。
+
+第一，InferCNV 参考细胞最好用：
+
+```text
+免疫细胞 + 内皮 + 成纤维
+```
+
+但不要混入可疑上皮细胞。正常上皮看起来像好参考，但胃癌癌旁上皮可能有炎症/肠化/异常状态，不一定干净。可以作为比较对象，但主参考我更倾向非上皮细胞。
+
+第二，不能只靠一个 `CNV score > 阈值`。推荐判定规则：
+
+```text
+恶性上皮细胞 = 上皮细胞 marker 阳性
+            + 来自肿瘤/转移样本为主
+            + InferCNV 显示明显大片段 CNV
+            + CopyKAT 判定为 aneuploid
+```
+
+如果 InferCNV 和 CopyKAT 冲突：
+
+```text
+优先保留“高置信恶性细胞”进入 F2 主分析；
+冲突细胞作为 uncertain，不进入核心分析。
+```
+
+这个决定很关键，因为 F2 的 MLMOD 高低亚群如果混进正常上皮，结论会变得很虚。
+
+**F1-8｜F1 最终输出**
+F1 结束时必须输出这些文件：
+
+```text
+01_all_cells_qc.rds
+02_all_cells_integrated_annotated.rds
+03_epithelial_reclustered.rds
+04_malignant_epithelial.rds
+sample_qc_summary.tsv
+cell_metadata_final.tsv
+cluster_marker_genes.tsv
+malignant_cell_calling_summary.tsv
+```
+
+F1 图表建议保留导师要求的 6-8 张，但我会稍微改成：
+
+```text
+图1-1：每个样本 QC 小提琴图，过滤前后对比
+图1-2：整合前按 sample_id 着色 UMAP
+图1-3：整合后按 sample_id/group 着色 UMAP
+图1-4：全细胞类型注释 UMAP
+图1-5：细胞类型 marker DotPlot
+图1-6：不同组别细胞组成比例柱状图
+图1-7：上皮细胞二次聚类 UMAP
+图1-8：InferCNV 热图 + CopyKAT 判定 UMAP
+图1-9：最终恶性上皮细胞 UMAP，按 normal/primary/metastasis 着色
+```
+
+**F1 目前我最想改的地方**
+你的 F1 草案整体方向没问题，但我建议明确修改这几处：
+
+```text
+1. “读取10x矩阵”改为“根据 GEO 文件格式读取 CSV 表达矩阵”。
+2. 加入 sample_info.tsv，否则后面分组会乱。
+3. 不要固定 nFeature_RNA < 6000，改成结合样本分布和 doublet 检测。
+4. 不建议主分析回归细胞周期，至少不要默认回归。
+5. 增加“上皮细胞二次聚类”。
+6. 恶性细胞不要只靠 InferCNV 阈值，要 InferCNV + CopyKAT + 上皮 marker + 样本来源联合判断。
+7. F1 最终产物应明确保存 rds 和 metadata，供 F2 直接使用。
+```
+
+我建议我们下一步就讨论 F1 的第一个关键决策：**GSE183904 到底用全 48 个样本，还是只用正常/原发/腹膜转移中与研究最相关的一部分样本？**
+我的初步意见是：主分析尽量用全 GSE183904，但 F2 之后只在“正常上皮、原发恶性上皮、腹膜转移恶性上皮”中聚焦。
+
+--------------------------------------------------------------------------------
+
+[009] 你 | 2026-05-27 20:24:29 Asia/Shanghai
+你的7点意见都接受。1.我注意到你选择DoubletFinder等的原因是对新手更友好、参数少，这是不对的，应该首先保证研究的严谨性和质量，不应为了好懂和容易操作而降低研究质量。2.我觉得经典marker也要写明引用来源，我不知道其他文献惯例是怎么做的，你可以反驳我。3.你说主参考你更倾向非上皮细胞，我也不知道哪个好，我们需要查阅高质量文献来看别人是怎么做的。4.如果高置信恶性细胞非常少怎么办，inferCNV的阈值应该怎么确定。5.还需要输出一个文件，写明使用了什么版本的软件和程序包。6.数据集中有没有细胞类型标签，如果有的话，我们为何还要再聚类
+
+--------------------------------------------------------------------------------
+
+[010] Codex | 2026-05-27 20:24:38 Asia/Shanghai
+你这几个问题都很关键，而且第 1 点我接受修正：执行手册可以写得新手友好，但方法选择必须先以严谨性、可复现性和领域接受度为准。我先查几个依据：doublet 方法基准、InferCNV/CopyKAT 参考细胞用法、GSE183904 是否自带注释，然后我们把 F1 决策定得更硬一点。
+
+--------------------------------------------------------------------------------
+
+[011] Codex | 2026-05-27 20:26:34 Asia/Shanghai
+你这 6 点都对，我们把 F1 标准再抬高一点。
+
+**1. 关于 DoubletFinder / scDblFinder**
+你说得对，不能因为“新手友好”就牺牲严谨性。这里我修正表述：工具选择标准应该是 **准确性、可复现性、领域接受度、是否适合当前数据**，易用性只能排在后面。
+
+我建议 F1 这样定：
+
+```text
+主流程：scDblFinder
+验证流程：DoubletFinder
+最终删除：高置信 doublet
+```
+
+理由不是“简单”，而是 scDblFinder 有正式方法论文和 benchmark 支撑，并且它结合人工 doublet、邻域信息和迭代分类器做判断；DoubletFinder 也是常用方法，但需要 pK sweep、预估 doublet rate、homotypic doublet 校正，参数主观性更强。scDblFinder 方法来源可引用 Germain et al. 2022；DoubletFinder 可作为敏感性验证。来源：[scDblFinder PubMed](https://pubmed.ncbi.nlm.nih.gov/35814628/)，[scDblFinder vignette](https://bioconductor.statistik.tu-dortmund.de/packages/3.17/bioc/vignettes/scDblFinder/inst/doc/scDblFinder.html)。
+
+最终规则不要写成“scDblFinder 说是 doublet 就删”，而是：
+
+```text
+删除 high-confidence doublets：
+1. scDblFinder 判定为 doublet；
+2. 或 DoubletFinder 判定为 doublet 且 nCount_RNA/nFeature_RNA 明显偏高；
+3. 或同时表达两个互斥谱系 marker，例如 EPCAM+CD3D、EPCAM+COL1A1、MS4A1+CD3D。
+```
+
+同时输出：
+
+```text
+doublet_call_scDblFinder
+doublet_call_DoubletFinder
+doublet_final_decision
+doublet_reason
+```
+
+这样更严谨，也方便审稿时解释。
+
+**2. 经典 marker 要不要写引用**
+我同意你。marker 不能只写“经典 marker”，尤其是给小白执行时更要写来源。
+
+但我也补充一句：文献惯例通常不会给每个 marker 单独引用一篇文献，而是引用 **数据库 + 胃癌单细胞研究 + 原数据集论文**。我们可以做一个 `cell_marker_reference.tsv`：
+
+```text
+cell_type    marker_genes    source_type    source
+Epithelial   EPCAM,KRT8,KRT18,KRT19    gastric scRNA paper / CellMarker / PanglaoDB
+T cell       CD3D,CD3E,TRAC            CellMarker / PanglaoDB
+B cell       MS4A1,CD79A,CD79B         CellMarker / PanglaoDB
+Fibroblast   COL1A1,COL1A2,DCN,LUM     gastric cancer scRNA paper
+Endothelial  PECAM1,VWF,KDR            CellMarker / gastric cancer scRNA paper
+```
+
+可引用来源包括 [CellMarker 2.0](https://academic.oup.com/nar/article/51/D1/D870/6775381)、[PanglaoDB](https://pubmed.ncbi.nlm.nih.gov/30951143/)、以及胃癌单细胞文献中使用的 marker 示例，比如胃癌 TME 研究里用 `CD19/MS4A1`、`CD3D/CD4/CD8A`、`CD14/CD68`、`TPSAB1/TPSB2`、`PECAM1`、`DCN/LUM` 等注释主要细胞类型：[PMC 胃癌 TME 单细胞研究](https://pmc.ncbi.nlm.nih.gov/articles/PMC9773611/)。
+
+**3. InferCNV 参考细胞到底用什么**
+这里不能拍脑袋。InferCNV 官方说明是用一组 reference “normal cells” 来和疑似肿瘤细胞比较；运行文档也明确 `ref_group_names` 应该是非肿瘤正常细胞类型。来源：[inferCNV Bioconductor vignette](https://master.bioconductor.org/packages/release/bioc/vignettes/infercnv/inst/doc/inferCNV.html)，[inferCNV Running docs](https://github.com/broadinstitute/infercnv/wiki/Running-InferCNV)。
+
+我建议这样定：
+
+```text
+主参考：
+高置信非上皮细胞，包括 T/NK/B/myeloid/endothelial/fibroblast。
+```
+
+但这里有一个细节：不要把所有参考细胞粗暴混成一个标签，最好按细胞类型保留参考组，例如：
+
+```text
+ref_T_NK
+ref_B
+ref_myeloid
+ref_endothelial
+ref_fibroblast
+```
+
+原因是不同谱系本身表达差异很大，分组参考比混合参考更容易检查异常。
+
+然后做两个敏感性分析：
+
+```text
+敏感性分析 A：仅用免疫细胞作为 reference。
+敏感性分析 B：加入正常上皮作为 reference。
+```
+
+如果三种参考方案得到的恶性上皮结论基本一致，可信度高。
+如果加入正常上皮后结果大变，要警惕癌旁上皮或正常上皮状态差异影响基线。
+
+**4. 高置信恶性细胞很少怎么办，InferCNV 阈值怎么定**
+InferCNV 没有一个通用阈值。不能写死 `CNV score > 0.05` 这种没有依据的标准。
+
+建议用经验分布定阈值：
+
+```text
+CNV_score = 每个细胞 inferCNV 平滑表达偏离 0 的平均绝对值或均方值。
+参考细胞 CNV_score 分布 = normal baseline。
+阈值 = reference CNV_score 的 99% 分位数，或 median + 3*MAD。
+```
+
+最终恶性判定不要只看单细胞，要看 cluster 级别：
+
+```text
+高置信恶性 epithelial cluster：
+1. epithelial marker 阳性；
+2. 来自 tumor/metastasis 样本为主；
+3. cluster median CNV_score 超过参考阈值；
+4. CopyKAT 中多数细胞为 aneuploid；
+5. inferCNV 热图有大片段染色体增益/缺失，而不是零散噪声。
+```
+
+如果高置信恶性细胞非常少，先不要强行推进 F2。按顺序排查：
+
+```text
+1. 数据是不是 processed normalized matrix，而不是 raw count？
+2. epithelial 细胞提取是否太严格？
+3. InferCNV gene_order_file 和基因名是否匹配？
+4. cutoff 是否不适合当前矩阵？
+5. reference 是否污染了疑似肿瘤上皮？
+6. 胃癌样本是否本身 near-diploid？
+```
+
+CopyKAT 论文也提醒：如果正常细胞太少，或肿瘤接近二倍体、CNV 很少，CNV 方法可能误分类。来源：[CopyKAT Nature Biotechnology 论文](https://pmc.ncbi.nlm.nih.gov/articles/PMC8122019/)。
+
+如果排查后仍然少，我建议分层：
+
+```text
+high_confidence_malignant：InferCNV + CopyKAT 一致
+probable_malignant：二者之一支持 + 肿瘤来源 + epithelial marker
+uncertain_epithelial：证据不足，不进入主分析
+```
+
+F2 主分析用 high_confidence + probable，并单独做 high_confidence-only 敏感性分析。
+
+**5. 软件和包版本文件**
+完全同意，F1 输出必须加：
+
+```text
+software_versions.tsv
+R_sessionInfo.txt
+renv.lock
+pipeline_parameters.yaml
+analysis_log.md
+```
+
+其中 `software_versions.tsv` 至少记录：
+
+```text
+R
+Seurat
+harmony
+SingleR
+celldex
+scDblFinder
+DoubletFinder
+infercnv
+copykat
+clusterProfiler
+ggplot2
+Matrix
+dplyr
+```
+
+这不是形式主义。以后别人复现、论文返修、或者你半年后自己回看，都靠这个救命。
+
+**6. 数据集有没有细胞类型标签？有的话为什么还要再聚类**
+GEO 页面目前明确给了样本级标签，比如 `Primary_Tumor`、`Primary_Normal`、`Peritoneal_Tumor`、`Peritoneal_Normal`，并列出了 40 个样本和 sample 文件映射；但 GEO 页面没有直接展示每个细胞的 cell type label。GEO 还写明 raw files 未提交，补充文件是 CSV processed data。来源：[GSE183904 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183904)。
+
+即使作者在论文、figshare 或其他对象里提供了细胞类型标签，我们仍然要再聚类，理由不是“重复劳动”，而是：
+
+```text
+1. 我们会重新做 QC 和 doublet 过滤，细胞集合已经变了。
+2. 我们研究的是 MLMOD 高活性恶性上皮亚群，原文注释粒度未必适合。
+3. 原文标签可作为 reference，不应直接作为本研究唯一依据。
+4. 审稿通常要求展示自己的质控、聚类、注释和恶性细胞识别流程。
+5. 后续 F2 的高/低 MLMOD 亚群必须建立在我们统一处理后的对象上。
+```
+
+所以 F1 里我们写成：
+
+```text
+若原数据提供作者注释：
+保留为 author_celltype；
+本研究重新聚类注释得到 celltype_manual；
+比较二者一致性，输出 confusion matrix 和 ARI；
+冲突 cluster 人工核查。
+```
+
+这样最稳。
+
+我建议我们把 F1 的核心执行原则定为一句话：
+
+```text
+F1 不以复现作者图为目的，而以构建可追溯、可验证、适合 MLMOD 下游分析的高置信恶性上皮细胞对象为目的。
+```
+
+--------------------------------------------------------------------------------
+
+[012] 你 | 2026-05-29 13:58:52 Asia/Shanghai
+1.是不是最好先写好cell_marker_reference.tsv，然后再开始分析，属于是准备工作了。2.最终恶性判定不要只看单细胞，要看 cluster 级别是什么意思，不是要找恶性细胞吗。3.随机seed也要记录。4.数据集没给原始数据咋办。
+
+--------------------------------------------------------------------------------
+
+[013] Codex | 2026-05-29 14:00:08 Asia/Shanghai
+对，这 4 个点都应该进入 F1 执行细节。
+
+**1. 是不是先写 `cell_marker_reference.tsv`？**
+是的，最好作为准备工作，在正式注释前就写好。
+
+它的作用不是跑代码，而是提前规定“我们准备用哪些 marker 判断哪些细胞类型”，避免后面看着结果临时挑 marker，产生主观偏倚。
+
+我建议 F1 准备阶段至少有这些文件：
+
+```text
+sample_info.tsv
+cell_marker_reference.tsv
+software_versions.tsv
+pipeline_parameters.yaml
+```
+
+`cell_marker_reference.tsv` 可以这样设计：
+
+```text
+cell_type    marker_gene    direction    confidence    reference_source    note
+Epithelial   EPCAM          positive     high          CellMarker;胃癌scRNA文献    上皮总标志
+Epithelial   KRT8           positive     high          CellMarker;胃癌scRNA文献    胃癌上皮常用
+T cell       CD3D           positive     high          CellMarker;PanglaoDB       T细胞
+B cell       MS4A1          positive     high          CellMarker;PanglaoDB       B细胞
+Fibroblast   COL1A1         positive     high          胃癌scRNA文献              CAF/成纤维
+Endothelial  PECAM1         positive     high          CellMarker;PanglaoDB       内皮
+```
+
+引用来源可以包括数据库和胃癌单细胞论文，比如 [CellMarker 2.0](https://academic.oup.com/nar/article/51/D1/D870/6775381)、[PanglaoDB](https://pubmed.ncbi.nlm.nih.gov/30951143/)、GSE183904 原研究或其他胃癌 scRNA 文献。
+
+**2. “cluster 级别判定恶性”是什么意思？**
+不是说我们不找恶性细胞，而是说：**单个细胞的 CNV 信号噪声很大，最终恶性标签要结合它所在 cluster 的整体证据。**
+
+举个例子：
+
+如果某个上皮 cluster 有 800 个细胞，其中：
+
+```text
+90% 来自肿瘤或腹膜转移样本
+EPCAM/KRT8/KRT18 阳性
+inferCNV 热图显示整条染色体臂增益/缺失
+cluster 平均 CNV score 明显高于参考细胞
+CopyKAT 多数判定为 aneuploid
+```
+
+那这个 cluster 可以判为恶性上皮 cluster。然后这个 cluster 里的细胞可以标记为 malignant epithelial cells。
+
+反过来，如果某个单细胞 CNV score 偶然偏高，但它所在 cluster 大部分是正常上皮、CopyKAT 不支持、没有大片段 CNV，那不能轻易把它叫恶性。
+
+所以更准确的表述是：
+
+```text
+恶性细胞最终标签以单细胞结果为基础，但必须接受 cluster-level 证据校正。
+```
+
+输出可以分三类：
+
+```text
+malignant_high_confidence
+malignant_probable
+epithelial_uncertain
+```
+
+后续 F2 主分析用 `malignant_high_confidence + malignant_probable`，再做一个只用 `malignant_high_confidence` 的敏感性分析。
+
+**3. 随机 seed 要记录**
+完全同意，而且要固定。
+
+涉及随机性的步骤包括：
+
+```text
+UMAP
+tSNE
+PCA 部分近似算法
+FindClusters
+Harmony
+DoubletFinder/scDblFinder
+下采样
+K-means
+部分富集置换分析
+```
+
+建议在所有脚本开头统一写：
+
+```r
+set.seed(20260529)
+```
+
+并在 `pipeline_parameters.yaml` 里记录：
+
+```yaml
+random_seed: 20260529
+```
+
+`software_versions.tsv` 之外，再保存：
+
+```text
+R_sessionInfo.txt
+pipeline_parameters.yaml
+```
+
+这样版本、参数、随机性都可追溯。
+
+**4. 数据集没给原始数据怎么办？**
+这是 F1 的大问题。GSE183904 的 GEO 页面显示它提供的是 processed CSV 文件，而不是标准 FASTQ 或 10x 原始矩阵；所以我们要先判断 CSV 到底是不是 raw count matrix。来源：[GSE183904 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183904)。
+
+执行上分三种情况：
+
+```text
+情况 A：CSV 是整数 count 矩阵
+可以按常规 Seurat 流程做 CreateSeuratObject、NormalizeData、QC、聚类。
+```
+
+```text
+情况 B：CSV 是非整数，但像 log-normalized 表达矩阵
+不能严格执行 raw count QC；nCount_RNA、percent.mt、InferCNV、差异分析都要谨慎。
+```
+
+```text
+情况 C：CSV 是作者处理后的对象导出，缺少完整基因或细胞信息
+只能做复用分析，不能声称从 raw data 完整重分析。
+```
+
+如果没有真正 raw count，我建议写进方案：
+
+```text
+本研究优先使用作者提供的 processed count matrix。若矩阵经检查为整数型 UMI count，则按常规 scRNA-seq 流程重建 Seurat 对象；若为 normalized expression matrix，则保留作者 QC 结果，重新进行降维、注释、恶性细胞识别和下游分析，并在方法学局限中说明无法从 FASTQ/原始 UMI 层面复现质控。
+```
+
+最关键的检查是：
+
+```r
+summary(as.numeric(expr[expr > 0]))
+mean(expr == round(expr))
+```
+
+如果接近 100% 是整数，基本可以当 count 用。
+如果大量小数，就不能假装是 raw count。
+
+这一步必须放在 F1-1，甚至在所有分析之前。
+我建议 F1 开头新增一个步骤：
+
+```text
+F1-1 数据类型确认：判断 GSE183904 CSV 文件是否为 raw UMI count、整数 count、TPM/CPM，或 log-normalized expression。
+```
+
+这个判断结果会决定后面 QC、doublet、InferCNV、差异分析的可信边界。
+
+--------------------------------------------------------------------------------
+
+[014] 你 | 2026-05-29 16:54:03 Asia/Shanghai
+1.恶性上皮 cluster中的细胞有无可能不满足infercnv恶性标准，如果不满足咋办，是否属于恶性，清楚的说一下恶性鉴定标准。2.seed是不是惯用42。3.如果没有raw count，文章会不会受质疑，现有文献有能参考的吗
+
+--------------------------------------------------------------------------------
+
+[015] Codex | 2026-05-29 16:54:12 Asia/Shanghai
+这三个问题都关系到“审稿人会不会抓住不放”。我会把恶性判定标准写成可执行的分层规则，同时查一下 processed matrix 被二次分析时文献/数据库上通常怎么处理，避免我们自己编口径。
+
+--------------------------------------------------------------------------------
+
+[016] Codex | 2026-05-29 16:55:24 Asia/Shanghai
+**1. 恶性判定标准要写清楚**
+是的，恶性上皮 cluster 里的个别细胞完全可能“不满足 inferCNV 单细胞恶性标准”。这不奇怪，因为 scRNA 推 CNV 本来有噪声、dropout、测序深度差异，而且 inferCNV 关注的是大尺度染色体片段增减，不是每个细胞都能稳定判出来。inferCNV 官方说明也是用表达强度沿染色体位置相对正常参考细胞推断大尺度 CNV，而不是提供一个天然的“恶性/非恶性”绝对标签；CopyKAT 论文也强调它是从 scRNA read depth 推断 CNV/aneuploidy 来区分癌细胞和正常细胞。来源：[inferCNV vignette](https://bioconductor.org/packages/release/bioc/vignettes/infercnv/inst/doc/inferCNV.html)，[CopyKAT Nature Biotechnology](https://www.nature.com/articles/s41587-020-00795-2)。
+
+我建议 F1 写成分层标准：
+
+```text
+候选细胞范围：
+只在 epithelial cells 中鉴定恶性细胞。
+```
+
+```text
+inferCNV 单细胞阳性：
+CNV_score 高于 reference cells 阈值。
+阈值 = max(reference 99%分位数, reference median + 3*MAD)。
+```
+
+```text
+CopyKAT 单细胞阳性：
+CopyKAT 判定为 aneuploid。
+```
+
+```text
+恶性上皮 cluster：
+1. epithelial marker 阳性；
+2. 主要来自 tumor/metastasis 样本；
+3. cluster median CNV_score 高于参考阈值；
+4. inferCNV 热图显示连续大片段染色体 gain/loss；
+5. CopyKAT aneuploid 比例明显升高，建议预设 >=50% 作为初始标准。
+```
+
+然后每个细胞最终标签分三档：
+
+```text
+malignant_high_confidence:
+epithelial + inferCNV positive + CopyKAT aneuploid。
+
+malignant_probable:
+epithelial + 属于恶性上皮 cluster + inferCNV 或 CopyKAT 至少一个支持。
+
+epithelial_uncertain:
+epithelial + 属于疑似恶性 cluster，但 inferCNV 阴性且 CopyKAT diploid/uncalled。
+```
+
+关键结论：
+**如果一个细胞在恶性上皮 cluster 里，但它自己 inferCNV 阴性，不能直接叫 high-confidence malignant。**
+如果 CopyKAT 支持，或 cluster 证据非常强，可以叫 `malignant_probable`。
+如果 inferCNV 和 CopyKAT 都不支持，就标为 `epithelial_uncertain`，不进入 F2 主分析。
+
+F2 主分析建议用：
+
+```text
+malignant_high_confidence + malignant_probable
+```
+
+敏感性分析用：
+
+```text
+malignant_high_confidence only
+```
+
+如果某个“恶性 cluster”里超过一半细胞都不满足 inferCNV/CopyKAT 标准，那这个 cluster 不能硬叫恶性，必须重新检查：是否参考细胞选错、上皮亚群混杂、cluster 分辨率太低、或者这个样本本身 CNV 不明显。
+
+**2. seed 是不是惯用 42**
+`42` 很常见，但不是生信标准，只是程序员文化里常用的任意数。严谨性不取决于 seed 是不是 42，而取决于：
+
+```text
+固定 seed
+记录 seed
+关键随机步骤可复现
+必要时测试不同 seed 下结果是否稳定
+```
+
+为了新手容易记，也可以统一用：
+
+```r
+set.seed(42)
+```
+
+我没意见。
+但我更建议在方案里写：
+
+```yaml
+random_seed: 42
+```
+
+如果我们后面有多个阶段，也可以统一所有脚本都用 `42`，避免混乱。
+
+**3. 没有 raw count 会不会被质疑**
+会被质疑，但不是致命问题。GSE183904 的 GEO 页面明确写着：原始文件因患者隐私未提交，提供的是 supplementary processed CSV；页面也列出 `Raw data not provided` 和 `Processed data provided as supplementary file`。来源：[GSE183904 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183904)。
+
+所以我们的写法必须诚实：
+
+```text
+本研究使用 GSE183904 作者在 GEO 提供的 processed count/expression matrices。
+由于 FASTQ/raw files 未公开，无法从 Cell Ranger 原始比对层面复现作者的初始质控。
+```
+
+但这不等于不能做。很多公开单细胞二次分析会下载 GEO/Single Cell Portal 的 count matrix 或 processed object 重新做 Seurat 分析。比如 eLife 2020 的跨公共单细胞数据分析明确使用公共库下载的 count matrices，并统一用 Seurat 处理；Scientific Data 的 NSCLC 整合数据集也整合了多个 GEO 数据，并发布 raw/normalized counts 和 metadata 供再分析。参考：[eLife 2020](https://elifesciences.org/articles/58040)，[Scientific Data NSCLC integrated dataset](https://www.nature.com/articles/s41597-023-02074-6)。
+
+真正的底线是：先检查 CSV 是不是整数 UMI count。
+
+```text
+如果是整数 count matrix：
+可以做常规 Seurat、QC、聚类、inferCNV/CopyKAT，但说明不是 FASTQ 层面重处理。
+
+如果是 normalized expression：
+不能声称完成了从 raw count 开始的完整重分析；QC、doublet、CNV、差异分析都要降级解释，最好优先寻找作者 Seurat 对象、原始 count matrix，或换/补充一个有 raw count 的胃癌单细胞数据集。
+```
+
+所以 F1 里要加一句硬规则：
+
+```text
+若 GSE183904 的 CSV 经检查不是整数 UMI count，则该数据集只作为单细胞表达图谱和细胞状态验证使用；恶性细胞 CNV 识别、doublet 检测和严格 QC 需谨慎解释，并优先寻找替代或补充数据集。
+```
+
+这句话很重要，能提前防住审稿风险。
+
+--------------------------------------------------------------------------------
+
+[017] 你 | 2026-05-29 17:09:10 Asia/Shanghai
+你说的这三条看起来还不错，本地仓库里我放了三篇pdf，是导师给的说有参考意义的文献，看一看有哪些东西可以参考
+
+--------------------------------------------------------------------------------
+
+[018] Codex | 2026-05-29 17:09:21 Asia/Shanghai
+我来读这三篇 PDF，重点不做泛泛总结，而是找能直接迁移到我们 F1 的东西：数据处理口径、注释依据、恶性细胞鉴定、CNV/reference 选择、图表呈现和方法学表述。
+
+--------------------------------------------------------------------------------
+
+[019] Codex | 2026-05-29 17:09:39 Asia/Shanghai
+我会先把 PDF 复制成临时英文文件名，避免中文路径影响提取，然后抽取标题、摘要、方法和出现 `Seurat / inferCNV / CopyKAT / marker / cluster / reference` 的段落。若有扫描页再考虑渲染看图。
+
+--------------------------------------------------------------------------------
+
+[020] Codex | 2026-05-29 17:10:02 Asia/Shanghai
+当前 bundled Python 里没有 `pdfplumber`，没关系，我先用已装库/系统工具试提取；如果文本层可读，不需要安装额外包。
+
+--------------------------------------------------------------------------------
+
+[021] Codex | 2026-05-29 17:10:51 Asia/Shanghai
+文本层能读出来。第一篇是胃癌高干性单细胞文章，和我们非常接近；另外两篇看起来一个是“通路打分+高低活性亚群”的范式，一个是非肿瘤疾病单细胞模仿范式。我再把三篇的标题和方法段落单独切出来，避免被大段正文淹没。
+
+--------------------------------------------------------------------------------
+
+[022] Codex | 2026-05-29 17:11:41 Asia/Shanghai
+看完了。三篇里对 **F1** 最有参考价值的是第一篇，其次第二篇，第三篇主要更适合后面 F2“多算法打分+高低活性亚群”。
+
+**三篇分别能参考什么**
+1. [s41698-025-01177-0.pdf](</D:/胃癌线粒体亚群/s41698-025-01177-0.pdf>)
+这篇最接近我们：胃癌、单细胞、恶性细胞、通路/状态亚群、bulk 验证。可以作为 F1 和 F2 的核心参考范式。
+
+可直接参考：
+
+```text
+数据来源：GSE183904 + GSE206785
+QC：去除 >20% mitochondrial content 或 <200 detected genes 的细胞
+整合：Seurat 标准流程 + Harmony
+聚类：resolution = 0.8
+注释：canonical marker genes
+恶性细胞：先提取 epithelial subpopulations，再用 inferCNV 做 CNV 分析
+亚群定义：在恶性细胞里按状态评分 top 25% 定义 HighStem
+```
+
+它还给了可引用的胃癌 marker 示例：
+
+```text
+T cells: CD3D, CD8A
+NK cells: NKG7, KLRD1
+Macrophages: CD68, CD163
+Epithelial cells: EPCAM, CDH1
+Dendritic cells: CD1C, FCER1A, CLEC9A
+```
+
+这篇对我们 F1 最有价值的一点是：
+**它也是先从上皮细胞中做 CNV，再提取 malignant cells 做后续状态分析。**
+这支持我们之前说的：不是在全细胞里直接找 MLMOD，而是先拿到恶性上皮对象。
+
+但它也有不足：它只写了 “normal reference cells” 和 CNV score，没有把 inferCNV 阈值写得很细。所以我们不能照搬它的恶性判定标准，还是应该保留我们刚才定的 `inferCNV + CopyKAT + cluster-level evidence` 分层规则。
+
+2. [打分+亚群方案 - 副本.pdf](</D:/胃癌线粒体亚群/打分+亚群方案 - 副本.pdf>)
+这篇不是胃癌，也不是肿瘤，但对“单细胞标准流程”和“目标细胞二次聚类”很有参考价值。
+
+可参考：
+
+```text
+Seurat v4.3.0
+nFeature_RNA > 200 & nFeature_RNA < 7000
+nCount_RNA > 200 & nCount_RNA < 40000
+mitochondrial content < 40%
+hemoglobin content < 20%
+decontX 去除环境 RNA 污染
+NormalizeData
+FindVariableFeatures 选 2000 个高变基因
+ScaleData
+Harmony 去批次
+clustree 选择分辨率
+整体聚类 resolution = 0.6
+目标细胞群再次 subclustering
+```
+
+这篇给我们一个重要补充：
+**可以把 decontX 加进 F1 作为环境 RNA 污染评估/去除步骤。**
+
+不过它的线粒体阈值 `<40%` 对我们胃癌不一定合适，太宽松。我们仍建议主流程先用 `<20%-25%`，如果样本质量确实偏低，再根据每个样本 QC 分布调整。
+
+3. [非肿瘤单细胞模仿1.pdf](</D:/胃癌线粒体亚群/非肿瘤单细胞模仿1.pdf>)
+这篇对 F1 的参考弱一些，对 F2 更有用。
+
+可参考：
+
+```text
+nFeature 200-7000
+mitochondrial gene expression <20%
+red blood cell gene expression <3%
+PCA 取 top 20 PCs
+FindClusters resolution = 0.8
+FindAllMarkers 找 cluster marker
+典型 marker genes 注释细胞类型
+AUCell + UCell + singscore + ssGSEA + AddModuleScore 多算法评分
+按总评分中位数分高低活性细胞
+```
+
+但我不建议我们直接照它“中位数分高低 MLMOD”。对我们的核心亚群，`top 25%` 或基于分布/K-means 的高活性定义更合理，因为 MLMOD 高活性亚群应该是一个相对富集状态，不一定天然是一半细胞。
+
+**对 F1 的修订建议**
+基于这三篇，我建议 F1 增加/修改成：
+
+```text
+F1-0 准备 sample_info.tsv、cell_marker_reference.tsv、pipeline_parameters.yaml、software_versions.tsv。
+
+F1-1 先判断 GSE183904 CSV 是否为整数 UMI count；若不是 raw/count，记录限制。
+
+F1-2 每个样本单独 QC：
+nFeature_RNA >= 200；
+nFeature_RNA 上限初设 7000，但根据样本分布调整；
+percent.mt 初设 <20%-25%；
+增加 hemoglobin/ribosomal/ambient RNA 检查；
+考虑 decontX 评估环境 RNA 污染。
+
+F1-3 doublet 检测：
+主流程 scDblFinder；
+DoubletFinder 作为交叉验证；
+不因易用性选择工具，而以质量和可复现性为准。
+
+F1-4 Seurat + Harmony 整合：
+NormalizeData；
+FindVariableFeatures；
+ScaleData；
+PCA；
+Harmony；
+UMAP；
+FindClusters；
+clustree 评估 resolution。
+
+F1-5 细胞注释：
+marker 来源写入 cell_marker_reference.tsv；
+手动 marker + SingleR/scType + 作者标签交叉验证。
+
+F1-6 提取 epithelial cells 二次聚类。
+
+F1-7 在 epithelial cells 中做 inferCNV + CopyKAT 鉴定恶性上皮细胞。
+
+F1-8 输出 RDS、metadata、QC 表、恶性判定表、版本表、seed 和参数表。
+```
+
+我现在更确定一点：导师给的第一篇文章可以作为我们 F1 的“胃癌单细胞主参考”，但它的方法写得不够细。我们的方案应该比它更可复现，尤其是恶性判定、版本记录、seed、raw/processed matrix 限制说明这些地方。
+
+--------------------------------------------------------------------------------
+
+[023] 你 | 2026-05-29 19:37:42 Asia/Shanghai
+把目前我们讨论好的F1内容写进详细研究方案里，然后继续讨论。再次强调目标是写出一篇完整详细可行的研究方案，以目标为导向，你可以反驳我的任何观点，以及我给出的任何资料，你可以问我任何问题，以便我们对齐需求。
+
+--------------------------------------------------------------------------------
+
+[024] Codex | 2026-05-29 19:38:02 Asia/Shanghai
+我会直接把已达成一致的 F1 写进你的详细方案文档，不只加几句备注，而是替换成一版可执行的“F1 工作流”。我会先备份原文件，再改正文结构，最后尽量做一次可读性检查。
+
+--------------------------------------------------------------------------------
+
+[025] Codex | 2026-05-29 19:38:08 Asia/Shanghai
+本机没找到 LibreOffice/soffice，所以这次无法把 docx 渲染成 PDF/图片做版式验证；我会用 `python-docx` 做结构化编辑，并抽取文本核对内容。现在先定位 F1 到 F2 之间的正文和表格位置。
+
+--------------------------------------------------------------------------------
+
+[026] Codex | 2026-05-29 19:38:40 Asia/Shanghai
+接下来我会把 F1 改成 9 个小节：准备文件、数据类型确认、QC/doublet、整合聚类、注释、上皮二次聚类、恶性鉴定、输出文件、参考依据。恶性判定会写成明确分层标准，避免后面“哪些细胞算恶性”说不清。
+
+--------------------------------------------------------------------------------
+
+[027] Codex | 2026-05-29 19:40:58 Asia/Shanghai
+刚才脚本没有定位到 F1/F2 边界，所以没有完成正文替换；我已经在改动前先备份了原文件，而且这次失败没有把新内容写进去。问题多半是 Word 标题里的特殊竖线/样式文本匹配，我换成“包含 F1 / F2”的宽松定位再执行。
+
+--------------------------------------------------------------------------------
+
+[028] Codex | 2026-05-29 19:41:30 Asia/Shanghai
+为了避免中文内容经过 Python 标准输入时乱码，我改用一个 UTF-8 临时文本作为 F1 内容，再由脚本解析成 Word 标题、段落、项目符号和表格。这样稳一点，也更容易核对。
+
+--------------------------------------------------------------------------------
+
+[029] Codex | 2026-05-29 19:43:35 Asia/Shanghai
+这次中文内容已经安全了，但 Word 模板里没有 `Table Grid` 这个表格样式名，脚本在建第一张表时停住。源文件仍从备份恢复后再写入，我去掉对固定表格样式的依赖再跑一遍。
+
+--------------------------------------------------------------------------------
+
+[030] Codex | 2026-05-29 19:44:04 Asia/Shanghai
+F1 已经写入文档了。我现在做一次结构核对：确认旧 F1 被替换、新 F1 的关键小节和表格都在、F2 没被误删。
+
+--------------------------------------------------------------------------------
+
+[031] Codex | 2026-05-29 19:45:00 Asia/Shanghai
+已把目前讨论好的 F1 写入你的详细方案文档：
+
+[胃癌MLMOD亚群详细研究方案.docx](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群详细研究方案.docx>)
+
+我也做了备份：
+
+[胃癌MLMOD亚群详细研究方案.before_F1_update_20260529.docx](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群详细研究方案.before_F1_update_20260529.docx>)
+
+已核对：旧 F1 里的 `读取10x Genomics count矩阵`、固定 `nFeature_RNA 200-6000`、`window_length=101` 这类旧表述已被替换；新 F1 包含 `random_seed = 42`、数据类型确认、marker来源表、doublet双方法、上皮二次聚类、inferCNV/CopyKAT恶性分层标准、输出文件和预期图表。
+没做版式渲染检查，因为本机没有找到 LibreOffice/soffice；但我用 `python-docx` 抽取正文确认了 F1/F2结构没有被误删。
+
+继续讨论 F1，我现在要反推一个关键问题：**如果 GSE183904 的CSV不是整数count矩阵，单靠它做F1主数据会比较危险。** 文献里确实有人把 GSE183904 当作“raw expression matrix”继续用 Seurat 做二次分析，但这并不等于它一定满足我们做 doublet / inferCNV / CopyKAT 的条件。GSE206785 也常被胃癌单细胞文章一起用；GEO页面显示它有 processed `GSE206785_scgex.txt.gz`，原文说明 FASTQ 在 GSA/HRA002336，需按规定申请。来源：[GSE206785 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE206785)，[Genome Biology 原文](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02828-2)。
+
+我的建议是下一步先讨论并定稿 **F1的数据集策略**：
+
+1. `GSE183904` 作为主数据集，因为它有原发、正常、腹膜转移，最贴合你的研究问题。
+2. `GSE206785` 作为辅助/验证数据集，因为导师给的胃癌高干性文章也用了它，但它不一定能回答腹膜转移问题。
+3. 正式执行前必须下载并检查 GSE183904 CSV 是否为整数count；如果不是，F1方案里要明确降级处理或加入替代数据集。
+
+我建议我们下一轮就对齐这个问题：**F1主分析到底只用 GSE183904，还是从一开始就设计成 GSE183904 主分析 + GSE206785 外部单细胞验证？**
+
+--------------------------------------------------------------------------------
+
+[032] 你 | 2026-05-29 19:52:39 Asia/Shanghai
+GSE206785 外部单细胞验证是什么意思
+
+--------------------------------------------------------------------------------
+
+[033] Codex | 2026-05-29 19:52:55 Asia/Shanghai
+“GSE206785 外部单细胞验证”的意思是：**不用它来替代 GSE183904 的主分析，而是用另一个独立胃癌单细胞数据集，检查我们在 GSE183904 里发现的结果是不是只在一个数据集里偶然出现。**
+
+举个例子。
+
+我们的主线是：
+
+```text
+GSE183904
+正常 / 原发胃癌 / 腹膜转移
+↓
+鉴定恶性上皮细胞
+↓
+计算 MLMOD_Score
+↓
+找高 MLMOD 恶性上皮亚群
+```
+
+如果我们只在 GSE183904 里发现：
+
+```text
+高MLMOD恶性上皮细胞存在
+高MLMOD亚群有某些marker
+高MLMOD亚群富集某些通路
+```
+
+审稿人可能会问：这是不是 GSE183904 这个数据集特有的批次、样本组成、处理方式造成的？
+
+所以我们再拿另一个胃癌单细胞数据集，比如 `GSE206785`，重复验证一些核心结论：
+
+```text
+GSE206785
+独立胃癌单细胞数据
+↓
+同样识别上皮/恶性上皮细胞
+↓
+同样计算 MLMOD_Score
+↓
+看高MLMOD细胞是否存在
+↓
+看核心marker/通路是否一致
+```
+
+这就是外部单细胞验证。
+
+但注意：它不是所有结果都能验证。比如如果 GSE206785 没有腹膜转移样本，那它就不能验证“腹膜转移中高MLMOD比例更高”这个结论。它能验证的是更通用的东西：
+
+```text
+1. MLMOD_Score在胃癌恶性上皮细胞中是否可检测。
+2. 高MLMOD恶性上皮亚群是否在另一个胃癌数据集中也存在。
+3. 高MLMOD亚群marker是否有部分重现。
+4. 核心候选基因是否也主要表达在恶性上皮细胞。
+5. 高MLMOD相关功能通路是否方向一致。
+```
+
+所以我说它是“外部单细胞验证”，不是“主分析数据”。
+
+我的倾向是：
+**F1主分析仍以 GSE183904 为核心，因为它最贴合正常/原发/腹膜转移。GSE206785 作为后续验证数据集，不要在 F1 主流程里过度混合，否则会引入新的批次和样本设计复杂度。**
+
+--------------------------------------------------------------------------------
+
+[034] 你 | 2026-05-29 19:56:29 Asia/Shanghai
+1.有没有数据集能验证腹膜转移中高MLMOD比例更高？一开始为什么注意到GSE206785？2.有些研究把几个细胞集合并来做分析，为什么？我们能不能也这样做？
+
+--------------------------------------------------------------------------------
+
+[035] Codex | 2026-05-29 19:56:39 Asia/Shanghai
+这两个问题都很好，而且会影响整篇方案的“数据设计”。我先查一下公开胃癌腹膜转移单细胞数据到底有哪些，再解释为什么有些文章会合并多个单细胞集，以及我们能不能合并。
+
+--------------------------------------------------------------------------------
+
+[036] Codex | 2026-05-29 19:57:46 Asia/Shanghai
+**1. 能不能验证“腹膜转移中高MLMOD比例更高”？**
+
+有可能，但要分等级。
+
+最强验证数据应该满足：
+
+```text
+同一个独立数据集中同时有：
+primary gastric cancer
+peritoneal metastasis 或 malignant ascites
+可用单细胞表达矩阵
+最好有raw count或CellRanger矩阵
+```
+
+目前我看到比较相关的是：
+
+```text
+GSE163558
+```
+
+它是胃癌原发和多部位转移单细胞数据，GEO写明包含 primary gastric cancer、adjacent non-tumoral，以及 liver、peritoneum、ovary、lymph node 等转移样本；其中有一个 peritoneum metastasis 样本 `GSM5004187`，并且提供 `GSE163558_RAW.tar`，raw data 也在 SRA。它可以作为“腹膜转移方向”的外部验证，但问题是 **PM样本太少，只有一个明确腹膜转移样本**，所以只能算弱验证。来源：[GSE163558 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE163558)。
+
+```text
+GSE228598
+```
+
+它是胃癌患者腹膜细胞单细胞数据，样本来自 malignant ascites fluid 或 peritoneal washing，共 28 个样本，并且提供 `GSE228598_RAW.tar` 和 SRA raw data。它很适合验证“高MLMOD恶性细胞是否存在于腹膜/腹水环境中”，但因为它主要是腹膜细胞/腹水/冲洗液，不一定有 matched primary tumor，所以不一定能直接比较“原发 vs 腹膜转移比例更高”。来源：[GSE228598 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE228598)。
+
+```text
+HRA002712
+```
+
+Nature Communications 2023 那篇腹水单细胞文章，包含 35 位患者、191,987 个腹水癌细胞/免疫细胞，非常适合研究 gastric cancer peritoneal metastasis；但数据在 GSA-Human，controlled access，不一定能直接下载。来源：[Nature Communications 2023](https://pmc.ncbi.nlm.nih.gov/articles/PMC9929081/)。
+
+所以我的判断是：
+
+```text
+主分析：GSE183904，用它回答“正常/原发/腹膜转移”。
+外部弱验证1：GSE163558，用它验证原发与单个腹膜转移样本中MLMOD趋势是否一致。
+外部验证2：GSE228598，用它验证高MLMOD恶性上皮细胞是否在腹膜/腹水环境中可重复出现。
+可选增强：申请HRA002712，如果能拿到，用作强腹水/腹膜转移验证。
+```
+
+如果你问“有没有一个完美公开数据集能直接验证腹膜转移中高MLMOD比例更高？”
+我现在不敢说有。**GSE163558能做，但PM样本少；GSE228598腹膜样本多，但缺原发对照；HRA002712强但受控访问。**
+
+**为什么一开始注意到GSE206785？**
+
+不是因为它能验证腹膜转移。
+我注意到它有两个原因：
+
+```text
+1. 导师给的第一篇胃癌高干性文章同时用了 GSE183904 和 GSE206785。
+2. GSE206785 是较大的胃癌单细胞数据：24个治疗前患者，48个肿瘤/匹配正常样本。
+```
+
+GEO页面写明 GSE206785 是 24 位 treatment-naive 胃癌患者的 tumor 和 matched normal tissue，共 48 个样本；但不是腹膜转移设计。来源：[GSE206785 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE206785)。
+
+所以它适合验证：
+
+```text
+MLMOD高活性恶性上皮亚群是否存在于胃癌原发灶；
+核心基因是否在胃癌恶性上皮细胞中表达；
+高MLMOD marker/通路是否在另一个胃癌队列里重现。
+```
+
+但它不适合验证：
+
+```text
+腹膜转移中高MLMOD比例更高。
+```
+
+这一点我之前应该说得更明确。
+
+**2. 为什么有些研究会合并几个单细胞集？我们能不能也合并？**
+
+能合并，但不能为了“样本多”盲目合并。
+
+别人合并多个单细胞数据集，通常是为了：
+
+```text
+增加样本数和细胞数；
+提高稀有细胞群检出能力；
+覆盖更多组织状态，比如正常、原发、转移；
+构建更完整的细胞图谱；
+降低单一数据集偶然性；
+为bulk去卷积或机器学习提供更稳定参考。
+```
+
+我们也可以合并。实际上已有胃癌腹膜转移相关研究合并过 `GSE183904 + GSE163558 + GSE206785`，用于构建胃癌/转移单细胞图谱。也有 2026 年的 Communications Biology 文章用 `GSE183904 + GSE163558` 构建包含 normal、primary GC 和 GCPM 的自定义单细胞参考。来源：[ScienceDirect 摘要](https://www.sciencedirect.com/science/article/pii/S0006291X25015578)，[Communications Biology 2026](https://www.nature.com/articles/s42003-026-09906-2)。
+
+但我建议我们的方案不要一开始就把所有数据混成一个主对象。原因是：
+
+```text
+不同数据集处理流程不同，有的只有processed matrix，有的有raw count；
+不同平台、组织来源、患者状态、治疗背景会带来强批次效应；
+腹水/腹膜冲洗液和实体肿瘤组织不是同一种生态位；
+合并后如果看到高MLMOD比例差异，很难判断是生物学差异还是数据集差异；
+inferCNV和CopyKAT对数据质量、基因覆盖、表达矩阵类型很敏感。
+```
+
+我建议采用“三层设计”：
+
+```text
+第一层：主发现队列
+GSE183904单独分析，回答核心问题：正常/原发/腹膜转移中MLMOD高活性恶性上皮细胞是否增加。
+
+第二层：独立验证队列
+GSE163558、GSE228598、GSE206785分别独立处理，不直接混进主分析。
+验证不同问题：
+GSE163558：原发 vs 腹膜转移趋势；
+GSE228598：腹膜/腹水环境是否存在高MLMOD恶性细胞；
+GSE206785：原发胃癌中高MLMOD亚群和核心基因是否可复现。
+
+第三层：探索性整合图谱
+在前两层结果稳定后，再考虑合并GSE183904 + GSE163558 + GSE206785，使用Harmony/scVI等整合方法构建大图谱。
+这个整合图谱只作为补充分析，不作为最核心结论的唯一依据。
+```
+
+我的明确建议：
+**主结论不要建立在“多数据集合并后的一张UMAP”上。主分析和验证分析要分开。**
+合并可以做，但要放在补充/探索层，而不是一上来就把所有东西搅在一起。
+
+--------------------------------------------------------------------------------
+
+[037] 你 | 2026-05-29 20:03:11 Asia/Shanghai
+三层设计是可以的，但是第二三层不要写进主线计划里，他们属于主线做完之后，回过头来补充严谨性的，应该写进F1补充计划里。你觉得呢，我的想法不可能是完美的，你可以反驳或者优化我的想法
+
+--------------------------------------------------------------------------------
+
+[038] Codex | 2026-05-29 20:03:22 Asia/Shanghai
+我同意你的方向，但我会稍微优化一句：第二、三层不是“结果不好再补救”，而是“主线完成后按预先定义的补充验证计划执行”。这样既不干扰主线，又不会显得事后挑数据。我把这段写成 F1 的补充计划，放在 F2 前面。
+
+--------------------------------------------------------------------------------
+
+[039] Codex | 2026-05-29 20:04:00 Asia/Shanghai
+我再核对一下补充计划是否插在 F1 和 F2 之间，并确认没有重复插入。
+
+--------------------------------------------------------------------------------
+
+[040] Codex | 2026-05-29 20:04:17 Asia/Shanghai
+我同意你的想法，而且我做了一个小优化：把第二、三层定义为 **“预先规划的补充验证”**，而不是“主线做完后临时补救”。这样逻辑更严谨。
+
+我已经把它写进了详细方案的 F1 末尾，作为：
+
+`3.1.11 F1补充计划：外部单细胞验证与探索性整合`
+
+位置在 F1 参考依据之后、F2 之前。也新建了备份：
+
+[胃癌MLMOD亚群详细研究方案.before_F1_supplement_20260529.docx](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群详细研究方案.before_F1_supplement_20260529.docx>)
+
+我在文档里明确写了：
+
+- 主线发现层：只用 `GSE183904` 回答核心问题。
+- 外部单细胞验证层：`GSE163558 / GSE228598 / GSE206785` 等，主线完成后独立处理。
+- 探索性整合层：多个数据集合并，只作为补充展示，不作为主结论唯一依据。
+
+我觉得你这个判断是对的：如果一开始把所有数据集都写进主线，方案会变得散，初学者执行也容易混乱；而且跨数据集合并会把“生物学差异”和“批次/来源差异”搅在一起。主线要锋利，补充计划要预留，这样最稳。
+
+--------------------------------------------------------------------------------
+
+[041] 你 | 2026-05-29 20:07:57 Asia/Shanghai
+现在把计划文件分成三份，一份是完整计划，包括主线计划和补充验证，一份只包含主线计划，一份只包括补充验证
+
+--------------------------------------------------------------------------------
+
+[042] Codex | 2026-05-29 20:08:11 Asia/Shanghai
+我来把现有方案拆成三份 Word：完整版本直接保留当前内容；主线版本删除 F1 的补充验证小节；补充验证版本只保留补充验证计划。拆完我会抽取结构核对，确保没有误删 F2-F8。
+
+--------------------------------------------------------------------------------
+
+[043] Codex | 2026-05-29 20:08:38 Asia/Shanghai
+这次又是中文路径传进 Python 后被系统编码替换成问号导致保存失败。文件内容没问题，我改成 Python 只在临时英文路径里生成，再用 PowerShell 复制到中文目标路径。
+
+--------------------------------------------------------------------------------
+
+[044] Codex | 2026-05-29 20:09:03 Asia/Shanghai
+三份文件已经生成。我现在逐个抽查：完整版本应包含 F1补充计划和 F2；主线版本应包含 F2 但不包含补充计划；补充验证版本应只包含补充计划。
+
+--------------------------------------------------------------------------------
+
+[045] Codex | 2026-05-29 20:09:29 Asia/Shanghai
+抽查发现一个必须马上修的点：刚才补充验证小节在 Word 里出现了中文编码损坏（显示成问号），这是 Windows 管道编码惹的祸。主线 F1 正文是正常的，但补充验证段需要重写；我会用 UTF-8 临时文件重插一遍，然后重新生成三份。
+
+--------------------------------------------------------------------------------
+
+[046] Codex | 2026-05-29 20:10:27 Asia/Shanghai
+已经修复并重新生成。最后再做一次内容抽查，这次重点看是否还有问号乱码、主线是否不含补充节、补充验证是否不含完整主线。
+
+--------------------------------------------------------------------------------
+
+[047] Codex | 2026-05-29 20:10:48 Asia/Shanghai
+完整版和主线版已经干净；补充验证版的正文小节正常，但文件标题/定位句还有乱码，因为那两句是在 Python 脚本里直接写的中文。我把标题也改成 UTF-8 文件输入，再重建补充验证版。
+
+--------------------------------------------------------------------------------
+
+[048] Codex | 2026-05-29 20:11:50 Asia/Shanghai
+已拆成三份，并完成抽查，无乱码：
+
+[完整研究方案_含主线与补充验证](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群完整研究方案_含主线与补充验证.docx>)
+
+[主线研究方案](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群主线研究方案.docx>)
+
+[补充验证方案](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群补充验证方案.docx>)
+
+核对结果：完整版本包含 F1-F8 和 `3.1.11 F1补充计划`；主线版本包含 F1-F8，但不含补充验证小节；补充验证版本只包含补充验证与探索性整合计划。
+
+--------------------------------------------------------------------------------
+
+[049] 你 | 2026-05-29 20:55:53 Asia/Shanghai
+现在继续讨论F1
+
+--------------------------------------------------------------------------------
+
+[050] Codex | 2026-05-29 20:56:33 Asia/Shanghai
+继续。F1 现在方案框架已经比较稳了，但还没到“小白能完整执行”的粒度。我们接下来要把 F1 从“方法方案”继续拆成“执行手册”。
+
+我建议 F1 接下来重点讨论 5 个尚未完全落地的问题：
+
+1. **GSE183904到底下载哪些文件，怎么确认矩阵类型**
+2. **`sample_info.tsv` 怎么写，分组标签怎么定**
+3. **QC 阈值到底怎么从数据分布里决定，而不是只写一个范围**
+4. **细胞注释怎么从 marker 到最终标签，具体决策规则是什么**
+5. **恶性上皮细胞判定流程怎么让初学者照着一步步执行**
+
+先从第 1、2 点开始，因为它们是 F1 的入口。
+
+**F1第一步不应该是跑Seurat**
+我想明确反驳一个常见做法：很多人拿到数据就直接 `CreateSeuratObject()`，然后画 QC 小提琴图。这对新手很危险。
+
+真正的第一步应该是：
+
+```text
+数据审计，而不是数据分析。
+```
+
+也就是先搞清楚：
+
+```text
+这个数据到底是什么格式？
+每个文件对应哪个样本？
+每个样本是正常、原发、腹膜转移，还是腹膜正常？
+矩阵是raw count还是normalized expression？
+有没有作者提供的metadata/cell type标签？
+```
+
+如果这一步没弄清楚，后面所有分组图、恶性细胞判定、MLMOD比例比较都会有风险。
+
+**GSE183904主线分组建议**
+我建议主线仍然以 GSE183904 全部相关样本作为入口，但分析时分两层标签：
+
+第一层：保留原始细分标签。
+
+```text
+Primary_Normal
+Primary_Tumor
+Peritoneal_Normal
+Peritoneal_Tumor
+其他原始标签
+```
+
+第二层：为了回答研究问题，建立研究分组。
+
+```text
+Normal
+Primary_Tumor
+Peritoneal_Metastasis
+```
+
+这里要注意：
+`Peritoneal_Normal` 不应该被简单并入 `Normal`，至少一开始不要。腹膜正常组织和胃正常上皮不是同一个生态位。如果把它们都叫 Normal，后面比较容易混乱。
+
+所以我建议 `sample_info.tsv` 里至少有两个分组列：
+
+```text
+group_original
+group_analysis
+```
+
+例如：
+
+```text
+sample_id    patient_id    group_original       group_analysis          tissue_site    tumor_status
+S01          P01           Primary_Normal       Normal_Gastric          stomach        non_tumor
+S02          P01           Primary_Tumor        Primary_Tumor           stomach        tumor
+S03          P02           Peritoneal_Tumor     Peritoneal_Metastasis   peritoneum     tumor
+S04          P02           Peritoneal_Normal    Normal_Peritoneum       peritoneum     non_tumor
+```
+
+后面画主图时，核心比较应该是：
+
+```text
+Normal_Gastric epithelial
+Primary_Tumor malignant epithelial
+Peritoneal_Metastasis malignant epithelial
+```
+
+`Normal_Peritoneum` 可以先作为参考/补充，不要直接混进胃正常上皮。
+
+**我建议 F1 的第一个人工检查表**
+在正式跑 R 之前，先做一个 `data_audit.tsv`：
+
+```text
+file_name
+file_size
+sample_id
+matrix_rows
+matrix_cols
+row_is_gene
+col_is_cell
+value_integer_rate
+min_value
+max_value
+has_negative_value
+gene_name_type
+mt_gene_count
+conclusion
+```
+
+其中最关键的是：
+
+```text
+value_integer_rate
+```
+
+判定规则可以写成：
+
+```text
+>=0.99：基本可视为整数count矩阵
+0.90-0.99：人工检查，可能有读取/压缩/格式问题
+<0.90：不能当raw count矩阵使用
+```
+
+这一步对 F1 特别重要，因为 GSE183904 如果不是整数 count，我们对 doublet、QC、inferCNV 的措辞都要收紧。
+
+**是否使用所有样本**
+我的建议是：
+
+```text
+导入时使用所有GSE183904相关单细胞样本；
+主线统计时只使用预先定义的核心组别；
+低质量或分组不清楚的样本记录后排除，不能静默删除。
+```
+
+也就是说，不能一开始只挑看起来顺眼的样本。
+但也不能把所有样本混在一起做所有结论。
+
+更严谨的做法是：
+
+```text
+全数据用于构建图谱；
+核心组别用于主结论；
+其他组别用于补充观察或参考。
+```
+
+**F1这里我还要提醒一个风险**
+如果 GSE183904 没有足够清楚的每细胞 metadata，我们需要自己从文件名和 GEO 样本信息推断分组。这个时候必须保存一个“分组来源说明”。
+
+例如：
+
+```text
+sample_id 的 group_original 来自 GEO sample title；
+patient_id 来自作者样本编号；
+group_analysis 由本研究根据 tissue/source/tumor_status 重新编码；
+所有手动编码规则记录在 sample_info_notes.md。
+```
+
+否则以后别人会问：你怎么知道这个 sample 是腹膜转移？你怎么知道这个是正常？
+
+**我建议我们现在先定一个F1入口标准**
+可以写成最终执行规则：
+
+```text
+F1入口规则：
+1. 下载GSE183904全部公开表达矩阵和GEO样本信息。
+2. 建立sample_info.tsv和data_audit.tsv。
+3. 只有当表达矩阵经检查满足整数count矩阵标准时，才进入完整Seurat-QC-doublet-inferCNV主流程。
+4. 若矩阵不是整数count，则保留表达图谱和MLMOD评分分析，但doublet、严格QC和CNV恶性判定需降级解释，并优先寻找作者对象或外部raw count数据补充。
+5. 任何样本排除必须写明原因，输出excluded_samples.tsv。
+```
+
+我建议下一步我们就把 `sample_info.tsv` 的字段和分组规则彻底定下来。这个表一旦定好，F1后面所有图和统计才不会乱。
+
+--------------------------------------------------------------------------------
+
+[051] 你 | 2026-05-29 21:16:19 Asia/Shanghai
+可以把F1前的准备工作称为F0，下面先讨论确定F0的细节
+
+--------------------------------------------------------------------------------
+
+[052] Codex | 2026-05-29 21:17:03 Asia/Shanghai
+可以，而且我认为非常应该加 **F0**。
+
+这不是形式主义。F0 的作用是把“准备、审计、命名、分组、版本、目录结构”从 F1 正式分析里拆出来。这样 F1 就不会一边下载数据、一边猜分组、一边跑 Seurat，逻辑会清楚很多。
+
+我建议：
+
+```text
+F0｜项目准备、数据审计与可复现性配置
+F1｜单细胞常规分析流程
+```
+
+F0 的目标不是产生生物学结论，而是回答：
+
+```text
+数据从哪里来？
+每个文件是什么？
+每个样本属于什么分组？
+矩阵能不能当 raw count 用？
+项目目录怎么组织？
+软件版本和随机种子怎么记录？
+哪些数据能进入 F1 主流程？
+哪些数据只能作为补充或被排除？
+```
+
+**F0总目标**
+F0 结束时，必须得到这些“准入文件”：
+
+```text
+project_structure_ready.txt
+sample_info.tsv
+data_audit.tsv
+cell_marker_reference.tsv
+pipeline_parameters.yaml
+software_versions.tsv
+analysis_log.md
+excluded_samples.tsv
+```
+
+如果这些文件没有完成，不进入 F1。
+
+**F0-1 项目目录建立**
+建议固定目录：
+
+```text
+data/
+  raw_public/
+  processed_input/
+  metadata/
+  external_validation/
+scripts/
+  F0_setup/
+  F1_single_cell/
+  F2_MLMOD_scoring/
+results/
+  F0_audit/
+  F1_qc/
+  F1_objects/
+  F1_annotation/
+  F1_malignancy/
+  F2_scoring/
+docs/
+  notes/
+  references/
+logs/
+```
+
+为什么要这样分？
+因为新手最容易把下载文件、处理后文件、结果图、脚本混在一起。后面一旦重跑就会灾难。
+
+**F0-2 数据下载与原始文件锁定**
+主线数据：
+
+```text
+GSE183904
+```
+
+下载内容：
+
+```text
+GEO页面
+supplementary files
+series matrix file
+sample metadata
+所有表达矩阵CSV/压缩包
+```
+
+下载后不直接改名覆盖。建议保留：
+
+```text
+data/raw_public/GSE183904/
+```
+
+同时建立：
+
+```text
+download_manifest.tsv
+```
+
+字段：
+
+```text
+dataset_id
+file_name
+source_url
+download_date
+file_size
+md5_or_sha256
+note
+```
+
+这里我建议记录 SHA256。即使不会写代码，后面也能证明文件没变。
+
+**F0-3 样本信息表 `sample_info.tsv`**
+这个表非常关键。建议字段：
+
+```text
+dataset_id
+sample_file
+geo_accession
+sample_id
+patient_id
+group_original
+group_analysis
+tissue_site
+tumor_status
+metastasis_site
+is_paired
+paired_normal_id
+include_in_main
+include_reason
+source_of_group
+note
+```
+
+解释一下核心字段：
+
+```text
+group_original
+```
+
+保留 GEO 或作者原始标签，例如：
+
+```text
+Primary_Normal
+Primary_Tumor
+Peritoneal_Normal
+Peritoneal_Tumor
+```
+
+```text
+group_analysis
+```
+
+本研究用于统计和画图的标签，例如：
+
+```text
+Normal_Gastric
+Primary_Tumor
+Peritoneal_Metastasis
+Normal_Peritoneum
+Other
+```
+
+```text
+tumor_status
+```
+
+建议统一为：
+
+```text
+tumor
+non_tumor
+unclear
+```
+
+```text
+include_in_main
+```
+
+建议统一为：
+
+```text
+yes
+no
+pending
+```
+
+这能避免后面静默排除样本。
+
+我建议主线核心比较先定义为：
+
+```text
+Normal_Gastric epithelial
+Primary_Tumor malignant epithelial
+Peritoneal_Metastasis malignant epithelial
+```
+
+`Normal_Peritoneum` 不直接并入 `Normal_Gastric`，可以作为补充或 reference 讨论。
+
+**F0-4 数据审计表 `data_audit.tsv`**
+每个表达矩阵一个记录。
+
+字段：
+
+```text
+dataset_id
+file_name
+sample_id
+file_format
+compressed
+matrix_rows
+matrix_cols
+row_identity
+column_identity
+gene_name_type
+cell_barcode_pattern
+nonzero_value_count
+integer_value_rate
+min_value
+max_value
+has_negative_value
+mt_gene_count
+hb_gene_count
+suspected_matrix_type
+audit_decision
+decision_reason
+```
+
+关键判定：
+
+```text
+integer_value_rate >= 0.99
+```
+
+基本可以当 count matrix 用。
+
+```text
+integer_value_rate < 0.90
+```
+
+不能当 raw count 用。
+
+中间情况：
+
+```text
+0.90-0.99
+```
+
+人工检查。
+
+`audit_decision` 建议固定为：
+
+```text
+enter_full_F1
+limited_use_expression_only
+exclude
+pending
+```
+
+**F0-5 `cell_marker_reference.tsv`**
+这个表也属于 F0，而不是 F1 中临时写。
+
+字段：
+
+```text
+cell_type
+marker_gene
+direction
+confidence
+reference_source
+reference_type
+note
+```
+
+`reference_type` 可以是：
+
+```text
+database
+gastric_cancer_scRNA_paper
+GSE183904_original_paper
+review
+manual_check
+```
+
+这里我们已经初步定了 marker，但 F0 里要做成表。
+
+**F0-6 参数和版本记录**
+`pipeline_parameters.yaml` 至少写：
+
+```yaml
+project_name: GC_MLMOD
+main_dataset: GSE183904
+random_seed: 42
+
+matrix_integer_rate_cutoff:
+  full_count_matrix: 0.99
+  normalized_or_uncertain: 0.90
+
+qc_initial_thresholds:
+  min_nFeature_RNA: 200
+  max_nFeature_RNA_initial: 7000
+  min_nCount_RNA: 200
+  max_percent_mt_initial: 25
+  max_percent_hb_initial: 5
+
+integration:
+  method: Harmony
+  dims_use: 1:30
+  variable_features: 3000
+
+clustering:
+  resolution_grid: [0.2, 0.4, 0.6, 0.8, 1.0]
+
+malignancy_calling:
+  infercnv_reference: high_confidence_non_epithelial
+  cnv_score_threshold: max(reference_99_percentile, reference_median_plus_3MAD)
+  copykat_validation: true
+```
+
+`software_versions.tsv` 字段：
+
+```text
+software_or_package
+version
+purpose
+install_source
+date_checked
+```
+
+**F0-7 排除规则**
+任何排除都要写入：
+
+```text
+excluded_samples.tsv
+```
+
+字段：
+
+```text
+dataset_id
+sample_id
+file_name
+exclude_from
+exclude_reason
+decision_date
+decision_by
+can_be_used_for_supplement
+note
+```
+
+排除原因必须具体，例如：
+
+```text
+matrix_not_count
+missing_group_metadata
+too_few_cells_after_QC
+suspected_wrong_tissue
+file_corrupted
+duplicate_sample
+```
+
+不能写“质量不好”这种模糊理由。
+
+**F0-8 F0通过标准**
+我建议写得很硬：
+
+```text
+只有满足以下条件，才允许进入F1主流程：
+1. sample_info.tsv完成，所有主线样本有明确group_analysis。
+2. data_audit.tsv完成，所有主线样本有audit_decision。
+3. 至少核心组别Normal_Gastric、Primary_Tumor、Peritoneal_Metastasis有可用样本。
+4. 表达矩阵被确认可用于Seurat对象构建；若不是整数count，必须在analysis_log.md中记录限制。
+5. cell_marker_reference.tsv完成。
+6. pipeline_parameters.yaml写入随机种子和初始参数。
+7. software_versions.tsv记录R和核心R包版本。
+8. 所有排除样本写入excluded_samples.tsv。
+```
+
+我建议 F0 的结论输出一句话：
+
+```text
+F0结论：GSE183904中有X个样本进入F1完整主流程，Y个样本仅用于表达层面分析，Z个样本排除；主线比较组为Normal_Gastric、Primary_Tumor和Peritoneal_Metastasis。
+```
+
+这样 F1 开始时就很清楚，不会混乱。
+
+我下一步建议我们讨论两个最关键的 F0 表格：
+
+```text
+sample_info.tsv
+data_audit.tsv
+```
+
+尤其是 `group_analysis` 怎么定。这个定不好，后面“腹膜转移中高MLMOD比例更高”会很容易被质疑。
+
+--------------------------------------------------------------------------------
+
+[053] 你 | 2026-05-30 17:43:26 Asia/Shanghai
+1.为什么你觉得Normal_Peritoneum 不直接并入 Normal_Gastric。2.每个表达矩阵指的是每个细胞吗。3.cell_marker_reference.tsv要真实查文献，查数据库去写，不能自己编。4.决策之前，都要搜一搜现有高质量文献有无先例或参考
+
+--------------------------------------------------------------------------------
+
+[054] Codex | 2026-05-30 17:44:56 Asia/Shanghai
+完全同意你的第 3、4 点。后面所有关键决策，我都按“先查证，再定规则”的方式来做；没有高质量先例就明确写“未找到可靠先例，作为本研究预设规则/敏感性分析”。
+
+**1. 为什么 Normal_Peritoneum 不直接并入 Normal_Gastric**
+因为它们不是同一种“正常”。
+
+`Normal_Gastric` 是胃组织正常/癌旁组织，里面会有胃上皮谱系，比如 pit mucous、chief、intestinal-like epithelial 等。GSE183904 原文也把胃上皮分成不同 epithelial sublineages，例如 `CDH1` 阳性上皮、`MUC5AC/TFF1` pit mucous、`LIPF/PGA3` chief、`REG4/TFF3` intestinal-type 等。来源：[GSE183904 原文](https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/)。
+
+`Normal_Peritoneum` 是腹膜组织。正常腹膜主要由间皮细胞单层覆盖，下方有成纤维细胞、免疫细胞、淋巴管和毛细血管网络。它不是“胃正常上皮”的等价对照。来源：[normal peritoneum scRNA 文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC7908046/)。
+
+而且胃癌腹膜转移研究也经常把 gastric normal、primary GC、GCPM、peritoneal tissue 分开处理，而不是把 peritoneal normal 直接合并到 gastric normal。比如一篇 GCPM 单细胞研究明确包括 gastric normal、primary GC、GCPM、peritoneal normal、PBMC 五类来源。来源：[GCPM TME 研究](https://pmc.ncbi.nlm.nih.gov/articles/PMC11874311/)。
+
+所以我的建议是：
+
+```text
+Normal_Gastric：可作为胃上皮正常对照。
+Normal_Peritoneum：保留为腹膜生态位参考，不直接并入Normal_Gastric。
+```
+
+它可以用于：
+
+```text
+腹膜微环境参考；
+CellChat背景解释；
+判断腹膜来源非肿瘤细胞。
+```
+
+但不适合直接用于：
+
+```text
+胃正常上皮 vs 胃癌恶性上皮 的主比较。
+```
+
+**2. “每个表达矩阵”不是每个细胞**
+不是。每个表达矩阵通常指 **一个样本/一个测序文库/一个文件对应的 gene-by-cell 表达表**。
+
+在单细胞表达矩阵里：
+
+```text
+行：基因/feature
+列：细胞barcode
+值：该基因在该细胞中的UMI count或表达量
+```
+
+10x 官方文档也说明 feature-barcode matrix 中 rows 是 features，columns 是 cell-associated barcodes；Seurat 的 `CreateSeuratObject` 也要求 counts 是 features as rows、cells as columns。来源：[10x Feature-Barcode Matrices](https://www.10xgenomics.com/support/software/cell-ranger-arc/latest/analysis/feature-barcode-matrices)，[SeuratObject CreateSeuratObject](https://satijalab.github.io/seurat-object/reference/CreateSeuratObject.html)。
+
+所以：
+
+```text
+data_audit.tsv：每个表达矩阵/文件一行。
+cell_metadata_final.tsv：每个细胞一行。
+```
+
+F0 做的是文件级审计；F1 才进入细胞级 QC。
+
+**3. cell_marker_reference.tsv 必须真实查文献/数据库**
+同意，不能自己编。我们现在讨论中列出的 marker 只能算“候选清单”，正式写入 `cell_marker_reference.tsv` 前必须查来源。
+
+建议来源优先级：
+
+```text
+第一优先级：GSE183904原文和胃癌单细胞高质量文献。
+第二优先级：胃癌/消化道肿瘤相关scRNA文献。
+第三优先级：CellMarker 2.0、PanglaoDB等人工整理数据库。
+第四优先级：自动注释工具参考库，如SingleR/celldex，只作为辅助。
+```
+
+可用数据库/文献包括：
+
+- [CellMarker 2.0](https://academic.oup.com/nar/article/51/D1/D870/6775381)
+- [PanglaoDB](https://pubmed.ncbi.nlm.nih.gov/30951143/)
+- [GSE183904 胃癌单细胞图谱](https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/)
+- [胃癌TME单细胞研究 GSE206785](https://pmc.ncbi.nlm.nih.gov/articles/PMC9773611/)
+- [胃癌高干性单细胞文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC12711953/)
+
+我建议 `cell_marker_reference.tsv` 字段增加：
+
+```text
+pmid_or_doi
+source_url
+query_date
+tissue_context
+disease_context
+evidence_note
+```
+
+这样每个 marker 都能追溯，不是“凭经验写的”。
+
+**4. 决策前要查高质量文献先例**
+同意，并且建议把它写成 F0 的硬规则。
+
+但我会稍微限定范围：
+需要查证的是 **影响结论的生物学/方法学决策**，比如分组、marker、QC阈值、恶性鉴定、数据集合并、CNV reference、打分阈值。
+不需要每个文件夹名字、脚本编号都查文献。
+
+F0 增加一个文件：
+
+```text
+decision_evidence_log.tsv
+```
+
+字段：
+
+```text
+decision_id
+decision_topic
+decision_made
+evidence_source_1
+evidence_source_2
+source_type
+evidence_summary
+confidence_level
+remaining_uncertainty
+date_checked
+```
+
+规则：
+
+```text
+关键决策必须至少查：原始数据论文/高质量同领域论文/官方工具文档/权威数据库。
+如果没有找到先例，不能假装有；写明“未找到直接先例”，并设置敏感性分析。
+```
+
+这点你提得很对。我们的方案目标不是看起来复杂，而是每个关键步骤都经得起追问。
+
+--------------------------------------------------------------------------------
+
+[055] 你 | 2026-05-30 17:51:50 Asia/Shanghai
+1.腹膜转移是否并入tumor。2.同意影响结论的关键生物学/方法学决策最好可以参考高分文献。
+
+--------------------------------------------------------------------------------
+
+[056] Codex | 2026-05-30 17:52:25 Asia/Shanghai
+**1. 腹膜转移是否并入 tumor？**
+
+要并入，但要分两层标签，不能只用一个粗糙的 `tumor`。
+
+我的建议是：
+
+```text
+tumor_status = tumor
+group_analysis = Peritoneal_Metastasis
+```
+
+也就是说，**腹膜转移是 tumor，但不是 Primary_Tumor**。
+
+理由很明确：腹膜转移灶/恶性腹水里的癌细胞本质上是胃癌肿瘤细胞在腹膜生态位中的转移状态。胃癌腹膜转移单细胞研究也会把 GCPM 作为癌症/转移样本来分析，例如 Nature Communications 2023 明确研究 gastric cancer peritoneal metastasis 中的 cancer/immune cells；另有胃癌器官特异性转移单细胞研究把 primary tumours 和 peritoneum/ovary/liver/lymph node metastases 分开比较。来源：[Nature Communications GCPM](https://pmc.ncbi.nlm.nih.gov/articles/PMC9929081/)，[胃癌器官特异性转移scRNA研究](https://pmc.ncbi.nlm.nih.gov/articles/PMC8858624/)。
+
+所以 F0 的 `sample_info.tsv` 应该这样编码：
+
+```text
+sample_id    group_analysis           tumor_status    tissue_site     metastasis_site
+S01          Normal_Gastric           non_tumor       stomach         none
+S02          Primary_Tumor            tumor           stomach         none
+S03          Peritoneal_Metastasis    tumor           peritoneum      peritoneum
+S04          Normal_Peritoneum        non_tumor       peritoneum      none
+```
+
+后续统计时：
+
+```text
+所有肿瘤样本 = Primary_Tumor + Peritoneal_Metastasis
+核心分组比较 = Normal_Gastric vs Primary_Tumor vs Peritoneal_Metastasis
+```
+
+也就是说：
+
+```text
+腹膜转移并入“tumor_status = tumor”；
+但不并入“group_analysis = Primary_Tumor”。
+```
+
+这个区分很重要。否则“肿瘤 vs 正常”和“原发 vs 腹膜转移”两个问题会混在一起。
+
+**2. 关于关键决策查高质量文献**
+
+同意，我们把它写成 F0 的规则：
+
+```text
+影响结论的关键生物学/方法学决策，必须先查高质量文献、原始数据论文、官方工具文档或权威数据库。
+```
+
+需要查证的包括：
+
+```text
+样本分组规则
+Normal_Peritoneum 是否能作为 Normal_Gastric 对照
+细胞类型 marker
+QC 阈值
+doublet 方法
+批次整合方法
+inferCNV reference 选择
+恶性细胞判定标准
+MLMOD打分算法
+高低MLMOD阈值
+是否合并多数据集
+```
+
+建议 F0 增加：
+
+```text
+decision_evidence_log.tsv
+```
+
+字段：
+
+```text
+decision_id
+decision_topic
+decision_made
+evidence_source
+source_type
+evidence_summary
+confidence_level
+remaining_uncertainty
+date_checked
+```
+
+如果找不到直接先例，就写：
+
+```text
+未找到直接先例；本研究采用预设规则，并通过敏感性分析验证。
+```
+
+这比硬装“文献支持”更可靠，也更经得起导师或审稿人追问。
+
+--------------------------------------------------------------------------------
+
+[057] 你 | 2026-05-30 17:57:41 Asia/Shanghai
+同意增加decision_evidence_log.tsv。下面列一个F0执行计划
+
+--------------------------------------------------------------------------------
+
+[058] Codex | 2026-05-30 17:58:27 Asia/Shanghai
+下面是我建议的 **F0执行计划**。它的定位是：在任何 Seurat 分析之前，先完成项目准备、数据审计、分组锁定和证据记录。F0 不产生生物学结论，只决定哪些数据能进入 F1、怎么进入 F1、哪些限制必须提前写清楚。
+
+**F0｜项目准备、数据审计与可复现性配置**
+
+**F0目标**
+完成以下 9 个准入文件后，才允许进入 F1：
+
+```text
+project_structure_ready.txt
+download_manifest.tsv
+sample_info.tsv
+data_audit.tsv
+cell_marker_reference.tsv
+decision_evidence_log.tsv
+pipeline_parameters.yaml
+software_versions.tsv
+excluded_samples.tsv
+```
+
+**F0-1 建立项目目录**
+目的：避免下载文件、处理文件、脚本、结果混在一起。
+
+建议目录：
+
+```text
+data/
+  raw_public/
+  processed_input/
+  metadata/
+  external_validation/
+scripts/
+  F0_setup/
+  F1_single_cell/
+  F2_MLMOD_scoring/
+results/
+  F0_audit/
+  F1_qc/
+  F1_objects/
+  F1_annotation/
+  F1_malignancy/
+docs/
+  notes/
+  references/
+logs/
+```
+
+输出：
+
+```text
+project_structure_ready.txt
+```
+
+内容记录：
+
+```text
+project_root
+created_date
+directory_list
+operator
+```
+
+**F0-2 下载并锁定主线数据**
+主线数据：
+
+```text
+GSE183904
+```
+
+下载内容：
+
+```text
+GEO页面信息
+series matrix
+supplementary files
+表达矩阵CSV/压缩包
+样本metadata
+原始论文和补充材料
+```
+
+输出：
+
+```text
+download_manifest.tsv
+```
+
+字段：
+
+```text
+dataset_id
+file_name
+source_url
+download_date
+file_size
+sha256
+file_role
+note
+```
+
+注意：下载后的原始文件只读保存，不手动改名覆盖。需要重命名时复制到 `processed_input/`。
+
+**F0-3 建立样本信息表 `sample_info.tsv`**
+目的：锁定样本分组，防止后续画图和统计时混乱。
+
+字段：
+
+```text
+dataset_id
+sample_file
+geo_accession
+sample_id
+patient_id
+group_original
+group_analysis
+tissue_site
+tumor_status
+metastasis_site
+is_paired
+paired_normal_id
+include_in_main
+include_reason
+source_of_group
+note
+```
+
+分组规则：
+
+```text
+tumor_status:
+tumor / non_tumor / unclear
+```
+
+```text
+group_analysis:
+Normal_Gastric
+Primary_Tumor
+Peritoneal_Metastasis
+Normal_Peritoneum
+Other
+Unclear
+```
+
+关键规则：
+
+```text
+Peritoneal_Metastasis 的 tumor_status = tumor。
+Peritoneal_Metastasis 不并入 Primary_Tumor。
+Normal_Peritoneum 不并入 Normal_Gastric。
+主线核心比较为 Normal_Gastric vs Primary_Tumor vs Peritoneal_Metastasis。
+```
+
+`source_of_group` 必须写清楚，例如：
+
+```text
+GEO sample title
+original paper metadata
+supplementary table
+manual inference from file name
+```
+
+**F0-4 数据审计 `data_audit.tsv`**
+目的：判断每个表达矩阵能不能进入完整 F1 流程。
+
+注意：这里“每个表达矩阵”通常指每个样本/文件的 gene-by-cell 表达表，不是每个细胞。
+
+字段：
+
+```text
+dataset_id
+file_name
+sample_id
+file_format
+compressed
+matrix_rows
+matrix_cols
+row_identity
+column_identity
+gene_name_type
+cell_barcode_pattern
+nonzero_value_count
+integer_value_rate
+min_value
+max_value
+has_negative_value
+mt_gene_count
+hb_gene_count
+suspected_matrix_type
+audit_decision
+decision_reason
+```
+
+矩阵判定规则：
+
+```text
+integer_value_rate >= 0.99:
+基本可视为整数count矩阵，可进入完整F1主流程。
+```
+
+```text
+0.90 <= integer_value_rate < 0.99:
+人工复核，暂定pending。
+```
+
+```text
+integer_value_rate < 0.90:
+不能当raw count矩阵使用，进入limited_use_expression_only或排除。
+```
+
+`audit_decision` 固定选项：
+
+```text
+enter_full_F1
+limited_use_expression_only
+exclude
+pending
+```
+
+**F0-5 建立 marker 证据表 `cell_marker_reference.tsv`**
+目的：提前登记细胞注释依据，避免看结果后临时挑 marker。
+
+字段：
+
+```text
+cell_type
+marker_gene
+direction
+confidence
+reference_source
+reference_type
+pmid_or_doi
+source_url
+query_date
+tissue_context
+disease_context
+evidence_note
+```
+
+来源优先级：
+
+```text
+1. GSE183904原文和胃癌单细胞高质量文献
+2. 胃癌/消化道肿瘤相关scRNA文献
+3. CellMarker 2.0、PanglaoDB等权威数据库
+4. SingleR/celldex等自动注释参考库，仅作辅助
+```
+
+要求：
+
+```text
+不能凭经验编marker。
+每个marker至少要有一个可追溯来源。
+若marker仅来自通用数据库，而非胃癌语境，需要在note中标记。
+```
+
+**F0-6 建立关键决策证据表 `decision_evidence_log.tsv`**
+目的：所有影响结论的生物学/方法学决策，先查文献和官方文档，再定规则。
+
+字段：
+
+```text
+decision_id
+decision_topic
+decision_made
+evidence_source
+source_type
+evidence_summary
+confidence_level
+remaining_uncertainty
+date_checked
+```
+
+需要记录的关键决策包括：
+
+```text
+样本分组规则
+Normal_Peritoneum 是否并入 Normal_Gastric
+Peritoneal_Metastasis 是否归为 tumor
+QC 阈值
+doublet 方法选择
+批次整合方法
+细胞类型marker来源
+inferCNV reference选择
+恶性细胞判定标准
+MLMOD打分算法
+高低MLMOD阈值
+是否合并多数据集
+```
+
+如果没有找到直接先例，写：
+
+```text
+未找到直接先例；本研究采用预设规则，并通过敏感性分析验证。
+```
+
+**F0-7 固定参数 `pipeline_parameters.yaml`**
+目的：所有脚本共享同一套参数，避免不同脚本各写一套。
+
+建议内容：
+
+```yaml
+project_name: GC_MLMOD
+main_dataset: GSE183904
+random_seed: 42
+
+matrix_integer_rate_cutoff:
+  full_count_matrix: 0.99
+  manual_review_lower_bound: 0.90
+
+group_analysis_levels:
+  - Normal_Gastric
+  - Primary_Tumor
+  - Peritoneal_Metastasis
+  - Normal_Peritoneum
+  - Other
+  - Unclear
+
+qc_initial_thresholds:
+  min_nFeature_RNA: 200
+  max_nFeature_RNA_initial: 7000
+  min_nCount_RNA: 200
+  max_percent_mt_initial: 25
+  max_percent_hb_initial: 5
+
+integration:
+  method: Harmony
+  variable_features: 3000
+  dims_use: "1:30"
+
+clustering:
+  resolution_grid: [0.2, 0.4, 0.6, 0.8, 1.0]
+
+malignancy_calling:
+  infercnv_reference: high_confidence_non_epithelial
+  cnv_score_threshold: max(reference_99_percentile, reference_median_plus_3MAD)
+  copykat_validation: true
+```
+
+**F0-8 记录软件版本 `software_versions.tsv`**
+字段：
+
+```text
+software_or_package
+version
+purpose
+install_source
+date_checked
+```
+
+至少记录：
+
+```text
+R
+RStudio
+Seurat
+SeuratObject
+harmony
+SingleR
+celldex
+scDblFinder
+DoubletFinder
+decontX 或 SoupX
+infercnv
+copykat
+clustree
+ggplot2
+dplyr
+Matrix
+future
+```
+
+后续 F1 运行后还要保存：
+
+```text
+R_sessionInfo.txt
+renv.lock
+```
+
+**F0-9 排除样本记录 `excluded_samples.tsv`**
+字段：
+
+```text
+dataset_id
+sample_id
+file_name
+exclude_from
+exclude_reason
+decision_date
+decision_by
+can_be_used_for_supplement
+note
+```
+
+允许的排除原因要具体：
+
+```text
+matrix_not_count
+missing_group_metadata
+file_corrupted
+duplicate_sample
+too_few_cells_after_QC
+suspected_wrong_tissue
+unresolved_sample_identity
+```
+
+禁止写：
+
+```text
+质量不好
+不合适
+结果不好
+```
+
+**F0通过标准**
+满足以下条件才进入 F1：
+
+```text
+1. 项目目录已建立。
+2. GSE183904主线数据下载完成，并记录sha256。
+3. sample_info.tsv完成，所有主线样本有明确group_analysis。
+4. data_audit.tsv完成，所有主线样本有audit_decision。
+5. cell_marker_reference.tsv完成，并包含真实文献/数据库来源。
+6. decision_evidence_log.tsv记录所有关键决策依据。
+7. pipeline_parameters.yaml记录随机种子和初始参数。
+8. software_versions.tsv记录核心软件和R包版本。
+9. excluded_samples.tsv记录所有排除或暂不纳入主线的样本。
+```
+
+F0最后输出一句总判断：
+
+```text
+F0结论：GSE183904中X个样本进入F1完整主流程，Y个样本仅用于表达层面分析，Z个样本排除；主线比较组为Normal_Gastric、Primary_Tumor和Peritoneal_Metastasis。
+```
+
+我建议下一步就开始细化 `sample_info.tsv`：我们需要确定每个字段怎么填、哪些值允许出现、哪些情况必须标记为 `unclear/pending`。
+
+--------------------------------------------------------------------------------
+
+[059] 你 | 2026-05-30 19:27:37 Asia/Shanghai
+我打算使用biomni这个生信agent来做具体执行，在此之前我们先手动做好marker 证据表 cell_marker_reference.tsv，然后把执行计划prompt和cell_marker_reference.tsv一起发给biomni
+
+--------------------------------------------------------------------------------
+
+[060] Codex | 2026-05-30 19:27:52 Asia/Shanghai
+这个思路我赞成：Biomni 可以负责跑流程，但 `cell_marker_reference.tsv` 这种“研究口径”最好我们先人工定好，不把注释依据完全交给 agent 即兴发挥。 我先查并固定高质量来源，然后做一个可追溯的 v1 表，后面 Biomni 只按表执行和补充。
+
+--------------------------------------------------------------------------------
+
+[061] Codex | 2026-05-30 19:28:28 Asia/Shanghai
+我会先做一个“可用于 Biomni 执行的 v1 证据表”，范围只覆盖 F1 大类细胞注释和必要的胃上皮亚型，不把后续所有免疫细分都塞进去。表里每条 marker 都会带来源 URL/DOI 和证据备注；来源优先使用胃癌单细胞文献，其次才是 CellMarker/PanglaoDB。
+
+--------------------------------------------------------------------------------
+
+[062] Codex | 2026-05-30 19:29:18 Asia/Shanghai
+我已经找到足够的胃癌/胃组织单细胞来源来支撑 v1：包括 GSE183904 相关胃癌单细胞文章、胃癌高干性文章、胃癌转移/微环境文章、以及 CellMarker/PanglaoDB 数据库。现在我会在项目里创建 `data/metadata/cell_marker_reference.tsv`，用英文字段和英文备注，方便 Biomni 读取。
+
+--------------------------------------------------------------------------------
+
+[063] Codex | 2026-05-30 19:31:51 Asia/Shanghai
+表已经落地了。我会做一次快速审计：确认列数一致、没有空行、marker 数量和来源字段都可读；如果有格式问题马上修。
+
+--------------------------------------------------------------------------------
+
+[064] Codex | 2026-05-30 19:32:03 Asia/Shanghai
+列数检查通过：12 列、62 行、没有坏行。PowerShell 的分组输出被表格宽度吞掉了，我再用更简洁的方式看一下各细胞类型覆盖。
+
+--------------------------------------------------------------------------------
+
+[065] Codex | 2026-05-30 19:32:23 Asia/Shanghai
+同意，而且我已经先做了一个可给 Biomni 使用的 v1 表：
+
+[cell_marker_reference.tsv](/D:/胃癌线粒体亚群/data/metadata/cell_marker_reference.tsv)
+
+检查结果：`62` 行、`12` 列、无坏行。覆盖了上皮、胃上皮亚型、T/NK/B/浆细胞、髓系、巨噬、DC、肥大细胞、成纤维/CAF、内皮、周细胞/平滑肌、增殖状态等 F1 注释需要的主要类型。
+
+我按你要求，没有凭经验空写。每行都带了 `reference_source / reference_type / pmid_or_doi / source_url / query_date / evidence_note`。主要参考来源包括：
+
+- [胃癌高干性单细胞文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC12711953/)
+- [GSE183904 相关胃癌单细胞图谱](https://pmc.ncbi.nlm.nih.gov/articles/PMC9407012/)
+- [胃癌 palmitoylation 单细胞研究](https://pmc.ncbi.nlm.nih.gov/articles/PMC13096639/)
+- [转移性胃癌单细胞研究](https://pmc.ncbi.nlm.nih.gov/articles/PMC12036284/)
+- [胃癌免疫表型单细胞图谱](https://aacrjournals.org/clincancerres/article/26/11/2640/82651/Single-Cell-Atlas-of-Diverse-Immune-Phenotypes)
+- [CellMarker 2.0](https://academic.oup.com/nar/article/51/D1/D870/6775381)
+- [PanglaoDB](https://panglaodb.se/)
+
+我保留了一个重要口径：这个表是 **注释证据表**，不是“自动判定真理表”。Biomni 后续应该用它作为人工注释依据，再结合 DotPlot、FeaturePlot、cluster marker、作者注释和数据实际表达来定最终标签。
+
+下一步可以写给 Biomni 的执行 prompt，把 F0/F1 计划、这个 marker 表、输出文件要求、禁止事项一起打包进去。
+
+--------------------------------------------------------------------------------
+
+[066] 你 | 2026-05-30 19:38:21 Asia/Shanghai
+你在写文件时，有些写在D:\胃癌线粒体亚群，有些写在D:\software\wps\云盘缓存\807350289\WPS云盘\LRY\0Ting\胃癌线粒体死亡亚群方案。既然如此，就同步两个路径，文件都保存到两个路径中
+
+--------------------------------------------------------------------------------
+
+[067] Codex | 2026-05-30 19:38:36 Asia/Shanghai
+我来把两个目录做成“双向同步”：缺的文件互相补齐；同名但内容不同的文件用较新的版本覆盖较旧版本，并把被覆盖的旧版本先放进 `sync_conflicts_backup`，避免误伤。同步后我会给你一个简短清单。
+
+--------------------------------------------------------------------------------
+
+[068] Codex | 2026-05-30 19:39:10 Asia/Shanghai
+已完成双向同步。现在两个目录内容一致：
+
+- `D:\胃癌线粒体亚群`
+- `D:\software\wps\云盘缓存\807350289\WPS云盘\LRY\0Ting\胃癌线粒体死亡亚群方案`
+
+本次同步做了 7 个动作：把 WPS 目录里的方案文档复制到了工作目录，把 `cell_marker_reference.tsv` 复制到了 WPS 目录，并用较新的 WPS 版更新了工作目录里的 `胃癌MLMOD亚群详细研究方案.docx`。
+
+校验结果：两个目录各 11 个文件，哈希不一致数量为 0。
+
+--------------------------------------------------------------------------------
+
+[069] 你 | 2026-05-30 19:40:42 Asia/Shanghai
+下面你来写给biomni的prompt，首先你要确切知道biomni是什么东西，它有哪些能力及能力边界，然后写总述prompt
+
+--------------------------------------------------------------------------------
+
+[070] Codex | 2026-05-30 19:40:49 Asia/Shanghai
+我先查清楚 Biomni 的官方定位和能力边界，再写 prompt。这里不能凭印象写，因为如果把它当成“全能生信助手”来下指令，后面很容易把数据审计、方法判断和结果解释混在一起。
+
+--------------------------------------------------------------------------------
+
+[071] Codex | 2026-05-30 19:41:18 Asia/Shanghai
+我已经查了官方 GitHub、论文摘要和 HuggingFace 说明。接下来我会把“Biomni 能做什么/不能替我们决定什么”写进 prompt 头部，再给它一个总述级任务，不让它直接跳到跑分析。
+
+--------------------------------------------------------------------------------
+
+[072] Codex | 2026-05-30 19:42:03 Asia/Shanghai
+总述 prompt 已经写成文件。我现在同步到 WPS 目录，并确认两个路径都有同一份。
+
+--------------------------------------------------------------------------------
+
+[073] Codex | 2026-05-30 19:42:18 Asia/Shanghai
+我查了 Biomni 的官方资料后，先写好了一个 **总述 prompt**，并同步到两个目录：
+
+[biomni_overview_prompt.md](/D:/胃癌线粒体亚群/prompts/biomni_overview_prompt.md)
+
+同一份也已保存到：
+
+[biomni_overview_prompt.md](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/prompts/biomni_overview_prompt.md>)
+
+我的理解里，Biomni 适合做：文献/数据库检索、流程规划、代码执行、数据审计、生信分析、结果整理。但它的边界也要写清楚：不能替我们发明分组、marker、阈值或生物学解释；不能静默删样本；不能为了预期结果换方法；关键决策必须有文献/官方文档/数据库证据。
+
+这个 prompt 现在只要求 Biomni **先输出执行计划，不直接跑大规模下载或分析**。这样我们可以先看它理解得对不对，再让它进入 F0/F1 执行。
+
+--------------------------------------------------------------------------------
+
+[074] 你 | 2026-05-30 19:45:45 Asia/Shanghai
+我怕一开始就让biomni知道补充验证线会太混乱，不如只让biomni知道主线任务，做完主线再告诉biomni补充验证任务
+
+--------------------------------------------------------------------------------
+
+[075] Codex | 2026-05-30 19:45:54 Asia/Shanghai
+我同意，这样更清楚。Biomni 第一轮只需要知道主线 F0/F1，外部验证先不进入上下文，避免它把 GSE206785/GSE163558 混进主对象。 我会另写一个“主线专用 prompt”，保留禁止合并外部数据的提醒，但不展开补充验证方案。
+
+--------------------------------------------------------------------------------
+
+[076] Codex | 2026-05-30 19:46:43 Asia/Shanghai
+主线专用 prompt 已写好。我会同步到 WPS 目录，并做一次哈希确认。
+
+--------------------------------------------------------------------------------
+
+[077] Codex | 2026-05-30 19:46:57 Asia/Shanghai
+同意你的担心。第一轮让 Biomni 只知道主线，会更稳。补充验证等主线 F0/F1 做完后再另开 prompt 给它，避免它一开始把 GSE206785、GSE163558、GSE228598 混进主对象。
+
+我已经写好了主线专用 prompt，并同步到两个目录：
+
+[biomni_mainline_f0_f1_prompt.md](/D:/胃癌线粒体亚群/prompts/biomni_mainline_f0_f1_prompt.md)
+
+同一份：
+
+[biomni_mainline_f0_f1_prompt.md](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/prompts/biomni_mainline_f0_f1_prompt.md>)
+
+这个版本只告诉 Biomni：
+
+- 当前只做 `GSE183904` 主线
+- 只做 F0/F1
+- 不做 F2 MLMOD 打分
+- 不下载/处理/合并外部验证数据集
+- 外部验证只能作为“后续建议”一句话出现，不允许执行
+
+之前那个总述 prompt 我也保留着，但第一轮建议用新的 `biomni_mainline_f0_f1_prompt.md`。
+
+--------------------------------------------------------------------------------
+
+[078] 你 | 2026-05-30 19:53:50 Asia/Shanghai
+在给这个主线入口prompt之前，需要先把胃癌MLMOD亚群主线研究方案.docx这个文档写好。先把这个文档转为txt格式，然后我们一节一节对抗性讨论其内容。记住你可以提出任何建议，可以在任何时候任何问题上反驳我。
+
+--------------------------------------------------------------------------------
+
+[079] Codex | 2026-05-30 19:53:58 Asia/Shanghai
+明白。我们先把主线 docx 转成可讨论的 txt，方便逐节做“挑刺式”审查。 我会从已同步的主线方案生成纯文本，不改 Word 正文；然后先从 F0/F1 开始逐节对抗性讨论。
+
+--------------------------------------------------------------------------------
+
+[080] Codex | 2026-05-30 19:54:15 Asia/Shanghai
+又是中文路径进 Python 变问号的问题；我换成 Python 输出到临时英文路径，再由 PowerShell 复制回中文路径。这个转换只读 Word，不会碰正文。
+
+--------------------------------------------------------------------------------
+
+[081] Codex | 2026-05-30 19:54:43 Asia/Shanghai
+txt 已生成并同步。我会先快速抽取开头和章节目录，看看当前主线文档的结构，随后我们从第一节开始挑刺。
+
+--------------------------------------------------------------------------------
+
+[082] Codex | 2026-05-30 19:54:59 Asia/Shanghai
+已转换完成并同步到两个目录：
+
+[胃癌MLMOD亚群主线研究方案.txt](/D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+
+同一份：
+
+[胃癌MLMOD亚群主线研究方案.txt](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群主线研究方案.txt>)
+
+我先看了结构，当前主线文档仍然是从 `F1` 开始，没有独立 `F0`。这是第一个必须改的地方：既然我们已经决定把准备工作独立为 F0，那么主线方案应该重构成：
+
+```text
+F0｜项目准备、数据审计与可复现性配置
+F1｜单细胞常规分析流程
+F2｜单细胞通路打分与高MLMOD亚群鉴定
+...
+```
+
+而不是把 F0 内容塞在 F1 的 `3.1.1 正式分析前准备文件` 里。
+
+我建议第一轮对抗性讨论从 **文档结构问题** 开始，我的初步批评是：
+
+1. 当前 F1 里混入了 F0 内容，会让 Biomni 误以为“准备文件”是 F1 的一部分，而不是 F1 准入条件。
+2. 当前主线方案缺少 `download_manifest.tsv`、`data_audit.tsv`、`decision_evidence_log.tsv`、`excluded_samples.tsv` 的正式 F0 描述。
+3. `cell_marker_reference.tsv` 在 Word 里仍是“建议 marker 表”，但我们现在已经有真实证据表，文档应该改成“以外部 TSV 为准”，不要再在正文里维护一份可能过期的简表。
+4. 当前 F1 里还写了“若 CSV 不是整数 count，则通过外部数据验证降低风险”，但主线方案不应该展开外部验证。应该改为：“记录限制，暂停完整 F1 或进入 limited-use 版本；外部验证另见补充方案。”
+5. 当前 F2-F8 还是旧方案，很多地方还没经过我们这种强度的审查，后面大概率要大改。
+
+下一步我建议我们先定稿 **F0 在主线文档中的内容**，然后我把 Word 和 txt 都更新。
+
+--------------------------------------------------------------------------------
+
+[083] 你 | 2026-05-30 19:58:08 Asia/Shanghai
+1.先补进F0这一节，把F0和F1的结构改好。2.cell_marker_reference.tsv内给出具体的marker了吗，这个文档的根本作用是服务细胞类型注释，我觉得字段写得太臃肿没有好处。
+
+--------------------------------------------------------------------------------
+
+[084] Codex | 2026-05-30 19:58:25 Asia/Shanghai
+我同意这两个点，而且第二点我会直接优化：`cell_marker_reference.tsv` 应该是给 Biomni/分析脚本用的“注释工作表”，字段要少而清楚；详细证据可以另存为 evidence 表。 我现在先改主线 Word：补入 F0，把 F1 里混进去的准备工作拆出去；然后把 marker 表拆成“简表 + 证据表”。
+
+--------------------------------------------------------------------------------
+
+[085] Codex | 2026-05-30 19:59:38 Asia/Shanghai
+刚才是 PowerShell 字符串替换里反斜杠被当成正则了，文档还没改动。我换成非正则替换重新执行。
+
+--------------------------------------------------------------------------------
+
+[086] Codex | 2026-05-30 20:00:54 Asia/Shanghai
+文档结构已经改好：F0 现在是独立章节，F1 从“数据导入与F0结果确认”开始。接下来我把 marker 表拆成两层：简洁工作表给注释用，完整证据表给追溯用。
+
+--------------------------------------------------------------------------------
+
+[087] Codex | 2026-05-30 20:01:17 Asia/Shanghai
+简表现在只有 7 列，证据表保留完整来源。为了让 Biomni 更容易读，我再把 TSV 改成无引号的纯制表符格式。
+
+--------------------------------------------------------------------------------
+
+[088] Codex | 2026-05-30 20:01:39 Asia/Shanghai
+现在重新从更新后的 Word 导出 txt，并同步两边，方便我们下一轮逐节对抗性讨论。
+
+--------------------------------------------------------------------------------
+
+[089] Codex | 2026-05-30 20:02:09 Asia/Shanghai
+检查时发现一个小结构问题：F1 从 3.1.1 后直接跳到了 3.1.3，这是拆 F0 时留下的编号空洞。我会顺手把 F1 后续编号顺下来，避免给 Biomni 或读者造成混乱。
+
+--------------------------------------------------------------------------------
+
+[090] Codex | 2026-05-30 20:02:58 Asia/Shanghai
+txt 里编号还没顺下来，说明 Word 段落里的编号文本可能被拆在多个 run 或抽取中保留旧值。我会用更底层的 XML 文本替换再处理一次。
+
+--------------------------------------------------------------------------------
+
+[091] Codex | 2026-05-30 20:03:29 Asia/Shanghai
+我也会把 Biomni 主线 prompt 里关于 marker 表的措辞同步更新成“简表 + 证据表”，免得它误以为只有一个臃肿文件。
+
+--------------------------------------------------------------------------------
+
+[092] Codex | 2026-05-30 20:03:57 Asia/Shanghai
+已完成两件事。
+
+第一，主线方案已经重构：现在文档从独立的 `F0｜项目准备、数据审计与可复现性配置` 开始，然后才是 `F1｜单细胞常规分析流程`。F1 里原本混杂的准备工作已经拆到 F0，F1 编号也顺好了：
+
+[胃癌MLMOD亚群主线研究方案.docx](/D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.docx)
+[胃癌MLMOD亚群主线研究方案.txt](/D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+
+第二，你对 `cell_marker_reference.tsv` 的判断是对的。它的根本作用是服务细胞类型注释，所以我把它拆成两份：
+
+[cell_marker_reference.tsv](/D:/胃癌线粒体亚群/data/metadata/cell_marker_reference.tsv)
+这是简洁工作表，只有 7 列：`cell_type, marker_gene, direction, confidence, reference_short, evidence_id, note`。
+
+[cell_marker_reference_evidence.tsv](/D:/胃癌线粒体亚群/data/metadata/cell_marker_reference_evidence.tsv)
+这是完整证据表，保留 DOI/URL/查询日期/证据说明等追溯信息。
+
+两边目录都已同步，哈希一致。Biomni 主线 prompt 也同步改成读取“简表 + 证据表”，避免它误用旧的臃肿格式。
+
+--------------------------------------------------------------------------------
+
+[093] 你 | 2026-05-30 20:32:59 Asia/Shanghai
+我看到很多细胞类型只有一两个marker，每个参考来源也只提供一两个marker，这是合理的吗，我不太了解
+
+--------------------------------------------------------------------------------
+
+[094] Codex | 2026-05-30 20:33:43 Asia/Shanghai
+你的担心是对的。**只给一两个 marker，不足以作为最终细胞类型注释依据**，尤其是要交给 Biomni 跑的时候，表格太薄会让它误以为“看到 EPCAM 就等于上皮、看到 CD68 就等于巨噬”，这很危险。
+
+但这里要区分两件事：
+
+**1. 文献里常常只展示一两个代表 marker，这是正常的**
+很多单细胞文章的正文或图注为了节省篇幅，只会写：
+
+```text
+T cells: CD3D/CD8A
+NK cells: NKG7/KLRD1
+Macrophages: CD68/CD163
+Epithelial cells: EPCAM/CDH1
+```
+
+这不是说作者只靠这两个 marker 注释，而是只展示代表性 marker。比如导师给的胃癌高干性文章就是这种写法。
+
+**2. 我们给 Biomni 的注释表不能只停留在“代表 marker”**
+正式执行时，最好每个大类细胞都有一个 marker panel，而不是单基因判断。单细胞最佳实践也强调：传统 marker 注释通常基于一个或一小组 marker，但理想上应在多个数据集/来源中验证 marker set；实际注释应结合 cluster marker、参考图谱和人工检查，而不是只看单个基因。参考：[Single-cell best practices: annotation](https://www.sc-best-practices.org/cellular_structure/annotation.html)，[10x single-cell analysis best practices](https://www.10xgenomics.com/analysis-guides/best-practices-analysis-10x-single-cell-rnaseq-data)。
+
+所以我会反驳我们当前表格的一个问题：
+**现在的 `cell_marker_reference.tsv` 可以作为 v1 候选表，但还不够成熟，不应该直接作为 Biomni 的最终注释依据。**
+
+它目前有两个缺点：
+
+```text
+1. 有些细胞类型 marker 太少，比如 CAF、Pericyte、Myeloid。
+2. 一行一个marker不利于表达“marker panel”和“排除marker”。
+```
+
+我建议改成两层：
+
+```text
+cell_marker_reference.tsv
+```
+
+继续保留一行一个 marker，方便脚本读取。
+
+再新增一个更适合 Biomni 阅读的：
+
+```text
+cell_type_marker_panel.tsv
+```
+
+每个细胞类型一行，写清楚：
+
+```text
+cell_type
+positive_markers
+supporting_markers
+negative_markers
+minimum_rule
+confidence
+evidence_ids
+note
+```
+
+例如：
+
+```text
+Epithelial
+positive: EPCAM,KRT8,KRT18,KRT19,CDH1
+negative: PTPRC,COL1A1,PECAM1
+minimum_rule: epithelial annotation requires >=2 epithelial markers and no strong immune/stromal marker conflict
+```
+
+```text
+T_cell
+positive: CD3D,CD3E,TRAC
+supporting: CD4,CD8A,CD8B
+negative: EPCAM,MS4A1,COL1A1
+minimum_rule: requires pan-T markers; CD4/CD8 genes only define subtype
+```
+
+```text
+Macrophage
+positive: LYZ,C1QA,C1QB,CD68,CD163
+negative: EPCAM,CD3D,MS4A1
+minimum_rule: requires broad myeloid marker plus macrophage-associated markers
+```
+
+这个 panel 表会比现在的逐基因表更贴近“细胞类型注释”的实际用途。
+
+我建议下一步我来做两件事：
+
+1. 扩充缺 marker 的细胞类型，尤其是 `CAF/Fibroblast/Pericyte/Myeloid/Endothelial/Epithelial`。
+2. 新增 `cell_type_marker_panel.tsv`，让 Biomni 按 panel 注释，不按单 marker 注释。
+
+这样更稳。
+
+--------------------------------------------------------------------------------
+
+[095] 你 | 2026-05-30 20:37:38 Asia/Shanghai
+同意panel 表，但目前这部分的文件太乱了，只保留俩文件，完整证据表给我们自己看，cell_type_marker_panel.tsv给biomni看。等我们讨论完主线任务txt，发给biomni的东西只有一段prompt和主线任务txt和cell_type_marker_panel.tsv，所以目前很多文件是冗余的
+
+--------------------------------------------------------------------------------
+
+[096] Codex | 2026-05-30 20:37:47 Asia/Shanghai
+同意，给 Biomni 的输入越少越好，尤其 marker 这里不能让它在多个表之间自己猜主次。 我会把 marker 文件收敛为两份：`cell_marker_reference_evidence.tsv` 给我们追溯，`cell_type_marker_panel.tsv` 给 Biomni 执行；旧的逐基因简表和备份先移到 archive，不再作为入口文件。
+
+--------------------------------------------------------------------------------
+
+[097] Codex | 2026-05-30 20:38:43 Asia/Shanghai
+我会同步更新主线方案和 Biomni prompt：把 `cell_marker_reference.tsv` 的入口改成 `cell_type_marker_panel.tsv`，只保留证据表作为我们追溯用。
+
+--------------------------------------------------------------------------------
+
+[098] Codex | 2026-05-30 20:39:22 Asia/Shanghai
+有一个小心点：刚才全局替换可能把“evidence.tsv”也误改名成 panel evidence，我检查并修正一下 prompt 和文档中的文件名引用。
+
+--------------------------------------------------------------------------------
+
+[099] Codex | 2026-05-30 20:39:40 Asia/Shanghai
+你说得对，我刚检查发现 Word 里还有旧的 `cell_marker_reference.tsv` 引用和一张旧 marker 表，这会继续制造混乱。 我现在做一次清理：主线文档只把 `cell_type_marker_panel.tsv` 作为 Biomni 注释入口；证据表只写成我们内部追溯，不作为 Biomni 输入要求；同时删除 metadata 里的旧 marker 归档。
+
+--------------------------------------------------------------------------------
+
+[100] Codex | 2026-05-30 20:40:25 Asia/Shanghai
+我刚才的 prompt 自动替换可能把证据文件名误替换成 panel 文件名，我会手动检查 prompt，确保它只要求 Biomni 读取 panel，不要求 evidence。然后重新导出 txt。
+
+--------------------------------------------------------------------------------
+
+[101] Codex | 2026-05-30 20:40:31 Asia/Shanghai
+现在 active metadata 目录里只剩两份 marker 文件，prompt 也只要求 Biomni 读取 panel。接下来我修一下 prompt 里旧的 `cell_marker_reference_check.tsv` 名称，并导出新的主线 txt。
+
+--------------------------------------------------------------------------------
+
+[102] Codex | 2026-05-30 20:41:01 Asia/Shanghai
+抽查显示 Word 里还有旧引用没有替换干净，原因是表格单元格和段落文本不是精确匹配。 我会用更宽松的规则按段落开头和表头清理，确保 txt 里不再出现旧的逐基因 marker 表。
+
+--------------------------------------------------------------------------------
+
+[103] Codex | 2026-05-30 20:41:51 Asia/Shanghai
+这次暴露出一个编码坑：我把中文替换文本直接塞进 Python 标准输入，结果写进 Word 后变成了问号。 我会改用 UTF-8 JSON 文件给 Python 读取替换文本，避免中文损坏，并按 ASCII 线索清理旧表。
+
+--------------------------------------------------------------------------------
+
+[104] Codex | 2026-05-30 20:42:35 Asia/Shanghai
+清理已经写进 Word 了，导出 txt 时又把中文路径传给 Python 了才失败；我现在用临时英文路径重新导出并核对。
+
+--------------------------------------------------------------------------------
+
+[105] Codex | 2026-05-30 20:43:03 Asia/Shanghai
+还有两处残留：F0通过标准那一条被误替成了说明段，F1注释段还有旧的 `marker引用来源`。我按章节上下文再修一次。
+
+--------------------------------------------------------------------------------
+
+[106] Codex | 2026-05-30 20:43:40 Asia/Shanghai
+你这个判断是对的，我已经按这个原则清理了。
+
+现在 marker 相关只保留两份 active 文件：
+
+[cell_type_marker_panel.tsv](/D:/胃癌线粒体亚群/data/metadata/cell_type_marker_panel.tsv)
+给 Biomni 用。每个细胞类型一行，包含 `positive_markers / supporting_markers / negative_markers / minimum_rule`，避免它按单个 marker 生硬注释。
+
+[cell_marker_reference_evidence.tsv](/D:/胃癌线粒体亚群/data/metadata/cell_marker_reference_evidence.tsv)
+给我们自己看。保留每个 marker 的文献、数据库、URL、查询日期和证据说明。
+
+旧的 `cell_marker_reference.tsv` 和临时备份/归档已经从 active metadata 目录移除。主线方案文档和 txt 也已更新，不再把旧逐基因 marker 表作为 Biomni 输入。
+
+同步后的主线文件：
+
+[胃癌MLMOD亚群主线研究方案.docx](/D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.docx)
+[胃癌MLMOD亚群主线研究方案.txt](/D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+
+我同意你的方向：最终发给 Biomni 的东西应该只有三样：一段 prompt、主线任务 txt、`cell_type_marker_panel.tsv`。证据表留给我们内部审查，不塞给它。
+
+--------------------------------------------------------------------------------
+
+[107] 你 | 2026-05-30 20:51:41 Asia/Shanghai
+以后不再更新主线docx，只更新主线txt，然后清理一下这一堆docx文档
+
+--------------------------------------------------------------------------------
+
+[108] Codex | 2026-05-30 20:51:54 Asia/Shanghai
+明白。以后主线方案我只维护 `胃癌MLMOD亚群主线研究方案.txt`，不再更新主线 docx。 我会做非破坏性清理：把生成的方案 docx、备份 docx、拆分 docx 移到归档目录里，保留导师原始大纲和你的原始详细方案文档在原位，避免把来源材料也收走。
+
+--------------------------------------------------------------------------------
+
+[109] Codex | 2026-05-30 20:52:09 Asia/Shanghai
+我会保留两个来源文档在原位：`方案设计.docx` 和 `胃癌MLMOD亚群详细研究方案.docx`。其余我生成过的主线/完整/补充/备份 docx 全部移到 `archive_docx_20260530`，这样目录里不会再被 docx 版本淹没。
+
+--------------------------------------------------------------------------------
+
+[110] Codex | 2026-05-30 20:52:26 Asia/Shanghai
+我还会把 Biomni prompt 里的输入文件从主线 docx 改成主线 txt。既然主线 docx 已归档，后续入口就应该完全指向 txt，避免 Biomni 找错文件。
+
+--------------------------------------------------------------------------------
+
+[111] Codex | 2026-05-30 20:53:05 Asia/Shanghai
+已清理好。
+
+以后主线方案只更新：
+
+[胃癌MLMOD亚群主线研究方案.txt](/D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+
+不再维护主线 docx。Biomni prompt 也已改成读取 `胃癌MLMOD亚群主线研究方案.txt`，不再指向 docx。
+
+两个目录现在原位只保留 2 个来源 docx：
+
+- `方案设计.docx`
+- `胃癌MLMOD亚群详细研究方案.docx`
+
+我生成过的主线/完整/补充/备份 docx 都已非破坏性移到：
+
+- [archive_docx_20260530](/D:/胃癌线粒体亚群/archive_docx_20260530)
+- [archive_docx_20260530](</D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/archive_docx_20260530>)
+
+当前两边同步确认：主线 txt、Biomni prompt、`cell_type_marker_panel.tsv`、证据表都一致。
+
+--------------------------------------------------------------------------------
+
+[112] 你 | 2026-05-30 21:13:35 Asia/Shanghai
+1.再检查一遍cell_type_marker_panel.tsv的真实性和正确性。2.然后我们来对抗性 讨论胃癌MLMOD亚群主线研究方案.txt
+
+--------------------------------------------------------------------------------
+
+[113] Codex | 2026-05-30 21:13:54 Asia/Shanghai
+我先做 marker panel 的审计，不只看格式，还要挑来源和生物学规则的问题：哪些 marker 可靠、哪些容易误导、哪些 evidence_id 不足、哪些 negative marker/最低规则需要改。查完我会先给结论并修表，然后再进入主线 txt 的对抗性讨论。
+
+--------------------------------------------------------------------------------
+
+[114] Codex | 2026-05-30 21:15:26 Asia/Shanghai
+我会先把 marker panel 当作“未来 Biomni 实际执行会依赖的准入文件”来审，而不是只看格式。这里我会重新查文献/数据库支撑，尤其盯住那些一两个 marker 就判定的类型，因为这正是最容易埋雷的地方。
+
+--------------------------------------------------------------------------------
+
+[115] Codex | 2026-05-30 21:15:45 Asia/Shanghai
+我会用 Life Science Research 里的检索思路来做这一步：不是把 marker 当常识表背出来，而是把“胃癌单细胞文献 + 通用细胞marker数据库/综述”交叉核对。重点不是证明每个基因都能用，而是找出哪些 marker 只能辅助、哪些不能单独定类。
+
+--------------------------------------------------------------------------------
+
+[116] Codex | 2026-05-30 21:16:34 Asia/Shanghai
+初步看完现表后，我不准备全盘推翻。大多数主干细胞类型 marker 是可靠的，但有几处需要收紧：Myeloid、CAF、Pericyte、DC 这几类如果按现在写法，容易被 Biomni 或人工复核误解成“单marker即可定类”。这不符合我们之前定的严谨标准。
+
+--------------------------------------------------------------------------------
+
+[117] Codex | 2026-05-30 21:17:21 Asia/Shanghai
+我现在要改的是 panel 本身，而不是为了好看加字段。改动原则：保留面向 Biomni 的简洁结构，但把“容易被单基因误判”的行改成组合判定，并把证据表补上对应来源。
+
+--------------------------------------------------------------------------------
+
+[118] Codex | 2026-05-30 21:18:17 Asia/Shanghai
+顺手我还发现主线 TXT 有一个逻辑冲突：我们说发给 Biomni 的只有 prompt、主线 TXT、panel，但 TXT 的 F0 表里还把内部证据表列成“准入文件”。这会让执行代理误以为缺文件，所以我会把主线 TXT 改成 Biomni-facing：只要求 panel，不要求内部 evidence 表。
+
+--------------------------------------------------------------------------------
+
+[119] Codex | 2026-05-30 21:19:15 Asia/Shanghai
+已重新核对并修订了 `cell_type_marker_panel.tsv`，两边路径已同步。
+
+改动文件：
+[主线TXT](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+[Biomni marker panel](D:/胃癌线粒体亚群/data/metadata/cell_type_marker_panel.tsv)
+[内部marker证据表](D:/胃癌线粒体亚群/data/metadata/cell_marker_reference_evidence.tsv)
+
+我重点改了 4 类容易误判的 marker：
+
+1. `Myeloid`：不再只写 `LYZ`，改为 `LYZ,MNDA`，并要求配合支持基因。`LYZ`太宽，单独用不严谨。
+2. `Dendritic_cell`：加入 `LILRA4`，并明确 DC 是宽泛标签，`CD1C/FCER1A`、`CLEC9A`、`LILRA4`其实代表不同 DC 亚型，不能粗暴合并。
+3. `CAF`：不再只写 `FAP`，加入 `INHBA,CTHRC1`，并要求 fibroblast 背景 + 至少两个 CAF/activation marker。`FAP`单独判 CAF 不够。
+4. `Pericyte`：不再只写 `RGS5`，加入 `PDGFRB,CSPG4`，并提醒与 smooth muscle / stromal cells 区分。
+
+另外我把主线 TXT 里的一个冲突也修了：之前 TXT 里把 `cell_marker_reference_evidence.tsv`列成 F0 准入文件，但我们已经决定发给 Biomni 的只有 prompt、主线 TXT、`cell_type_marker_panel.tsv`。现在 TXT 已改成 Biomni 只需要读 panel，内部 evidence 表只留给我们自己审查。
+
+参考依据主要包括：[胃癌单细胞分型marker文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC9894979/)、[胃癌lineage/TME单细胞图谱](https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/)、[pericyte marker综述/单细胞分析](https://pmc.ncbi.nlm.nih.gov/articles/PMC9199463/)、[CellMarker 2.0](https://academic.oup.com/nar/article/51/D1/D870/6775381)、[PanglaoDB](https://panglaodb.se/)、[单细胞注释best practices](https://www.sc-best-practices.org/cellular_structure/annotation.html)。
+
+现在进入对抗性讨论主线 TXT。我先提出第一条我认为必须改/必须明确的地方：
+
+**主线TXT仍然有一个潜在风险：F0写得很完整，但对新手来说还不够“可执行”。**
+比如 `download_manifest.tsv`、`sample_info.tsv`、`data_audit.tsv` 都写了字段，但没有写“怎么填、从哪里找、遇到模糊字段怎么办、示例行长什么样”。如果目标是让没接触生信和代码的小白执行，F0不能只写字段清单，必须加“逐步操作说明 + 示例 + 判定规则”。
+
+我的建议是：F0下一轮重点改成“任务卡式执行步骤”，每一步都包含：
+
+`目的`、`输入文件`、`具体操作`、`输出文件`、`检查标准`、`常见错误`、`如果失败怎么办`。
+
+我会先从 `3.0.3 主线数据下载与文件锁定` 开始对抗性拆。这里现在最大的问题是：它要求下载很多东西，但没有明确“GEO页面、series matrix、supplementary files、论文补充材料”各自承担什么角色。新手会不知道哪些是必须用于分析，哪些只是用于分组/复核。我的立场是：这里要拆成“表达矩阵必需、metadata必需、论文材料辅助、无法下载则记录”的四类，不然 F0 很容易乱。
+
+--------------------------------------------------------------------------------
+
+[120] 你 | 2026-05-30 21:29:43 Asia/Shanghai
+1.你有没有读过那些marker参考来源，marker一定要是真实的，容不得一点虚假，不然整个流程都是错的。2.现在主线txt的目标不是让没接触生信和代码的小白执行，这个主线txt是要发给biomni作为执行参考的，可以写得详细一些，但要符合biomni的阅读习惯。3.改一下txt的编号，从F0开始，现在是从3.0开始的。
+
+--------------------------------------------------------------------------------
+
+[121] Codex | 2026-05-30 21:30:01 Asia/Shanghai
+你这个质疑是对的，而且我接受得很严肃：marker 表不能靠“常识感”或二手记忆糊过去。接下来我会做一轮更硬的处理：凡是我不能在可访问原文、补充表、数据库页面或明确论文方法里逐项追到的新增 marker，都先从给 Biomni 的 panel 里撤掉或降级。
+
+--------------------------------------------------------------------------------
+
+[122] Codex | 2026-05-30 21:30:56 Asia/Shanghai
+更正一下我的上一轮措辞：我不能把“查到某篇文献支持某类 marker”说成“已经完整读过所有参考来源”。我现在按更严格标准来做：对给 Biomni 的 panel，只保留我能在可检索片段或本地 PDF 文本中直接核到的 marker 组合；内部证据表也要如实标注来源强弱。
+
+--------------------------------------------------------------------------------
+
+[123] Codex | 2026-05-30 21:32:57 Asia/Shanghai
+关于 TXT 的用途我也纠正：它不是“新手教程”，而是 Biomni 的执行参考。因此我不会把它写成一步一截图式说明；应该写成结构化、约束清楚、输入输出明确、可被 agent 拆任务执行的格式。编号我会全局从 `3.0.1` 改为 `F0.1` 这种形式。
+
+--------------------------------------------------------------------------------
+
+[124] Codex | 2026-05-30 21:34:04 Asia/Shanghai
+我已经核到一个具体问题：DC 这一行把 `LILRA4` 放在 positive_markers 会给 Biomni 造成“pDC 与 cDC 一起作为宽泛 DC 阳性标准”的误解。它是真实 pDC marker，但不应作为 broad DC 的同权 positive marker；我已把它移到 supporting_markers。
+
+--------------------------------------------------------------------------------
+
+[125] Codex | 2026-05-30 21:34:57 Asia/Shanghai
+我还发现一个编号结构问题：文本里有 `F6+F7`，但下面只有 `F6.1-F6.4`，这对 Biomni 也不友好。它会不知道 F7 是单独阶段还是 F6 的别名。我会把它拆成 F6 和 F7：F6 管免疫/治疗响应，F7 管突变/通路深度分析。
+
+--------------------------------------------------------------------------------
+
+[126] Codex | 2026-05-30 21:36:03 Asia/Shanghai
+你质疑得对。严格说，我之前不能说“完整读过所有 marker 参考来源”，更准确是“按 marker 关键词和可访问证据做了核对”。这对现在的标准还不够，所以我刚才做了两件事：
+
+第一，把给 Biomni 用的 [cell_type_marker_panel.tsv](D:/胃癌线粒体亚群/data/metadata/cell_type_marker_panel.tsv) 再收紧了。尤其是 `Dendritic_cell`：`LILRA4`是真实 pDC marker，但不适合和 `CD1C/FCER1A/CLEC9A` 同权放在 broad DC 的 positive marker 里，所以我已把它降到 supporting marker，避免 Biomni 误判。`Myeloid / CAF / Pericyte` 也维持组合判定，不允许单 marker 定类。
+
+第二，更新了内部 [cell_marker_reference_evidence.tsv](D:/胃癌线粒体亚群/data/metadata/cell_marker_reference_evidence.tsv)，把部分胃上皮亚型 marker 的证据换成更直接的胃组织/胃癌单细胞来源。核对参考包括本地 `s41698-025-01177-0.pdf`，其中能直接检到 `CD3D/CD8A`、`NKG7/KLRD1`、`CD68/CD163`、`EPCAM/CDH1`、`CD1C/FCER1A/CLEC9A` 等注释依据；也参考了 [CellMarker 2.0](https://academic.oup.com/nar/article/51/D1/D870/6775381)、[PanglaoDB](https://panglaodb.se/)、胃上皮亚群文献 [PMC12371260](https://pmc.ncbi.nlm.nih.gov/articles/PMC12371260/)、胃癌lineage/TME图谱 [PMC9394383](https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/) 和 pericyte marker 文献 [PMC9199463](https://pmc.ncbi.nlm.nih.gov/articles/PMC9199463/)。我不会把证据强度不够的 marker 当成“确定事实”写给 Biomni。
+
+主线 TXT 也按你的要求改了：[胃癌MLMOD亚群主线研究方案.txt](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)。
+
+改动包括：
+- 标题改为“Biomni执行参考”，不再按小白教程口吻处理。
+- 删除 `3.0.1` 这类编号，统一改为 `F0.1、F1.1、F2.1...`。
+- 原来的 `F6+F7` 拆成了清楚的 `F6｜免疫浸润与免疫治疗响应分析` 和 `F7｜基因组变异与分子通路深度分析`，避免 Biomni 读到混合阶段。
+- 双路径已同步，哈希一致。
+
+我下一步建议继续对抗性审主线 TXT 的 F0：不是把它写得更“新手”，而是让 Biomni 执行时不误解输入、输出、停止条件和降级条件。
+
+--------------------------------------------------------------------------------
+
+[127] 你 | 2026-05-30 21:41:02 Asia/Shanghai
+检查cell_type_marker_panel.tsv和cell_marker_reference_evidence.tsv内容的正确性，必须是在引用文献里能找到确切证据的marker。
+
+--------------------------------------------------------------------------------
+
+[128] Codex | 2026-05-30 21:41:20 Asia/Shanghai
+你这次要求我按“证据审计”标准处理，我会把门槛抬高：不是“这个 marker 常见”，而是“当前 evidence 表里引用的来源能不能直接找到这个基因和对应细胞类型/用途”。我会用本地 PDF 文本抽取 + 可访问网页/PMC/数据库页面逐项核对，核不到的先从 Biomni-facing panel 撤掉或标成不能作为证据。
+
+--------------------------------------------------------------------------------
+
+[129] Codex | 2026-05-30 21:41:31 Asia/Shanghai
+我会同时用 PDF 和表格处理两类技能：PDF 用来核本地导师文献里是否真的出现对应 marker；TSV 当作待审计数据表处理，最后只把可追溯内容留给 Biomni。
+
+--------------------------------------------------------------------------------
+
+[130] Codex | 2026-05-30 21:42:24 Asia/Shanghai
+我现在发现一个重要现实问题：现有 evidence 表里有些来源是“数据库/概括性来源”，并不是每一行都能在同一篇胃癌单细胞正文里逐字找到。按你现在的标准，这些不能直接算合格证据。我的处理会很保守：能在可访问正文/本地PDF里核到的保留；只靠数据库或宽泛常识的，降级或从 Biomni panel 删除。
+
+--------------------------------------------------------------------------------
+
+[131] Codex | 2026-05-30 21:48:19 Asia/Shanghai
+我接下来会直接改两个 TSV。原则是：`cell_type_marker_panel.tsv` 只保留“在当前证据表可追溯到具体文献/网页正文”的 marker；`cell_marker_reference_evidence.tsv` 只保留这些 marker 的证据，不再放“只靠数据库常识、没在引用来源中核到”的条目。这样会牺牲一点 marker 丰富度，但能保证不把未经核实的东西交给 Biomni。
+
+--------------------------------------------------------------------------------
+
+[132] Codex | 2026-05-30 21:53:15 Asia/Shanghai
+已经把两个文件改成“严格版”：panel 里的 supporting marker 也只保留能在 evidence 表里追到的基因；之前没有直接证据或容易造成误读的 marker 被删掉了。现在我做一致性检查：所有 panel 里出现的 marker 都必须能在 evidence 表中找到对应行，所有 evidence_id 也必须存在。
+
+--------------------------------------------------------------------------------
+
+[133] Codex | 2026-05-30 21:56:47 Asia/Shanghai
+一致性检查已经过了：panel 里 22 行、evidence 表 84 个 marker；所有 panel 中出现的 positive/supporting/negative markers 都能在 evidence 表找到对应行；所有 evidence 行的 source_url 页面也已实际抓取并确认能找到对应 gene symbol。现在我同步到 WPS 路径。
+
+--------------------------------------------------------------------------------
+
+[134] Codex | 2026-05-30 21:57:28 Asia/Shanghai
+你说得对，这一步不能有半点“我觉得常见”。我已经按更严格标准重做了。
+
+已更新并同步：
+[cell_type_marker_panel.tsv](D:/胃癌线粒体亚群/data/metadata/cell_type_marker_panel.tsv)
+[cell_marker_reference_evidence.tsv](D:/胃癌线粒体亚群/data/metadata/cell_marker_reference_evidence.tsv)
+
+这次标准是：
+
+- `cell_type_marker_panel.tsv` 里出现的每一个 positive/supporting/negative marker，都必须在 `cell_marker_reference_evidence.tsv` 里有对应 gene 证据行。
+- evidence 表每一行都必须有 `verified_source_url`。
+- 我实际抓取了所有 `verified_source_url` 页面，并检查对应 gene symbol 是否能在引用来源正文中找到。
+- 最终检查结果：`panel_rows=22`，`evidence_rows=84`，`issues=0`。
+- 两个路径已同步，哈希一致。
+
+我删掉/撤下了一批之前证据不够硬的 marker，比如 `TACSTD2`、`CLDN18`、`SYP`、`CCR7`、`IKZF2`、`FCGR3A`、`PRF1`、`GZMB`、`MNDA`、`APOE`、`MSR1`、`LILRA4`、`KDR`、`ESAM`、`MCAM`、`ABCC9`、`KCNJ8`、`CNN1`、`DES`、`PCNA`、`STMN1` 等。不是说这些一定错，而是当前引用证据没有达到“能在引用文献里直接核到”的标准，所以不能给 Biomni 当正式 marker。
+
+主要可核查来源包括：
+[高干性胃癌单细胞文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC12711953/)
+[胃癌 lineage/TME 单细胞图谱](https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/)
+[胃癌发生过程单细胞图谱](https://pmc.ncbi.nlm.nih.gov/articles/PMC12302424/)
+[胃癌代谢单细胞分析](https://pmc.ncbi.nlm.nih.gov/articles/PMC11145399/)
+[胃癌/肝转移单细胞分析](https://pmc.ncbi.nlm.nih.gov/articles/PMC10894352/)
+[胃癌内皮细胞单细胞分析](https://pmc.ncbi.nlm.nih.gov/articles/PMC11236301/)
+[胃癌转移单细胞TME分析](https://pmc.ncbi.nlm.nih.gov/articles/PMC10870525/)
+[pericyte marker单细胞文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC9199463/)
+[胃癌CAF/SMC多组学文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC12681864/)
+[胃癌FOLFOX相关单细胞分析](https://pmc.ncbi.nlm.nih.gov/articles/PMC9520597/)
+
+现在这两个表可以作为“严格审过的版本”继续往下讨论。我的建议是以后不要再随手加 marker，任何新增 marker 都必须先补进 evidence 表并通过同样检查。
+
+--------------------------------------------------------------------------------
+
+[135] 你 | 2026-05-30 21:59:54 Asia/Shanghai
+有些细胞只有两三个marker，一般来说应该有多少？其他文献是多少marker？
+
+--------------------------------------------------------------------------------
+
+[136] Codex | 2026-05-30 22:01:02 Asia/Shanghai
+一般没有固定标准，不存在“每种细胞必须 ≥5 个 marker”这种规则。更准确的原则是：
+
+**少数高特异 marker + 阴性排除 marker + cluster DEGs + UMAP/DotPlot 共同判断。**
+
+两三个 marker 是可以接受的，尤其是胃上皮亚型或非常经典的大类细胞。但不能只有“一个marker阳性就定类”。
+
+**其他胃癌单细胞文献的 marker 数量大概是这样：**
+
+| 文献/例子 | 用了多少 marker |
+|---|---:|
+| 高干性胃癌单细胞文献：T cells `CD3D, CD8A`；NK `NKG7, KLRD1`；macrophage `CD68, CD163`；epithelial `EPCAM, CDH1`；DC `CD1C, FCER1A, CLEC9A` | 多数 2-3 个 |
+| 胃癌 CAF 文献：T cells `CD3D, CD3E`；B cells `CD79A, MS4A1`；fibroblast `COL1A2, DCN`；mast `KIT, TPSB2` | 多数 2 个 |
+| 胃癌代谢单细胞文献：epithelial `EPCAM, KRT18, KRT19, MUC1, MUC5AC, KRT8`；fibroblast `DCN, COL1A2, COL1A1, LUM, COL3A1`；endothelial `VWF, RAMP2, PECAM1, PLVAP` | 4-6 个 |
+| 胃癌转移相关单细胞文献：epithelial `KRT8, KRT18, EPCAM`；fibroblast `COL1A1, COL1A2, DCN, LUM`；endothelial `VWF, PECAM1` | 2-4 个 |
+
+所以我们的表里某些细胞只有 2-3 个 marker，本身不反常。比如：
+
+- Pit mucous epithelial：`MUC5AC, TFF1`，合理。
+- Mucous neck epithelial：`MUC6, TFF2`，合理。
+- Intestinal-like epithelial：`REG4, TFF3`，合理。
+- Treg：`FOXP3, IL2RA`，合理，但必须先确认它属于 T cell。
+- Cycling：`MKI67, TOP2A`，合理，因为它是状态，不是细胞谱系。
+
+但我要强调一点：**2-3 个 marker 只能作为预设 panel，不等于最终注释证据足够。** Biomni 真正执行时还必须输出每个 cluster 的 `FindAllMarkers`、DotPlot、FeaturePlot，并检查阴性 marker。比如一个 cluster 表达 `EPCAM + CD3D`，即使 EPCAM 很高，也不能直接叫 epithelial，很可能是 doublet 或污染。
+
+我建议我们采用这个标准：
+
+- **大类细胞**：至少 2 个强阳性 marker，最好 3-5 个；必须有阴性排除 marker。
+- **胃上皮亚型**：2-3 个经典 marker 可以接受，但必须建立在 epithelial 背景上。
+- **免疫/基质细胞亚型**：至少 2-4 个 marker，且不能用单一 marker 判定。
+- **CAF、Pericyte、DC 这类异质性强的细胞**：宁愿写成 broad label 或 uncertain，也不要硬分亚型。
+- **最终论文图中**：每类细胞最好展示 2-5 个 marker；补充表可以放更多 cluster marker genes。
+
+所以结论是：我们现在 `cell_type_marker_panel.tsv` 的 marker 数量总体是符合文献习惯的。真正要守住的是：**不要为了凑数量加入证据不硬或特异性差的 marker。少但真实，比多但虚更严谨。**
+
+参考文献示例：
+[高干性胃癌单细胞文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC12711953/)
+[胃癌代谢单细胞分析](https://pmc.ncbi.nlm.nih.gov/articles/PMC11145399/)
+[胃癌CAF单细胞文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC11917039/)
+[胃癌转移单细胞文献](https://pmc.ncbi.nlm.nih.gov/articles/PMC12036284/)
+[单细胞注释best practices](https://www.sc-best-practices.org/cellular_structure/annotation.html)
+
+--------------------------------------------------------------------------------
+
+[137] 你 | 2026-05-30 22:04:11 Asia/Shanghai
+我同意：不要为了凑数量加入证据不硬或特异性差的 marker。少但真实，比多但虚更严谨。那么下面开始对抗性讨论主线txt，一个细节一个细节得敲定。
+
+--------------------------------------------------------------------------------
+
+[138] Codex | 2026-05-30 22:04:18 Asia/Shanghai
+好，我们就从现在的主线 TXT 当“Biomni 执行契约”来审，不把它当科普教程。我的讨论方式会比较硬：每个细节都问它是否会让 Biomni 误执行、漏输出、过度发挥，或者在审稿时站不住。
+
+--------------------------------------------------------------------------------
+
+[139] Codex | 2026-05-30 22:04:54 Asia/Shanghai
+好，开始。我们先只敲定 **F0 的第一层逻辑**，不急着往 F1 跳。
+
+我先给一个总判断：现在 F0 的方向是对的，但作为 **Biomni 执行参考**，它还不够“代理友好”。最大问题不是不详细，而是有些地方没有明确告诉 Biomni：**哪些必须执行，哪些只能记录，哪些失败时必须停止，哪些可以降级继续。**
+
+**第一个要敲定的细节：F0目标句**
+
+现在写的是：
+
+`F0不产生生物学结论，而是在进入Seurat分析前完成项目目录、数据下载记录、样本分组、矩阵类型审计、marker panel、关键决策证据、参数和软件版本记录。`
+
+我建议改。理由：这里漏了一个对 Biomni 很关键的约束：**F0不是让它开始分析，而是让它判断“能不能开始分析”。**
+
+建议改成：
+
+`F0不产生生物学结论，也不进行正式单细胞下游分析。F0的任务是完成项目目录、公共数据下载与文件指纹锁定、样本分组、表达矩阵类型审计、marker panel读取、关键决策证据记录、参数和软件版本记录，并输出是否允许进入F1的准入判断。若F0未通过，不得启动正式Seurat分析；若数据不满足raw count要求，只能进入limited-use表达层面分析或暂停主流程。`
+
+我反驳一个可能的简化想法：
+不建议只写“F0是准备工作”。这会让 Biomni 误以为 F0 做完文件夹就可以继续跑 Seurat。我们真正需要的是 **gatekeeping**，也就是准入门槛。
+
+**第二个要敲定的细节：F0.1准入文件是否都必要**
+
+现在列了 9 个文件。我认为其中 7 个必须保留，2 个需要调整定位。
+
+必须保留：
+`download_manifest.tsv`、`sample_info.tsv`、`data_audit.tsv`、`cell_type_marker_panel.tsv`、`decision_evidence_log.tsv`、`pipeline_parameters.yaml`、`software_versions.tsv`
+
+需要讨论：
+`project_structure_ready.txt` 和 `excluded_samples.tsv`
+
+我的意见：
+
+`project_structure_ready.txt` 可以保留，但它不应该是核心准入文件。因为它只是目录检查记录，不影响生物学结论。Biomni 可以生成它，但不能因为这个文件缺一个字段就阻止 F1。
+
+`excluded_samples.tsv` 应该保留，而且比现在更重要。它不能只记录“排除样本”，还要记录 **暂不进入完整F1但可用于limited-use分析的样本**。否则后面如果某些矩阵不是raw count，会被简单丢掉，审稿时解释不清楚。
+
+所以我建议把 F0.1 改成两类：
+
+`F0核心准入文件`：
+- `download_manifest.tsv`
+- `sample_info.tsv`
+- `data_audit.tsv`
+- `cell_type_marker_panel.tsv`
+- `decision_evidence_log.tsv`
+- `pipeline_parameters.yaml`
+- `software_versions.tsv`
+- `excluded_or_limited_samples.tsv`
+
+`F0辅助记录文件`：
+- `project_structure_ready.txt`
+
+并把 `excluded_samples.tsv` 改名为 `excluded_or_limited_samples.tsv`。这个名字更准确。
+
+**我现在要你先拍板两个问题：**
+
+1. F0目标是否按我上面这个“准入判断/gatekeeping”版本改？
+2. `excluded_samples.tsv` 是否改名为 `excluded_or_limited_samples.tsv`，并明确记录 `exclude` 和 `limited_use_expression_only` 两类样本？
+
+我的倾向是两个都改。这样 Biomni 会更不容易乱跑。
+
+--------------------------------------------------------------------------------
+
+[140] 你 | 2026-05-30 22:29:03 Asia/Shanghai
+再敲定细节之前，还有一个问题，marker参考的是高分文献吗，只有高质量期刊上的文献才有参考价值
+
+--------------------------------------------------------------------------------
+
+[141] Codex | 2026-05-30 22:30:14 Asia/Shanghai
+你这个判断方向是对的，但我会稍微反驳一句：**“只有高质量期刊文献才有参考价值”不能绝对化；但“进入 Biomni panel 的正式 marker，不能主要依赖低质量或纯二次分析文献”是对的。**
+
+我把标准拆开更合理：
+
+**1. 最理想证据**
+同疾病、同组织、原始单细胞数据、高质量期刊、文中明确写了“某细胞类型由某 marker 标注”。
+比如大型胃癌单细胞图谱、GSE183904相关论文、胃癌lineage/TME atlas。
+
+**2. 可接受辅助证据**
+通用 marker 数据库、综述、非胃癌但高质量单细胞文献。
+这些可以支持经典 marker，比如 `CD3D/CD3E` 标 T cells、`MS4A1/CD79A` 标 B cells，但不应该单独决定胃上皮亚型或 CAF 亚型。
+
+**3. 不应作为主证据**
+低质量纯生信文章、只整合公共数据但没有原始验证的文章、期刊质量一般且只随手列 marker 的文章。
+这些最多用来“参考”，不应作为 Biomni panel 的 primary evidence。
+
+所以我需要更正我们当前状态：
+现在的两个 marker 表已经做到“引用来源里能找到 gene symbol”，但还没有完全做到“所有 marker 都来自高质量期刊/高质量研究”。这是两个不同层级。
+
+我建议我们把标准再升一级：
+
+在 `cell_marker_reference_evidence.tsv` 里增加两列：
+
+`source_tier`：
+- `A_high_quality_primary_gc_scrna`：高质量胃癌/胃组织原始单细胞研究，优先采用。
+- `B_primary_scrna_context_relevant`：原始单细胞研究，但期刊/样本量/疾病相关性略弱。
+- `C_database_or_review_support`：数据库或综述，只能辅助。
+- `D_low_confidence_reference`：低质量或纯二次分析，不进入 Biomni panel。
+
+`evidence_role`：
+- `primary_for_panel`
+- `supporting_only`
+- `not_for_panel`
+
+然后规定：
+
+**Biomni 的 `cell_type_marker_panel.tsv` 中 positive markers 必须至少有一个 A 级或 B 级 primary evidence；胃癌关键细胞类型尽量用 A 级。C 级不能单独支撑；D 级直接剔除。**
+
+我不建议盲目追求“高影响因子才算”，因为经典 marker 有时候在高分文章里不会逐一解释，反而在方法表或数据库里更清楚。但对我们的项目，尤其是胃上皮亚型、CAF、Pericyte、DC、恶性上皮判断这些关键部分，必须优先用高质量胃癌单细胞原始研究。
+
+下一步我建议做一轮“文献质量分级审计”，不是再查 marker 对不对，而是查每条 evidence 的来源够不够格。审完后把低级证据从 Biomni panel 里拿掉，只留在内部 evidence 表或直接删除。
+
+--------------------------------------------------------------------------------
+
+[142] 你 | 2026-05-30 22:34:31 Asia/Shanghai
+同意你的说法，但cell_marker_reference_evidence.tsv 里再增加两列就太臃肿了，只要确保使用的marker是来自高质量期刊或研究就行了
+
+--------------------------------------------------------------------------------
+
+[143] Codex | 2026-05-30 22:35:43 Asia/Shanghai
+同意，不加列。我们只在后台做来源分级，文件本身保持简洁。但我现在会按这个标准再收紧一次：低质量或纯二次分析文献不再作为 Biomni panel 的主要依据；能用高质量胃癌/胃组织原始单细胞研究替代的，全部替代。
+
+--------------------------------------------------------------------------------
+
+[144] Codex | 2026-05-30 22:37:17 Asia/Shanghai
+我先把来源质量实际查了一遍：当前表里混进了几类我不想再作为正式依据的来源，比如 `Journal of Cancer`、`Aging (Albany NY)`、纯公共数据二次分析类文章。它们不一定错，但不适合作为 Biomni marker panel 的主证据。下一步我会用 Nature Communications、Cancer Discovery、npj Precision Oncology、Journal of Advanced Research 这类更强的胃癌单细胞/空间单细胞研究替换。
+
+--------------------------------------------------------------------------------
+
+[145] Codex | 2026-05-30 22:40:09 Asia/Shanghai
+还有一个表结构问题：你说“不加列”，我也应该把上次加的 `verification_status/verified_source_url` 去掉。证据是否通过核查由我们在后台保证，不塞进给人和 Biomni 看的表里。现在我会把 evidence 表恢复成简洁字段，同时替换为高质量来源。
+
+--------------------------------------------------------------------------------
+
+[146] Codex | 2026-05-30 22:42:02 Asia/Shanghai
+这一轮已经把 evidence 表字段恢复精简，并且正式来源集中到高质量胃癌原始单细胞/空间单细胞研究。接下来我做两类校验：一是 panel 的每个 marker 都有 evidence 行；二是每个 evidence 的 source_url 页面能抓到对应 gene symbol。
+
+--------------------------------------------------------------------------------
+
+[147] Codex | 2026-05-30 22:44:19 Asia/Shanghai
+现在检查通过：70 个 evidence marker、6 个主要来源 URL，全部能在引用来源页面中找到对应 gene symbol；表也恢复成原来的简洁字段，没有新增 `source_tier/evidence_role` 之类列。最后同步两个路径。
+
+--------------------------------------------------------------------------------
+
+[148] Codex | 2026-05-30 22:44:44 Asia/Shanghai
+同意，而且我已经按这个标准改完了，不加新列。
+
+已更新并同步：
+[cell_type_marker_panel.tsv](D:/胃癌线粒体亚群/data/metadata/cell_type_marker_panel.tsv)
+[cell_marker_reference_evidence.tsv](D:/胃癌线粒体亚群/data/metadata/cell_marker_reference_evidence.tsv)
+
+我做了三件事：
+
+1. 去掉了上次加的 `verification_status`、`verified_source_url` 等额外列，证据表恢复简洁。
+2. 删除或替换了不适合作为主证据的来源，包括 `Journal of Cancer`、`Aging (Albany NY)`、`Frontiers in Molecular Biosciences`、`Translational Cancer Research`、CellMarker、PanglaoDB 等。
+3. marker 主要改为来自高质量胃癌原始单细胞/空间单细胞研究，例如：
+   - Nature Communications 2024 胃癌卵巢/腹膜转移单细胞图谱
+   - Nature Communications 2022 胃癌TME单细胞图谱
+   - Cancer Discovery 2022 胃癌 lineage/TME 单细胞图谱
+   - Journal of Advanced Research 2025 胃癌发生过程单细胞图谱
+   - npj Precision Oncology 2025 胃癌高干性/GSE183904相关研究
+   - BMC Cancer 2026 胃癌空间图谱，仅用于 Treg 的 `FOXP3/IL2RA` 支持
+
+校验结果：
+- `cell_type_marker_panel.tsv`：22 行细胞类型
+- `cell_marker_reference_evidence.tsv`：70 个 marker 证据
+- 所有 panel 中出现的 marker 都能在 evidence 表找到
+- 所有 evidence 的 `source_url` 页面都能抓取到对应 gene symbol
+- 低质量/数据库来源关键词检查为空
+- 双路径文件哈希一致
+
+这版更保守了，删掉了一些不够硬的 marker，例如 `MUC1`、`S100A9`、`FCN1`、`PLVAP` 等。不是说它们错，而是当前我们不用它们作为正式 Biomni 输入证据。少但硬。
+
+--------------------------------------------------------------------------------
+
+[149] 你 | 2026-05-30 22:52:30 Asia/Shanghai
+看起来不错，但是还需要核查一下这些evidence是不是ai幻觉，需要确保它们是真实存在的，而且信息是真实的
+
+--------------------------------------------------------------------------------
+
+[150] Codex | 2026-05-30 22:52:46 Asia/Shanghai
+你这个追问非常必要。上一步我只证明了“网页里能找到 gene symbol”，但这还不等于 evidence_note 逐句真实，也不等于题名、期刊、DOI 没写错。现在我会做一轮反幻觉审计：核来源是否真实存在、题名/期刊/DOI 是否匹配、marker claim 是否能在正文或图注附近找到对应语境。
+
+--------------------------------------------------------------------------------
+
+[151] Codex | 2026-05-30 22:53:19 Asia/Shanghai
+我已经看到了表内容。下一步不是简单跑“gene symbol 是否出现”，而是核 `reference_source / 期刊 / DOI / evidence_note` 是否能被来源页面支持。尤其像 `MKI67/TOP2A` 这种如果只是页面里出现、但不是作为 cycling marker 使用，就要改掉或换来源。
+
+--------------------------------------------------------------------------------
+
+[152] Codex | 2026-05-30 22:55:02 Asia/Shanghai
+我会把这次当作“反幻觉审计”来做：不只看基因名有没有出现，还要核对来源是否真实、文章信息是否匹配、marker 是否真的是在对应细胞类型语境下被使用。先读当前两张表和相关研究技能说明，然后逐条抽查高风险证据。
+
+--------------------------------------------------------------------------------
+
+[153] Codex | 2026-05-30 22:55:18 Asia/Shanghai
+我看到了当前表的结构。下一步我会先核对 6 个唯一来源的题名、期刊、DOI 是否和表里一致，再集中检查容易“看起来合理但证据语义不够硬”的项，比如 PGC、JCHAIN、ACTA2/MYH11、MKI67/TOP2A。
+
+--------------------------------------------------------------------------------
+
+[154] Codex | 2026-05-30 22:56:08 Asia/Shanghai
+第一轮结果已经有一个明确问题：PGC、ACTA2/MYH11、MKI67/TOP2A 这些并非幻觉，语境能对上；但 JCHAIN 在当前引用的 Nature Communications 文章中没有跟 MZB1/IGKC/DERL3 同时作为 plasma marker 出现，至少当前正文证据不够硬。这个我会继续追源，找不到硬证据就从 Biomni panel 里删掉。
+
+--------------------------------------------------------------------------------
+
+[155] Codex | 2026-05-30 22:58:57 Asia/Shanghai
+除了 JCHAIN，我又看到一个更“方法学语义”的问题：Monocyte 行只用 CD14/LYZ 会偏粗，因为这两个更像 broad myeloid 证据；同一篇 Journal of Advanced Research 明确把 monocyte 标成 VCAN/LYZ。为了让 Biomni 注释更稳，我建议把 VCAN 加进 monocyte panel，而不是硬撑 CD14/LYZ 足够特异。
+
+--------------------------------------------------------------------------------
+
+[156] Codex | 2026-05-30 22:59:16 Asia/Shanghai
+我现在准备改两张表，改动会很克制：补齐 Cancer Discovery 的 DOI；把 JCHAIN 换成可直接验证的 BMC Biology 胃组织 atlas 证据；把 NK 的 NKG7/KLRD1/GNLY 换成更直接的来源；Monocyte 增加 VCAN 作为更明确的 monocyte marker。
+
+--------------------------------------------------------------------------------
+
+[157] Codex | 2026-05-30 23:01:16 Asia/Shanghai
+改完了。现在我会跑三类检查：表内 ID/marker 一致性、每个 source_url 是否能抓到对应 gene symbol、以及是否还残留 DOI 缺失或明显弱来源。
+
+--------------------------------------------------------------------------------
+
+[158] Codex | 2026-05-30 23:01:43 Asia/Shanghai
+机器层面的检查通过了：71 条 evidence 的 source_url 都能抓取，对应 marker gene 都能在来源正文中找到，表内 evidence_id 和 panel marker 也没有断链。接下来我再做最后一遍“语义抽查”，专盯刚才替换过的证据。
+
+--------------------------------------------------------------------------------
+
+[159] Codex | 2026-05-30 23:02:31 Asia/Shanghai
+语义抽查也过了：JCHAIN、VCAN、NKG7/KLRD1、GNLY、PGC、MKI67/TOP2A 都能在对应文章中找到“细胞类型/细胞状态”的直接语境。我现在把两个文件同步到 WPS 云盘路径。
+
+--------------------------------------------------------------------------------
+
+[160] Codex | 2026-05-30 23:03:01 Asia/Shanghai
+核查完了，而且我改了几处。
+
+这次不是只查“gene 是否出现”，而是查了“来源是否真实、题名/期刊/DOI 是否匹配、marker 是否出现在对应细胞类型语境里”。目前结果：
+
+- [cell_type_marker_panel.tsv](D:/胃癌线粒体亚群/data/metadata/cell_type_marker_panel.tsv)：22 行
+- [cell_marker_reference_evidence.tsv](D:/胃癌线粒体亚群/data/metadata/cell_marker_reference_evidence.tsv)：71 行
+- 7 个唯一来源 URL 全部可抓取
+- 71 条 evidence 的 marker gene 全部能在对应来源中找到
+- panel 中所有 marker/evidence_id 都能在 evidence 表中对应上
+- 没有残留 `NA` DOI
+- 没有低质量/数据库凑数来源，也没有额外臃肿字段
+- 已同步到 WPS 路径，两个路径文件 hash 一致
+
+我修正了几处潜在“像幻觉”的问题：
+
+1. `JCHAIN` 原来挂在 Nature Communications 2024 证据下不够直接，我改为 BMC Biology human stomach atlas，因为该文明确给出 plasma cells panel：`IGKC/JCHAIN/IGLC1`。
+2. `NKG7/KLRD1/GNLY` 原证据语义偏“NK/cytotoxic”，我改成更直接来源：`NKG7/KLRD1` 用 npj Precision Oncology 胃癌 scRNA，`GNLY` 用 BMC Cancer 胃癌空间/单细胞 atlas。
+3. `Monocyte` 只用 `CD14/LYZ` 太粗，我加入 `VCAN`，因为 Journal of Advanced Research 胃癌发生过程 scRNA 明确写 monocyte 为 `VCAN and LYZ`。
+4. Cancer Discovery 2022 那批证据原来 DOI 是 `NA`，已补成 `10.1158/2159-8290.CD-21-0683`。
+
+主要核查来源包括：[Nature Communications 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11443007/)、[Cancer Discovery 2022](https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/)、[Journal of Advanced Research 2025](https://pmc.ncbi.nlm.nih.gov/articles/PMC12302424/)、[npj Precision Oncology 2025](https://pmc.ncbi.nlm.nih.gov/articles/PMC12711953/)、[BMC Biology 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC10865703/)、[BMC Cancer 2026](https://pmc.ncbi.nlm.nih.gov/articles/PMC13067741/)、[Translational Oncology 2025](https://pmc.ncbi.nlm.nih.gov/articles/PMC12681864/)。
+
+我的判断：目前这两张表可以作为 F0 的正式 marker 准备文件使用。唯一保留的谨慎点是：BMC Cancer / Translational Oncology 不是顶刊级别，但它们是可核查的原始研究，且只用于非常具体、直接的 marker 证据；不是用来支撑核心生物学结论。
+
+--------------------------------------------------------------------------------
+
+[161] 你 | 2026-05-31 14:27:34 Asia/Shanghai
+同意目前这两张表可以作为 F0 的正式 marker 准备文件使用。下面开始对抗性讨论主线txt，一个细节一个细节去敲定。
+
+--------------------------------------------------------------------------------
+
+[162] Codex | 2026-05-31 14:27:51 Asia/Shanghai
+好，我们正式从“写给 Biomni 可执行的主线方案”角度来拆。第一步我先重新读当前主线 TXT，确认它现在的章节结构和具体表述，然后从 F0 第一处会影响执行结果的细节开始挑刺。
+
+--------------------------------------------------------------------------------
+
+[163] Codex | 2026-05-31 14:28:51 Asia/Shanghai
+我建议从 **F0.3 主线数据范围与数据性质** 开始敲定，因为这是整个方案的地基。
+
+我先挑刺：当前 TXT 写“主线数据集只使用 GSE183904”，这个方向可以成立，但必须把一句话写得更严谨：**GSE183904 的 GEO 页面明确写了 raw files 未提交，提供的是 processed supplementary CSV 文件**。所以我们不能在方案里暗示自己有原始 FASTQ 或 Cell Ranger raw count 级别数据。GEO 页面同时给了清楚样本映射：26 个 primary tumor、10 个 primary normal、3 个 peritoneal tumor、1 个 peritoneal normal，因此三组主线比较是可行的，但 normal peritoneum 只有 1 个样本，只能用于参考/展示，不能作为强统计比较组。[GEO GSE183904](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183904)
+
+我的建议是把 F0.3/F0.5 的原则敲定为：
+
+1. 主线只使用 `GSE183904`，因为它同时覆盖 `Normal_Gastric`、`Primary_Tumor`、`Peritoneal_Metastasis`，并且是 Cancer Discovery 2022 胃癌单细胞 atlas 的核心数据。
+2. 但文档中不要写“raw count 重分析”这种容易被质疑的话，除非 F0 审计证明 CSV 是整数 UMI count-like matrix。
+3. 目录名 `data/raw_public/` 容易误导，建议改成 `data/public_downloads/`，说明保存的是“从 GEO 下载的公开原始包/补充包”，不是生物信息学意义上的 raw FASTQ。
+4. F0 必须输出一句数据级别判断：
+   `GSE183904 provides processed supplementary CSV matrices rather than FASTQ/raw Cell Ranger files. If integer_value_rate >= 0.99, these matrices will be treated as count-like input for Seurat reanalysis; otherwise the analysis will be downgraded to expression-level limited use.`
+5. 方法学表述以后统一写：**基于公开 processed single-cell expression matrices 进行再分析**，而不是“从原始测序数据重新处理”。
+
+我会反驳当前 TXT 的一个细节：`data/raw_public/：保存GEO下载原始文件` 这句话不够严谨，应该改。我的建议是接受以上 5 条，然后我直接更新主线 TXT 的 F0.2、F0.3、F0.5。
+
+--------------------------------------------------------------------------------
+
+[164] 你 | 2026-05-31 14:32:49 Asia/Shanghai
+这五条可以接受，你说Cancer Discovery 2022 也使用了GSE183904，那我们可以通过Cancer Discovery 2022看一下GSE183904内有无raw数据，如果没有也可以借鉴Cancer Discovery 2022的处理方式，你觉得呢？
+
+--------------------------------------------------------------------------------
+
+[165] Codex | 2026-05-31 14:33:00 Asia/Shanghai
+这个思路我赞成，但要分两层：先用 GEO/Cancer Discovery 核实“公开可得的数据级别”，再借鉴原文处理策略；不能因为原文团队有 raw data 或内部对象，就假设 GEO 公开包也有同等信息。我先核一下 Cancer Discovery 2022 的方法和数据可用性。
+
+--------------------------------------------------------------------------------
+
+[166] Codex | 2026-05-31 14:33:21 Asia/Shanghai
+查到的方向是：GEO 明确公开的是 `GSE183904_RAW.tar`，但文件类型写的是 CSV，并且 GEO/BioProject 写明“raw files were not submitted due to patient privacy concerns”。Cancer Discovery 原文方法则说明他们自己的上游流程用 Cell Ranger 从 FASTQ 生成 feature counts；这两件事要区分开。
+
+--------------------------------------------------------------------------------
+
+[167] Codex | 2026-05-31 14:33:57 Asia/Shanghai
+我的结论是：可以借鉴，而且应该写进 F0 的证据逻辑里；但不能照搬到“我们也从 FASTQ 开始”。原文团队有 FASTQ 上游处理，公开 GEO 只有 CSV 矩阵，所以我们能借鉴的是 QC、标准化/整合、marker 注释、cluster 分辨率等思路，不是 Cell Ranger 级别复现。接下来我把这个边界写进主线 TXT 的 F0。
+
+--------------------------------------------------------------------------------
+
+[168] Codex | 2026-05-31 14:34:19 Asia/Shanghai
+F0 里已经补上这个边界了。我再同步到 WPS 路径，并检查一下是否还有 `data/raw_public` 或“raw count层面完整重分析”这种会让审稿人抓住的表述。
+
+--------------------------------------------------------------------------------
+
+[169] Codex | 2026-05-31 14:34:34 Asia/Shanghai
+我同意你的思路，但要加一个边界：**可以借鉴 Cancer Discovery 2022 的处理方式，不能声称我们复现了它的 FASTQ/Cell Ranger 上游流程**。
+
+我核查到两点：
+
+1. [GSE183904 GEO 页面](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183904)明确写了 raw files 未提交，原因是 patient privacy concerns；公开的是 `GSE183904_RAW.tar`，但类型是 processed supplementary CSV。
+2. [Cancer Discovery 2022 原文](https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/)方法里写他们用 `Cellranger v3.0` 从 FASTQ 比对到 hg38 并生成 feature counts，然后用 Seurat 做 QC、SCTransform、整合、UMAP、SNN 聚类和 marker 注释。
+
+所以我的判断是：**Cancer Discovery 2022 可以作为 GSE183904 的权威处理参考，但我们的公开数据主线只能写“基于 processed single-cell expression matrices 再分析”。** 如果 F0 审计发现 CSV 是整数 count-like 矩阵，就可以进入完整 Seurat 再分析；如果不是，就降级为表达层面 limited-use，不能强行做 raw-count 级别结论。
+
+我已经把这个边界写进 [胃癌MLMOD亚群主线研究方案.txt](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)，并同步到 WPS 路径。主要改了 F0.2、F0.3、F0.5：把 `data/raw_public/` 改成了 `data/public_downloads/`，并补入 Cancer Discovery 2022 与 GEO 公开数据级别的说明。
+
+--------------------------------------------------------------------------------
+
+[170] 你 | 2026-05-31 14:38:03 Asia/Shanghai
+Cancer Discovery 2022为什么有FASTQ数据？如果我们只能做表达层面 limited-use，哪些分析做不了？结论会不会被质疑
+
+--------------------------------------------------------------------------------
+
+[171] Codex | 2026-05-31 14:38:18 Asia/Shanghai
+这是一个关键风险点，我会直接把话说硬一点：如果公开矩阵最后被判定为非 count-like，那不是“小缺陷”，而是会影响 F1 恶性鉴定和后续亚群定义的证据等级。我们要提前把可做、不可做、可降级做的边界写清楚。
+
+--------------------------------------------------------------------------------
+
+[172] Codex | 2026-05-31 14:38:39 Asia/Shanghai
+Cancer Discovery 2022 有 FASTQ，不等于我们能拿到 FASTQ。原因很简单：**他们是原始测序团队，实验测序时当然产生 FASTQ；但公开到 GEO 时没有提交 FASTQ**。
+
+GEO 页面明确写了：`Raw files were not submitted due to patient privacy concerns`，公开的是 `GSE183904_RAW.tar`，但文件类型是 CSV processed data。[GSE183904 GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183904)
+
+Cancer Discovery 2022 原文方法里写他们用 `Cellranger v3.0` 从 FASTQ 比对到 hg38，生成 feature counts，然后进入 Seurat 分析。[Cancer Discovery 2022](https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/)
+
+所以这里要分三种情况：
+
+1. **公开 CSV 是整数 UMI count-like 矩阵**
+   这是最理想情况。虽然不能从 FASTQ/Cell Ranger 开始，但仍然可以做 Seurat 下游再分析，包括 QC、整合、聚类、marker 注释、inferCNV/CopyKAT 等。结论一般不会因为没有 FASTQ 被严重质疑，只要方法里诚实写“基于公开 processed count-like matrices”。
+
+2. **公开 CSV 是过滤后的整数 count，但没有 raw droplets**
+   仍可做主线，但有边界：不能完整复现 Cell Ranger；SoupX 这类依赖 raw droplet 背景的环境 RNA 校正会受限；doublet 只能基于 filtered cell matrix 估计。这个通常还能接受。
+
+3. **公开 CSV 是 normalized/log-transformed expression**
+   这就麻烦了，只能做 limited-use。不能严谨做：
+   - raw-count 层面的 QC 和 nCount 解释；
+   - SoupX/decontX 这类环境 RNA 校正；
+   - scDblFinder/DoubletFinder 的高置信 doublet 删除；
+   - SCTransform；
+   - CopyKAT；
+   - 严格 inferCNV 恶性鉴定；
+   - 基于 raw count 的差异表达统计。
+
+如果只能 limited-use，后续结论会被质疑，尤其是这三类：
+
+- “我们重新鉴定了恶性上皮细胞”
+- “腹膜转移中高 MLMOD 恶性细胞比例更高”
+- “高 MLMOD 亚群是一个可靠的恶性上皮亚群”
+
+我的建议很明确：**F0 必须先审计 CSV 是否是整数 count-like 矩阵。** 如果是，GSE183904 可以作为主线；如果不是，不能硬推主线，要么改用作者原始注释做表达层面探索，要么寻找有 count-like 矩阵的外部单细胞数据作为主线。这里不能侥幸。
+
+--------------------------------------------------------------------------------
+
+[173] 你 | 2026-05-31 14:48:04 Asia/Shanghai
+这是GSE183904的supplementary file下载链接https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE183904&format=file，帮我下载到仓库
+
+--------------------------------------------------------------------------------
+
+[174] Codex | 2026-05-31 14:48:22 Asia/Shanghai
+我来下到仓库的 `data/public_downloads/`，并顺手记录文件大小和 SHA256。这个链接通常会落到 `GSE183904_RAW.tar`，我先确认响应信息再下载，避免把一个网页错误页当成数据文件。
+
+--------------------------------------------------------------------------------
+
+[175] Codex | 2026-05-31 14:48:35 Asia/Shanghai
+HEAD 请求没给出稳定的元信息，这在 NCBI 下载链接上挺常见。我改用 `curl` 跟随重定向下载，并让它失败时直接报错；下载完再用文件头/大小校验。
+
+--------------------------------------------------------------------------------
+
+[176] 你 | 2026-05-31 14:54:26 Asia/Shanghai
+【用户中断上一轮】上一轮被主动打断；如果当时有命令在运行，可能仍在后台继续。
+
+--------------------------------------------------------------------------------
+
+[177] 你 | 2026-05-31 14:54:29 Asia/Shanghai
+我开了代理，不知道会不会拖慢速度，你尽快下载下来
+
+--------------------------------------------------------------------------------
+
+[178] Codex | 2026-05-31 14:54:46 Asia/Shanghai
+明白，我会用断点续传，不从头浪费刚才可能已经下到的部分。先检查残留文件和是否还有 curl 在跑，然后立刻续传。
+
+--------------------------------------------------------------------------------
+
+[179] Codex | 2026-05-31 14:55:00 Asia/Shanghai
+刚才那个 `curl` 进程还在，但文件一直是 0 字节，基本是卡在 GEO CGI 重定向/连接层了。我会停掉它，改用 NCBI FTP 的直接文件地址下载，这通常比 `download/?acc=...` 更快、更稳。
+
+--------------------------------------------------------------------------------
+
+[180] 你 | 2026-05-31 14:55:06 Asia/Shanghai
+【用户中断上一轮】上一轮被主动打断；如果当时有命令在运行，可能仍在后台继续。
+
+--------------------------------------------------------------------------------
+
+[181] 你 | 2026-05-31 14:55:26 Asia/Shanghai
+你试试开代理快还是不开快，挑个快的
+
+--------------------------------------------------------------------------------
+
+[182] Codex | 2026-05-31 14:55:40 Asia/Shanghai
+可以，我会做一个小文件测速：同一个 NCBI FTP 直链，分别用“绕过代理”和“使用检测到的代理”拉取前 2MB，比连接成功率和速度，然后用快的方式断点下载完整 tar。先清掉刚才可能残留的 curl。
+
+--------------------------------------------------------------------------------
+
+[183] Codex | 2026-05-31 14:57:44 Asia/Shanghai
+测速结果出来了：代理 `127.0.0.1:7897` 成功拉满 2MB，约 58 KB/s；绕过代理 45 秒超时，只下了约 1.88MB，约 43 KB/s。代理更稳也略快，我会用代理直连 NCBI FTP 地址继续断点下载。
+
+--------------------------------------------------------------------------------
+
+[184] Codex | 2026-05-31 14:58:10 Asia/Shanghai
+文件总大小是 345,210,880 字节，当前已有 41,009,152 字节。单连接太慢，我准备用 8 段并发 Range 下载到临时 parts 目录，全部段完整后再合并成 tar；这样比单连接断点续传快得多，也更容易发现哪一段失败。
+
+--------------------------------------------------------------------------------
+
+[185] Codex | 2026-05-31 14:58:39 Asia/Shanghai
+8 个下载进程已经启动。现在我开始轮询各段大小；如果某段卡死或失败，我会只重试那一段，不动已经成功的段。
+
+--------------------------------------------------------------------------------
+
+[186] Codex | 2026-05-31 14:59:15 Asia/Shanghai
+并发方案有效，25 秒已经下了约 15.3MB，综合速度大概 0.6MB/s，比单连接快一个数量级。继续等，先不打扰这些进程。
+
+--------------------------------------------------------------------------------
+
+[187] Codex | 2026-05-31 15:00:00 Asia/Shanghai
+目前 10.2%，八段都在跑，没有某一段明显掉队。按这个速度预计还要几分钟到十几分钟，我继续盯着。
+
+--------------------------------------------------------------------------------
+
+[188] Codex | 2026-05-31 15:00:50 Asia/Shanghai
+20.1%，速度还行。现在几个段有轻微差距，但都在正常增长；后面如果个别段落后，我会在完成后单独补，不需要重下整包。
+
+--------------------------------------------------------------------------------
+
+[189] Codex | 2026-05-31 15:01:46 Asia/Shanghai
+32.3%，已经过三分之一。并发下载比原来的 GEO CGI 链接稳定很多，目前没有失败段。
+
+--------------------------------------------------------------------------------
+
+[190] Codex | 2026-05-31 15:02:42 Asia/Shanghai
+44%。`part_01` 和 `part_05` 稍慢，但仍在增长；这类差距不影响，最后等慢段补齐即可。
+
+--------------------------------------------------------------------------------
+
+[191] Codex | 2026-05-31 15:03:38 Asia/Shanghai
+53.9%，超过一半。后面我会继续每轮看是否有进程提前退出；如果退出且大小不对，会自动补救。
+
+--------------------------------------------------------------------------------
+
+[192] Codex | 2026-05-31 15:04:34 Asia/Shanghai
+62.7%。总体速度有一点波动，但仍然比单连接好很多。现在最慢的两个段大概 55-56%，我会让它们继续追。
+
+--------------------------------------------------------------------------------
+
+[193] Codex | 2026-05-31 15:05:29 Asia/Shanghai
+68%。速度慢了些，但进程都还活着。现在继续，不换策略，避免重启造成浪费。
+
+--------------------------------------------------------------------------------
+
+[194] Codex | 2026-05-31 15:06:32 Asia/Shanghai
+88.4%，第 7 段已经完整完成并退出。剩下 7 个还在收尾，快到了。
+
+--------------------------------------------------------------------------------
+
+[195] Codex | 2026-05-31 15:07:19 Asia/Shanghai
+95.1%，三段完整，五段还差一点。再等一轮，如果慢段卡住就单段续补。
+
+--------------------------------------------------------------------------------
+
+[196] Codex | 2026-05-31 15:08:03 Asia/Shanghai
+99.4%，只剩两个小尾巴。马上进入完整性校验和合并。
+
+--------------------------------------------------------------------------------
+
+[197] Codex | 2026-05-31 15:08:50 Asia/Shanghai
+所有分段都完整了。现在我把旧的 41MB 中断文件先改名保留，再按 8 个 Range 段二进制合并成最终 `GSE183904_RAW.tar`，随后做大小、SHA256 和 tar 文件列表校验。
+
+--------------------------------------------------------------------------------
+
+[198] Codex | 2026-05-31 15:09:37 Asia/Shanghai
+tar 可以正常列出，里面是 `GSM5573466_sample1.csv.gz` 这类样本矩阵文件。接下来我把下载记录写入 `download_manifest.tsv`，然后同步最终 tar 和 manifest 到 WPS 路径，临时分段文件在校验通过后会清理掉。
+
+--------------------------------------------------------------------------------
+
+[199] Codex | 2026-05-31 15:09:52 Asia/Shanghai
+我注意到 manifest 里分隔符被我写成了字面量 `` `t ``，不是实际 tab；这个必须立刻修正，否则后续程序读表会错。我马上重写为真正 TSV。
+
+--------------------------------------------------------------------------------
+
+[200] Codex | 2026-05-31 15:10:04 Asia/Shanghai
+manifest 已修正为真正 TSV，能被 `Import-Csv -Delimiter \"`t\"` 正确读入。现在同步最终 tar 和 manifest 到 WPS 路径。
+
+--------------------------------------------------------------------------------
+
+[201] Codex | 2026-05-31 15:10:20 Asia/Shanghai
+同步完成，两个路径 hash 一致。最后我清理下载分段目录和中断残留的 41MB partial，只保留最终 tar 和 manifest。
+
+--------------------------------------------------------------------------------
+
+[202] Codex | 2026-05-31 15:10:39 Asia/Shanghai
+下载好了，已放到两个路径并校验一致：
+
+- 仓库：[GSE183904_RAW.tar](D:/胃癌线粒体亚群/data/public_downloads/GSE183904_RAW.tar)
+- WPS 同步路径：[GSE183904_RAW.tar](D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/data/public_downloads/GSE183904_RAW.tar)
+- 大小：`345,210,880` bytes
+- SHA256：`BA089D1DC186826E84D2199D1EB6942C35EB8FB70E7A5D2B20650B72982B90B3`
+- tar 内文件数：`40` 个，都是 `GSM...sample*.csv.gz`
+
+我也写好了下载记录：
+
+- [download_manifest.tsv](D:/胃癌线粒体亚群/data/metadata/download_manifest.tsv)
+- WPS 路径也已同步同名文件
+
+测速结果：绕过代理 45 秒超时，只下了约 1.88MB；代理 `127.0.0.1:7897` 能稳定完成 2MB 测试，所以最终用了代理 + NCBI FTP 直链 + 8 段并发 Range 下载。临时分段文件和中断残留已清理，没有遗留 `curl` 进程。
+
+下一步就可以进入 F0 数据审计：解包后检查这 40 个 CSV.gz 到底是整数 count-like 矩阵，还是 normalized/log 表达矩阵。
+
+--------------------------------------------------------------------------------
+
+[203] 你 | 2026-05-31 15:21:37 Asia/Shanghai
+先检查一下csv的情况，然后我们根据实际情况讨论主线计划txt的细节
+
+--------------------------------------------------------------------------------
+
+[204] Codex | 2026-05-31 15:21:49 Asia/Shanghai
+我会先用 Spreadsheets 技能处理这些 `.csv.gz`，因为这里的重点是表格结构审计；同时按 F0 的生信目标来判断它们是不是 count-like 矩阵。先不改主线 TXT，先拿事实说话。
+
+--------------------------------------------------------------------------------
+
+[205] Codex | 2026-05-31 15:22:16 Asia/Shanghai
+tar 里有 40 个 `sample*.csv.gz`，这和 GEO 的 40 个样本一致。下一步我先不全量解压，直接在 tar 内流式读取：看压缩文件大小、首行结构、基因/细胞方向、前几行数值类型，再决定是否需要跑完整 40 样本整数率审计。
+
+--------------------------------------------------------------------------------
+
+[206] Codex | 2026-05-31 15:22:24 Asia/Shanghai
+PowerShell 能列 tar，但 Python 直接打开中文绝对路径时被本机编码弄成了问号。我改用仓库相对路径读取，绕开这个 Windows 路径编码问题。
+
+--------------------------------------------------------------------------------
+
+[207] Codex | 2026-05-31 15:23:03 Asia/Shanghai
+首个文件结构已经很清楚：第一列是基因名，后面每列是细胞 barcode，数值看起来是非负整数 UMI count。现在我做全 40 个文件的“结构扫描”：不全量解压落盘，只流式检查每行列数是否一致、数值区是否出现小数/负数/科学计数法、是否有缺失值、基因数/细胞数/MT/HB 基因数。
+
+--------------------------------------------------------------------------------
+
+[208] Codex | 2026-05-31 15:29:28 Asia/Shanghai
+全 40 个文件扫完了：每个文件都是 26,571 个基因，合计 158,641 个细胞；数值区没有小数、负数、科学计数法或缺失值，按当前审计可以判为 count-like 整数矩阵。现在我再汇总 cell 数范围、最小样本、最大样本、MT/HB 基因情况，看看有没有会影响 F0/F1 计划的边界。
+
+--------------------------------------------------------------------------------
+
+[209] Codex | 2026-05-31 15:29:37 Asia/Shanghai
+汇总里有个小问题：我刚才的 TSV 预览显示字段被 CSV quoting 包起来，MT/HB 计数也异常为 0；这可能是因为我用“按行字符串扫描”时没按 CSV 引号语义解析第一列。数值类型结论不受大影响，但基因名统计要重跑一次用 `csv.reader` 严格解析。
+
+--------------------------------------------------------------------------------
+
+[210] Codex | 2026-05-31 15:36:16 Asia/Shanghai
+重跑后的严格解析结果稳定：40 个文件基因顺序完全一致，13 个线粒体基因、10 个血红蛋白相关基因都能识别，说明后续 `percent.mt` / `percent.hb` 可以正常计算。现在我把这个预检查结果同步到 WPS 路径。
+
+--------------------------------------------------------------------------------
+
+[211] Codex | 2026-05-31 15:36:44 Asia/Shanghai
+检查完了。结论很关键：**GSE183904 的 40 个 CSV.gz 是 count-like 整数表达矩阵，不是 normalized/log 表达矩阵，所以主线不用降级到 limited-use。**
+
+预检查结果已保存并同步：
+
+[gse183904_csv_structure_precheck.tsv](D:/胃癌线粒体亚群/results/F0_audit/gse183904_csv_structure_precheck.tsv)
+
+核心结果：
+
+- tar 内有 `40` 个 `GSM...sample*.csv.gz`
+- 每个文件都是 `gene x cell` 矩阵：第一列基因名，后面每列细胞 barcode
+- 所有样本基因数一致：`26,571` genes
+- 基因顺序完全一致：40 个文件的 `gene_order_sha256` 相同
+- 总细胞数：`158,641`
+- 每个样本细胞数范围：`186` 到 `13,626`
+- 所有数值区都是非负整数：没有小数、负数、科学计数法、缺失值
+- 可识别 `13` 个 `MT-` 线粒体基因、`10` 个血红蛋白相关基因
+- 预判：`nonnegative_integer_count_like`
+- F1 候选判断：`enter_full_F1_candidate`
+
+这说明：虽然 GEO 没有公开 FASTQ/raw Cell Ranger 文件，但公开的 CSV 可以作为 **processed count-like matrix** 进入完整 Seurat 下游再分析。我们可以做 QC、nFeature/nCount/percent.mt/percent.hb、聚类、注释、inferCNV、CopyKAT 等主线分析。
+
+但也要保留一个边界：这些是已经过滤后的细胞矩阵，不是 raw droplets。所以 **SoupX 这种依赖 empty droplets/ambient profile 的方法不能作为默认强制步骤**；更合理的是把 `decontX` 作为可执行的环境 RNA 评估/校正方法，`SoupX` 只在发现有可用 raw droplet/background 信息时才做。
+
+下一步我建议我们先敲定并修改主线 TXT 的这个细节：
+**F0/F1 中把数据类型写成“公开 processed count-like matrices，可进入完整 F1；但不能复现 FASTQ/Cell Ranger，也不能默认 SoupX”。**
+
+--------------------------------------------------------------------------------
+
+[212] 你 | 2026-05-31 15:42:35 Asia/Shanghai
+同意修改主线txt中的数据类型，毕竟我们现在已经知道数据类型了，不需要猜了，可以根据这个已知信息去修改主线txt
+
+--------------------------------------------------------------------------------
+
+[213] Codex | 2026-05-31 15:42:49 Asia/Shanghai
+对，现在该从“假设审计”改成“已审计事实”。我会把 F0/F1 里所有“如果是 count-like / 如果不是”这种不必要的悬置表达收紧：明确 GSE183904 是公开 processed count-like gene-by-cell 矩阵，同时保留 FASTQ/raw droplet 不可得的边界。
+
+--------------------------------------------------------------------------------
+
+[214] Codex | 2026-05-31 15:43:04 Asia/Shanghai
+我看到了几个需要同步收紧的位置：F0.5 还是“判定规则”，F1.1 还保留“若不是整数矩阵”的分支，F1.2 还把 SoupX 和 decontX 并列成默认。下面我会把它们改成已知事实和可执行边界。
+
+--------------------------------------------------------------------------------
+
+[215] Codex | 2026-05-31 15:43:46 Asia/Shanghai
+主线 TXT 已经改为“已知 processed count-like 矩阵”的版本。我再搜一遍，确保没有残留和当前事实冲突的 limited-use/猜测性表达。
+
+--------------------------------------------------------------------------------
+
+[216] Codex | 2026-05-31 15:43:53 Asia/Shanghai
+残留表达基本合理：`limited-use` 只出现在说明“不需要降级”里；SoupX 也被限定为有 raw droplet/background 时的补充。我现在把主线 TXT 同步到 WPS 路径。
+
+--------------------------------------------------------------------------------
+
+[217] Codex | 2026-05-31 15:44:05 Asia/Shanghai
+已按“已知数据类型”修改主线 TXT，并同步到 WPS 路径。
+
+改动重点：
+
+- 明确 GSE183904 是 **公开 processed count-like gene-by-cell matrices**。
+- 写入实际预审计结果：40 个 CSV.gz、26,571 genes、158,641 cells、非负整数、基因顺序一致、可识别 MT/HB 基因。
+- 删除了“如果不是整数矩阵就降级”的悬置语气，改为：当前可进入完整 F1 下游单细胞再分析。
+- 保留边界：不能声称从 FASTQ/BCL/Cell Ranger raw output 开始重处理。
+- F0.5 改成“记录已知结构和可追溯审计结果”，不是猜测是否能进入 F1。
+- F1.2 里把 ambient RNA 改为：主流程 `decontX`，`SoupX` 仅在有 raw droplet/background 信息时补充；因为 GSE183904 公开文件是 filtered count-like 矩阵，不能默认强制 SoupX。
+
+文件位置：
+
+[胃癌MLMOD亚群主线研究方案.txt](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+
+我觉得这个细节现在敲得比较稳：**能做完整下游分析，但不夸大为 FASTQ 级别复现。**
+
+--------------------------------------------------------------------------------
+
+[218] 你 | 2026-05-31 16:05:59 Asia/Shanghai
+现在开始从F0.1开始一点一点讨论细节
+
+--------------------------------------------------------------------------------
+
+[219] Codex | 2026-05-31 16:06:17 Asia/Shanghai
+好，我们从 F0.1 开始慢慢敲。这里我会先挑毛病：F0.1 看似只是文件清单，但它其实决定 Biomni 启动后“哪些是输入、哪些是它要生成的输出、哪些是执行过程中持续更新的审计记录”。这个边界如果不清楚，后面很容易文件一堆但责任不明。
+
+--------------------------------------------------------------------------------
+
+[220] Codex | 2026-05-31 16:06:42 Asia/Shanghai
+从 F0.1 开始，我先提出一个关键修改意见：**现在 F0.1 的“必须完成的准入文件”这个说法有点不准确。**
+
+因为这些文件不是在 F0 开始前都已经存在，而是分三类：
+
+1. **我们已经准备好的输入**
+   - `cell_type_marker_panel.tsv`
+   - `download_manifest.tsv` 里已有 `GSE183904_RAW.tar` 记录
+   - `gse183904_csv_structure_precheck.tsv` 作为预审计结果
+
+2. **Biomni 在 F0 必须正式生成的文件**
+   - `project_structure_ready.txt`
+   - `sample_info.tsv`
+   - `data_audit.tsv`
+   - `pipeline_parameters.yaml`
+   - `software_versions.tsv`
+   - `excluded_samples.tsv`
+
+3. **Biomni 需要持续更新/追加的审计文件**
+   - `decision_evidence_log.tsv`
+   - `software_versions.tsv`
+   - `pipeline_parameters.yaml`
+   - 后续 F1 中如果参数调整，也要回写或追加说明
+
+所以我建议 F0.1 不要叫 **“F0必须完成的准入文件”**，而改成：
+
+**F0.1 F0输入、输出与准入文件清单**
+
+这样更准确。
+
+我对当前 F0.1 的具体挑刺如下：
+
+| 文件 | 当前问题 | 建议 |
+|---|---|---|
+| `project_structure_ready.txt` | 有点形式化，但对 Biomni 有用 | 保留，要求记录实际创建/检查过的目录 |
+| `download_manifest.tsv` | 我们已经生成了，Biomni 不应覆盖 | 改成“读取并校验；如有新增下载再追加” |
+| `sample_info.tsv` | F0 最关键文件之一，当前要求还不够强调 | 必须作为 F0 核心输出；没有它不能进 F1 |
+| `data_audit.tsv` | 现在我们已有预审计，但还不是正式 F0 文件 | Biomni 必须基于 40 个 CSV.gz 正式生成 |
+| `cell_type_marker_panel.tsv` | 已完成，不应让 Biomni重写 | Biomni 只读取，不修改；如质疑需输出问题清单 |
+| `decision_evidence_log.tsv` | 很重要，但不应要求一开始全填完 | F0 先记录已定关键决策，后续 F1/F2 持续追加 |
+| `pipeline_parameters.yaml` | 应区分“预设参数”和“运行中调整参数” | F0 写初始全局规则，F1 若调整必须记录原因 |
+| `software_versions.tsv` | 不能只记录 R 包，还要记录系统/外部工具 | 增加 OS、R、Python、tar/gzip、Biomni环境信息 |
+| `excluded_samples.tsv` | 即使没有排除也要有文件 | 若无排除，写 header + `no_exclusion` 说明 |
+
+我建议 F0.1 最终原则定为：
+
+**F0.1 不是让 Biomni 一上来“重新创造一堆文件”，而是让 Biomni 明确：哪些文件已由我们提供、哪些文件必须由它正式生成、哪些文件只能追加不能覆盖。**
+
+尤其要写死两条：
+
+1. `cell_type_marker_panel.tsv` 是人工核查后的正式输入，Biomni 不得擅自改 marker。
+2. `download_manifest.tsv` 已有 GSE183904 下载记录，Biomni 只能校验或追加，不能覆盖。
+
+如果你同意，我下一步就把 F0.1 改成这个责任划分版本。
+
+--------------------------------------------------------------------------------
+
+[221] 你 | 2026-05-31 16:10:01 Asia/Shanghai
+同意修改
+
+--------------------------------------------------------------------------------
+
+[222] Codex | 2026-05-31 16:10:11 Asia/Shanghai
+好，我把 F0.1 改成“输入、输出、追加审计”的责任划分版本。这个改动会让 Biomni 不会误以为它要重写 marker 表或覆盖我们已经生成的 manifest。
+
+--------------------------------------------------------------------------------
+
+[223] Codex | 2026-05-31 16:10:45 Asia/Shanghai
+F0.1 已经改好了。我快速检查前 30 行确认表格没有断裂，然后同步到 WPS。
+
+--------------------------------------------------------------------------------
+
+[224] Codex | 2026-05-31 16:10:57 Asia/Shanghai
+已修改 F0.1，并同步到 WPS 路径。
+
+现在 F0.1 已经从“准入文件清单”改成了 **“F0输入、输出与准入文件清单”**，并明确三类责任：
+
+- 研究者已确认输入：`cell_type_marker_panel.tsv`、`download_manifest.tsv`、`gse183904_csv_structure_precheck.tsv`
+- Biomni 必须生成：`project_structure_ready.txt`、`sample_info.tsv`、`data_audit.tsv`、`pipeline_parameters.yaml`、`software_versions.tsv`、`decision_evidence_log.tsv`、`excluded_samples.tsv`
+- 后续只能追加/更新、不能覆盖历史的文件：`download_manifest.tsv`、`pipeline_parameters.yaml`、`software_versions.tsv`、`decision_evidence_log.tsv`
+
+我还加了两条关键约束：
+
+- Biomni 不得擅自修改我们已确认的 marker panel。
+- Biomni 不得覆盖已有 `download_manifest.tsv`，只能校验或追加。
+
+下一处我建议讨论 **F0.2 项目目录**。这里看似简单，但要决定：哪些目录是 Biomni 可以写的，哪些目录只能只读，以及 `data/processed_input/` 里是否要解包 40 个 CSV.gz。
+
+--------------------------------------------------------------------------------
+
+[225] 你 | 2026-05-31 16:15:17 Asia/Shanghai
+开始讨论F0.2
+
+--------------------------------------------------------------------------------
+
+[226] Codex | 2026-05-31 16:15:35 Asia/Shanghai
+F0.2 我会按“Biomni 实际执行会不会乱写、会不会覆盖、会不会产生巨大冗余文件”来挑。目录结构不是生物学决策，不需要文献支撑，但它会直接影响可复现性和后续交接。
+
+--------------------------------------------------------------------------------
+
+[227] Codex | 2026-05-31 16:15:57 Asia/Shanghai
+F0.2 当前最大问题：**目录只有“放什么”，没有写清楚“谁能写、谁只读、是否同步、是否允许解压成巨大的中间文件”。** 这会让 Biomni 很容易把 tar、csv.gz、解压 csv、Seurat 对象、日志全堆在一起。
+
+我建议 F0.2 改成更严格的执行规则。
+
+第一，明确两个根目录：
+
+- 主工作目录：`D:\胃癌线粒体亚群`
+- WPS 同步镜像：`D:\software\wps\云盘缓存\807350289\WPS云盘\LRY\0Ting\胃癌线粒体死亡亚群方案`
+
+但我建议写清楚：**Biomni 只在主工作目录执行分析；WPS 路径只作为同步备份，不作为运行目录。**
+原因是 WPS 云盘缓存路径可能有同步锁、路径过长、中文路径、文件占用问题。真正跑 R/Seurat 最好只在主目录跑。
+
+第二，`data/public_downloads/` 必须是只读区。里面放：
+
+- `GSE183904_RAW.tar`
+- 原始下载记录
+- 后续如补充材料、GEO metadata、论文补充表
+
+Biomni 不应在这里解压、改名、删除、覆盖。
+
+第三，`data/processed_input/` 要更具体。建议改成：
+
+- `data/processed_input/GSE183904/`
+
+这里放从 tar 中提取出来的 40 个 `GSM...csv.gz`。我不建议默认解压成 `.csv`，因为会非常大，而且 R 可以直接读 `.csv.gz`。如果某一步必须临时解压，放到 `tmp/`，用完删除或记录。
+
+第四，应该新增或明确：
+
+- `logs/F0_setup/`
+- `logs/F1_single_cell/`
+- `tmp/`
+
+现在只有一个笼统 `logs/`，后面会乱。`tmp/` 很重要，因为 Biomni 很可能会生成临时解压、缓存、测试文件；没有临时目录，它就会把垃圾文件散在项目根目录。
+
+第五，`results/` 目录可以保留现在的结构，但建议增加一个总原则：
+
+**results 目录只能保存可复现输出，不能保存手工修改过的输入文件。**
+
+我建议 F0.2 最终规则定为：
+
+1. Biomni 只在主工作目录运行。
+2. WPS 路径只做同步镜像。
+3. `data/public_downloads/` 只读，保存原始公开下载文件。
+4. `data/processed_input/GSE183904/` 保存从 tar 提取出的 40 个 `.csv.gz`，不默认解压为 `.csv`。
+5. `tmp/` 保存临时文件，可清理。
+6. 所有脚本进 `scripts/`，所有结果进 `results/`，所有日志进 `logs/`。
+7. 根目录不允许继续堆分析中间文件。
+
+我建议接受这些修改，尤其是“只在主目录运行，WPS 只同步”和“不要默认解压成 csv”。
+
+--------------------------------------------------------------------------------
+
+[228] 你 | 2026-05-31 16:17:51 Asia/Shanghai
+我使用的是网页版的biomni，所以不存在本地目录的说法，你之前居然不知道，说明我们的信息没有对齐，这很容易导致问题的
+
+--------------------------------------------------------------------------------
+
+[229] Codex | 2026-05-31 16:18:05 Asia/Shanghai
+你说得对，这是一个重要对齐错误。这里我需要明确更正：**如果你使用的是网页版 Biomni，那么“Biomni 在本地主工作目录运行、写入本地路径、同步 WPS 路径”这一套执行假设不成立。** 我刚才按本地 agent/本地脚本执行来设计 F0.2，是不对的。
+
+这会直接改变 F0.2 的定位：
+
+- 本地目录是 **我们这边整理、打包、审计、备份用**。
+- 网页版 Biomni 看不到你的 `D:\...` 路径，除非你上传文件或把文件内容/压缩包给它。
+- 给 Biomni 的 prompt 不能写“读取 D:\胃癌线粒体亚群\...”这种本地路径。
+- 应该写成：**请在你当前会话工作区中创建如下相对目录；我会上传这些输入文件。**
+
+所以 F0.2 应该分成两层：
+
+1. **本地项目归档目录**
+   - 这是我们维护的本地版本。
+   - 用于保存 TXT、marker panel、下载 tar、审计结果、同步 WPS。
+   - 不要求 Biomni 直接访问。
+
+2. **Biomni 网页工作区目录**
+   - 这是给 Biomni 执行时的相对目录结构。
+   - 只写相对路径，例如：
+     - `data/public_downloads/`
+     - `data/processed_input/GSE183904/`
+     - `data/metadata/`
+     - `scripts/F0_setup/`
+     - `results/F0_audit/`
+     - `logs/`
+     - `tmp/`
+   - 需要通过上传文件提供：
+     - `GSE183904_RAW.tar`
+     - `cell_type_marker_panel.tsv`
+     - `胃癌MLMOD亚群主线研究方案.txt`
+     - `download_manifest.tsv`
+     - `gse183904_csv_structure_precheck.tsv`
+
+我也要反驳我刚才的一点：
+“WPS 路径只做同步镜像”这句话只适用于我们本地整理，不应该写进给 Biomni 的主线计划。因为 Biomni 网页端不关心你的 WPS 路径。
+
+现在 F0.2 应该改成：
+
+**F0.2 项目目录分为本地归档目录和 Biomni 网页工作区目录。主线 TXT 面向 Biomni 时，只使用相对路径，不使用任何 Windows 绝对路径。**
+
+这是必须改的，否则 Biomni 会被错误路径带偏。
+
+--------------------------------------------------------------------------------
+
+[230] 你 | 2026-05-31 16:19:37 Asia/Shanghai
+你准备对F0.2做哪些改动
+
+--------------------------------------------------------------------------------
+
+[231] Codex | 2026-05-31 16:19:57 Asia/Shanghai
+我准备把 F0.2 从“本地执行目录设计”改成 **“网页版 Biomni 工作区目录设计”**。具体改动如下：
+
+1. **删除/避免本地执行假设**
+   - 不写“Biomni 只在 `D:\胃癌线粒体亚群` 运行”。
+   - 不写“WPS 路径作为同步镜像”。
+   - 不让 Biomni 读取任何 Windows 绝对路径。
+
+2. **明确主线 TXT 中所有路径均为相对路径**
+   - 例如 `data/public_downloads/`
+   - `data/processed_input/GSE183904/`
+   - `data/metadata/`
+   - `scripts/F0_setup/`
+   - `results/F0_audit/`
+   - `logs/F0_setup/`
+   - `tmp/`
+
+3. **加入“网页版 Biomni 输入文件需上传”**
+   F0.2 要写清楚：执行前请把以下文件上传到 Biomni 工作区：
+   - `胃癌MLMOD亚群主线研究方案.txt`
+   - `GSE183904_RAW.tar`
+   - `cell_type_marker_panel.tsv`
+   - `download_manifest.tsv`
+   - `gse183904_csv_structure_precheck.tsv`
+
+4. **明确上传后的推荐放置位置**
+   - `GSE183904_RAW.tar` 放到 `data/public_downloads/`
+   - `cell_type_marker_panel.tsv` 放到 `data/metadata/`
+   - `download_manifest.tsv` 放到 `data/metadata/`
+   - `gse183904_csv_structure_precheck.tsv` 放到 `results/F0_audit/`
+   - 主线计划 TXT 放到项目根目录或 `docs/`
+
+5. **继续保留只读/可写边界**
+   - `data/public_downloads/`：只读，不覆盖、不删除。
+   - `data/processed_input/GSE183904/`：从 tar 提取出的 40 个 `.csv.gz`，不默认解压成 `.csv`。
+   - `data/metadata/`：metadata 和审计表。
+   - `results/`：分析输出。
+   - `scripts/`：脚本。
+   - `logs/`：日志。
+   - `tmp/`：临时文件，可清理。
+
+6. **增加“不要默认解压为 CSV”**
+   - 从 `GSE183904_RAW.tar` 中提取 `*.csv.gz` 即可。
+   - 不要把 `.csv.gz` 全部解压成 `.csv`，除非某个工具不能读取 gzip。
+   - 若临时解压，放入 `tmp/`，并记录原因。
+
+7. **增加 Biomni 输出回传要求**
+   - Biomni 完成 F0 后，需要打包/导出：
+     - `data/metadata/`
+     - `results/F0_audit/`
+     - `logs/F0_setup/`
+     - `scripts/F0_setup/`
+   - 这些结果再由我们本地保存和同步。
+
+一句话：
+**F0.2 不再描述我们的本地硬盘怎么跑，而是描述 Biomni 网页工作区应如何组织输入、输出和临时文件。**
+
+--------------------------------------------------------------------------------
+
+[232] 你 | 2026-05-31 16:23:37 Asia/Shanghai
+1.网页版 Biomni也可以自己去下载所需文件，不需要所有文件都我们自己上传，只要下载前提出计划让我批准，下载后审核无误就可以。2.为什么不要默认解压为 CSV。
+
+--------------------------------------------------------------------------------
+
+[233] Codex | 2026-05-31 16:24:04 Asia/Shanghai
+你这两点都对，F0.2 要继续改。
+
+1. **网页版 Biomni 可以自行下载文件**
+我之前说“需要上传”说得太绝对了。更合理的规则应该是：
+
+- 输入文件来源可以有两种：
+  `researcher_uploaded` 或 `biomni_downloaded_after_approval`
+- Biomni 如果要下载文件，必须先提交下载计划，让你批准。
+- 下载计划至少写清楚：数据集编号、文件名、来源 URL、预计用途、保存位置、是否大文件。
+- 下载完成后必须做校验：文件大小、SHA256、能否列出/读取、是否和预期文件类型一致。
+- 校验无误后写入 `download_manifest.tsv`。
+- 未经批准不得自己下载额外数据集、替换数据源、偷偷换镜像。
+
+所以 F0.2 应该改成：**Biomni 工作区可以通过上传或批准后下载获得输入文件。**
+
+2. **为什么不要默认解压为 CSV**
+
+这里我要更精确地说：
+不是“不解包 tar”，而是 **从 tar 中提取 `.csv.gz`，但不要默认把 `.csv.gz` 再解压成 `.csv`。**
+
+原因：
+
+- `.csv.gz` 已经是 R/Python 可直接读取的格式，没必要膨胀成纯 CSV。
+- 纯 CSV 会非常大，浪费网页版 Biomni 工作区空间，也拖慢读写。
+- 多一份 `.csv` 就多一个可能被误改、误读、和 `.csv.gz` 不一致的版本。
+- 公开下载文件是 `GSE183904_RAW.tar`，tar 里原始成员就是 `GSM...csv.gz`；保留 `.csv.gz` 更接近公开数据原貌。
+- F0/F1 需要的是可追溯输入，越少冗余副本越安全。
+
+但这不是绝对禁止。应该写成：
+
+> 默认只从 `GSE183904_RAW.tar` 提取 40 个 `.csv.gz` 到 `data/processed_input/GSE183904/`。不默认 gunzip 为 `.csv`。若某个工具不能直接读取 `.csv.gz`，允许临时解压到 `tmp/`，必须记录原因、生成文件大小，并在用完后清理或明确标记为临时文件。
+
+所以我准备把 F0.2 改成三块：
+
+1. **Biomni 网页工作区相对目录**
+2. **输入文件获取方式：上传或批准后下载**
+3. **压缩文件处理规则：untar 到 `.csv.gz`，不默认 gunzip 成 `.csv`**
+
+这样就和网页版 Biomni 的实际能力对齐了。
+
+--------------------------------------------------------------------------------
+
+[234] 你 | 2026-05-31 16:26:00 Asia/Shanghai
+同意改动
+
+--------------------------------------------------------------------------------
+
+[235] Codex | 2026-05-31 16:26:07 Asia/Shanghai
+好，我来改 F0.2。核心是把它改成“网页版 Biomni 的相对工作区规则”，并把输入获取改成“研究者上传或经批准后由 Biomni 下载”。
+
+--------------------------------------------------------------------------------
+
+[236] Codex | 2026-05-31 16:26:44 Asia/Shanghai
+F0.2 已按网页版 Biomni 的真实使用方式改好了。我检查一下 F0.2 段落和是否还有本地路径假设，然后同步。
+
+--------------------------------------------------------------------------------
+
+[237] Codex | 2026-05-31 16:27:08 Asia/Shanghai
+检查没看到给 Biomni 的本地绝对路径，F0.2 现在是相对工作区语义。同步到 WPS。
+
+--------------------------------------------------------------------------------
+
+[238] Codex | 2026-05-31 16:27:29 Asia/Shanghai
+F0.2 已按你的两点修改并同步。
+
+现在 F0.2 的核心逻辑是：
+
+- 面向 **网页版 Biomni**，所有路径都是 Biomni 工作区内的相对路径。
+- 不再假设 Biomni 能访问你的本地 `D:\...` 或 WPS 路径。
+- 输入文件可以两种来源：
+  - `researcher_uploaded`
+  - `biomni_downloaded_after_approval`
+- Biomni 下载前必须先提交下载计划，经你批准后才能下载。
+- 下载后必须校验文件大小、SHA256、可读性和文件类型，并写入 `download_manifest.tsv`。
+- 默认从 `GSE183904_RAW.tar` 提取 40 个 `*.csv.gz` 到 `data/processed_input/GSE183904/`。
+- 不默认把 `.csv.gz` gunzip 成纯 `.csv`。
+- 如果某个工具不能读 `.csv.gz`，可以临时解压到 `tmp/`，但必须记录原因、文件大小、脚本和清理策略。
+- F0 完成后，Biomni 必须导出/打包 `data/metadata/`、`results/F0_audit/`、`logs/F0_setup/`、`scripts/F0_setup/`，不能只口头汇报。
+
+我也保留了一句本地/WPS 的定位，但只作为人工归档说明，不作为 Biomni 执行路径。这个现在应该和网页版 Biomni 的真实执行方式对齐了。
+
+--------------------------------------------------------------------------------
+
+[239] 你 | 2026-05-31 16:40:32 Asia/Shanghai
+我设想的项目执行方式是这样的，我们把详细研究方案txt讨论好，然后把研究方案txt和其他需要的文件和prompt发给biomni让其一节一节按计划执行，每节都要biomni先给出计划，我批准后执行，执行完后，我把biomni执行报告和biomni分享链接发给你codex，由codex去审计执行报告和从biomni分享链接中得到的我与biomni的对话上下文、biomni execution trace、execution code、中间文件和输出文件。你先了解一下这个全局情况
+
+--------------------------------------------------------------------------------
+
+[240] Codex | 2026-05-31 16:40:50 Asia/Shanghai
+这个全局流程非常关键，收到。我先把专门处理 Biomni trace/分享链接复核的本地技能说明读一下，这样后面我们设计主线 TXT 时就能把“给 Biomni 执行”和“给 Codex 事后审计”两件事同时纳入。
+
+--------------------------------------------------------------------------------
+
+[241] Codex | 2026-05-31 16:41:08 Asia/Shanghai
+明白了，这个全局流程我已经对齐。你设想的不是“让 Biomni 一次性跑完整项目”，而是一个 **Biomni 执行、Codex 审计、你做决策批准** 的三方闭环：
+
+1. 我们先在这里把主线研究方案 TXT 讨论到足够细。
+2. 你把主线 TXT、prompt、必要文件发给网页版 Biomni。
+3. Biomni 每一节执行前，先给出执行计划。
+4. 你批准后 Biomni 才执行。
+5. Biomni 执行完一节后，输出执行报告、文件、代码、结果。
+6. 你把 Biomni 执行报告和分享链接发给我。
+7. 我用分享链接下载/审计：
+   - 你和 Biomni 的对话上下文
+   - execution trace
+   - execution code
+   - 中间文件
+   - 输出文件
+   - 参数、版本、日志和错误修正历史
+8. 我判断 Biomni 是否按方案执行、是否有偷换方法、代码错误、文件缺失、结论过度解释。
+9. 审计通过后，再进入下一节。
+
+这意味着主线 TXT 里不只是“分析流程”，还要内置 **执行门控**：
+
+- 每节开始前：Biomni 必须先提交计划。
+- 每节执行中：不能擅自扩大范围、换数据、改 marker、改阈值。
+- 每节执行后：必须导出报告、代码、日志、关键输出和可审计文件。
+- 每节结束：必须等待研究者和 Codex 审计，不得自动进入下一节。
+
+所以 F0.2 还需要再加一个思想：**Biomni 工作区目录不是最终可信档案，Biomni 输出必须能被 Codex 事后审计和本地归档。**
+
+我建议接下来在 F0.2 或新增一个小节里加入：
+
+**“分节执行与Codex审计交接规则”**
+
+核心内容：
+
+- Biomni 不得连续执行多个 F 小节。
+- 每个小节执行前必须提交计划并等待批准。
+- 每个小节执行后必须导出：
+  - execution_report.md
+  - scripts/
+  - logs/
+  - key output tables
+  - key figures
+  - software_versions.tsv
+  - pipeline_parameters.yaml
+  - file manifest/checksums
+- Biomni 必须提供分享链接或可下载结果包。
+- Codex 审计通过前，不进入下一节。
+
+这会让整个项目流程从“让 agent 自己跑”变成“每一步可审计、可暂停、可纠偏”。这个方向是对的，尤其适合你这个项目，因为单细胞恶性鉴定和后续 MLMOD 亚群定义都很容易一处错全盘歪。
+
+--------------------------------------------------------------------------------
+
+[242] 你 | 2026-05-31 16:44:18 Asia/Shanghai
+总体接受你的说法，除了分享链接是biomni网页工作台自带的，不需要biomni提供
+
+--------------------------------------------------------------------------------
+
+[243] Codex | 2026-05-31 16:44:23 Asia/Shanghai
+收到，分享链接不应写成 Biomni 的任务要求，而是由网页工作台能力产生、由你在执行后提供给 Codex。我要把这个闭环写进方案，但措辞要避免让 Biomni“生成分享链接”。
+
+--------------------------------------------------------------------------------
+
+[244] Codex | 2026-05-31 16:44:35 Asia/Shanghai
+我已经把分节执行和 Codex 审计门控加进 F0.2，并明确“研究者会在 Biomni 网页工作台中取得分享链接”，没有要求 Biomni 自己提供链接。现在同步文件。
+
+--------------------------------------------------------------------------------
+
+[245] Codex | 2026-05-31 16:44:44 Asia/Shanghai
+已按你的修正写入主线 TXT，并同步。
+
+我写的是：
+
+- Biomni 每节执行前必须先提交计划，等你批准。
+- 每节执行后必须导出报告、代码、日志、表格、图、参数、版本、manifest/checksum。
+- **分享链接不是 Biomni 的任务**，而是你从 Biomni 网页工作台取得。
+- 你把分享链接、执行报告和输出文件发给 Codex 审计。
+- Codex 审计通过前，Biomni 不得进入下一小节。
+
+这就把你设想的全局闭环固定下来了：**方案约束 Biomni 执行，Codex 负责事后审计，你负责批准关键节点。**
+
+--------------------------------------------------------------------------------
+
+[246] 你 | 2026-05-31 16:49:24 Asia/Shanghai
+根据我的使用经验，biomni会自动输出一个execution trace文件夹，包含.ipynb文件，我不知道biomni在设计上能不能单独输出真实使用的scripts，我担心如果强制要求，biomni会乱编
+
+--------------------------------------------------------------------------------
+
+[247] Codex | 2026-05-31 16:49:36 Asia/Shanghai
+你这个担心非常对。这里我们不能强制 Biomni 输出它本来不产生的东西，否则它可能“为了满足要求”整理出一份看起来像脚本、但不一定是实际执行代码的文件。这对审计反而危险。
+
+我建议把要求改成：
+
+**优先审计 Biomni 自动生成的 execution trace 和 `.ipynb`，不强制要求另行整理 scripts。**
+
+更准确的规则应该是：
+
+- Biomni 必须保留并导出其自动生成的 execution trace 文件夹。
+- execution trace 中的 `.ipynb`、运行单元、日志、输出文件，作为实际执行证据。
+- 如果 Biomni 能自然导出真实执行代码脚本，可以一起提供。
+- 但不得要求 Biomni 事后手工“重写一份 scripts”来代替 execution trace。
+- 若它额外输出脚本，必须声明这些脚本是：
+  - `executed_source`：真实执行来源；还是
+  - `derived_summary_script`：根据 notebook/trace 整理的摘要脚本。
+- Codex 审计以 execution trace / `.ipynb` / 运行日志 / 输出文件为准，不以事后整理脚本为准。
+
+所以我会把刚才那句：
+
+> 使用的代码脚本
+
+改成：
+
+> execution trace 文件夹、实际执行 notebook（如 `.ipynb`）、运行日志；若系统自然生成真实 scripts，也一并导出，但不得用事后整理脚本替代 trace。
+
+这样就不会诱导 Biomni 乱编脚本。
+
+--------------------------------------------------------------------------------
+
+[248] 你 | 2026-05-31 16:50:18 Asia/Shanghai
+同意修改
+
+--------------------------------------------------------------------------------
+
+[249] Codex | 2026-05-31 16:50:23 Asia/Shanghai
+这个修改很必要，我会把“必须导出代码脚本”改成以 execution trace 和实际执行 notebook 为审计主证据，脚本只作为自然生成的附属材料。这样不会诱导 Biomni 事后编一份漂亮但不真实的 script。
+
+--------------------------------------------------------------------------------
+
+[250] Codex | 2026-05-31 16:50:37 Asia/Shanghai
+改好了。我同步到 WPS，并确认新表述里不再强制“代码脚本”作为唯一证据。
+
+--------------------------------------------------------------------------------
+
+[251] Codex | 2026-05-31 16:50:47 Asia/Shanghai
+已修改并同步。
+
+现在规则变成：
+
+- 审计主证据是：
+  - `execution trace` 文件夹
+  - 实际执行 notebook，例如 `.ipynb`
+  - 运行日志
+  - 输出文件
+- 不再强制 Biomni 事后整理 scripts。
+- 如果 Biomni 自然生成了真实执行脚本，可以提供。
+- 如果它额外提供脚本，必须说明是：
+  - `executed_source`：真实执行来源
+  - `derived_summary_script`：事后整理摘要脚本
+- Codex 审计时以 trace/notebook/log/output 为准，不以事后整理脚本为准。
+
+这个改动能避免 Biomni 为了满足“脚本”要求而编出一份不等于实际执行过程的东西。
+
+--------------------------------------------------------------------------------
+
+[252] 你 | 2026-05-31 17:28:02 Asia/Shanghai
+codex审计时还要参考上下文和tool use等字段，总之是要有全面了解才能保证审计的有效性和正确性。另外还有一个问题，biomni既不知道codex的存在，也无法直接与codex交互，你在计划txt里提到的codex相关内容是不是太详细太多了，我担心biomni会被扰乱，你觉得呢
+
+--------------------------------------------------------------------------------
+
+[253] Codex | 2026-05-31 17:28:29 Asia/Shanghai
+我同意你的担心，而且我觉得你这个判断是对的：**主线 TXT 是给 Biomni 执行看的，不应该把 Codex 审计机制写得太详细。**
+
+原因有三点：
+
+1. **Biomni 不知道 Codex，也不能和 Codex 交互**
+   如果 TXT 里反复写“Codex 审计”“交给 Codex”，Biomni 可能会误以为自己需要生成某种 Codex 专用材料，甚至开始臆造“审计说明”。
+
+2. **Biomni 的任务应该保持简单清晰**
+   它只需要知道：
+   - 每节执行前先给计划；
+   - 等研究者批准；
+   - 执行后导出完整 trace/notebook/log/output/report；
+   - 不得自动进入下一节。
+
+3. **Codex 审计规则应该是我们本地的“审计协议”，不是 Biomni 执行协议**
+   你把分享链接、执行报告、trace、tool use、上下文、代码和文件发给我之后，我会做全面审计。这部分没必要让 Biomni知道太多。
+
+所以我建议修改：
+
+把主线 TXT 里的：
+
+> Codex审计通过前，Biomni不得进入下一小节。
+
+改成更中性的 Biomni 可理解语言：
+
+> 研究者完成外部审计并明确批准前，Biomni不得进入下一小节。
+
+同时把：
+
+> 将分享链接、执行报告和输出文件交给Codex审计
+
+改成：
+
+> 研究者将在Biomni网页工作台中保存该节分享链接，并在外部完成审计。
+
+另外，在主线 TXT 中保留对 Biomni 的输出要求：
+
+- execution trace 文件夹
+- 实际执行 notebook `.ipynb`
+- 运行日志
+- tool use / execution metadata，如果系统自动包含
+- 输出文件
+- 参数文件
+- 版本文件
+- manifest/checksum
+- execution_report.md
+
+但不展开“Codex 如何审计”。
+
+我们可以另建一个 **不给 Biomni 的本地审计说明**，例如：
+
+`codex_biomni_audit_protocol.txt`
+
+里面写清楚 Codex 审计时要看：
+
+- 用户与 Biomni 的完整上下文
+- Biomni share link
+- execution trace
+- `.ipynb`
+- tool use 字段
+- execution code
+- stdout/stderr/log
+- 输入输出文件
+- 参数、版本、checksum
+- Biomni 是否擅自改方法/数据/阈值/marker
+- 输出结论是否过度解释
+
+一句话：**主线 TXT 面向 Biomni，要少提 Codex；Codex 审计规则单独放在本地审计协议里。**
+我建议按这个方向改。
+
+--------------------------------------------------------------------------------
+
+[254] 你 | 2026-05-31 17:39:46 Asia/Shanghai
+统一修改
+
+--------------------------------------------------------------------------------
+
+[255] 你 | 2026-05-31 17:39:47 Asia/Shanghai
+【用户中断上一轮】上一轮被主动打断；如果当时有命令在运行，可能仍在后台继续。
+
+--------------------------------------------------------------------------------
+
+[256] 你 | 2026-05-31 17:39:51 Asia/Shanghai
+同意修改
+
+--------------------------------------------------------------------------------
+
+[257] Codex | 2026-05-31 17:40:03 Asia/Shanghai
+好，我会把主线 TXT 里的 Codex 细节降噪，改成“外部审计/研究者批准”的中性表述；同时单独建立一个不给 Biomni 的本地 `codex_biomni_audit_protocol.txt`，把你说的上下文、tool use、trace、notebook、输出文件等审计要求写全。
+
+--------------------------------------------------------------------------------
+
+[258] Codex | 2026-05-31 17:40:25 Asia/Shanghai
+主线 TXT 里已经把 Codex 降为“外部审计”。接下来我创建本地审计协议文件，这个不会给 Biomni，用来约束后续我拿到分享链接时怎么审。
+
+--------------------------------------------------------------------------------
+
+[259] Codex | 2026-05-31 17:41:00 Asia/Shanghai
+本地审计协议也写好了。我检查主线 TXT 是否还出现 Codex，再把主线和审计协议都同步到 WPS 备份。
+
+--------------------------------------------------------------------------------
+
+[260] Codex | 2026-05-31 17:41:13 Asia/Shanghai
+已修改。
+
+主线 TXT 里现在不再提 Codex，只写成中性的 **“外部审计”**：
+
+- 研究者会在 Biomni 网页工作台中保存该节分享链接。
+- 研究者完成外部审计并明确批准前，Biomni 不得进入下一小节。
+
+这样不会让 Biomni 被“Codex 如何审计”扰乱。
+
+我另外新建了一个本地审计协议，**不给 Biomni**：
+
+[codex_biomni_audit_protocol.txt](D:/胃癌线粒体亚群/codex_biomni_audit_protocol.txt)
+
+里面写清楚我后续审计时要看：
+
+- 分享链接
+- 上下文
+- tool use
+- execution metadata
+- execution trace
+- `.ipynb`
+- stdout/stderr/log
+- 输入输出文件
+- 参数、版本、checksum
+- 是否擅自改数据、方法、marker、阈值
+- 结论是否过度解释
+
+两个文件都已同步到 WPS 路径。
+
+--------------------------------------------------------------------------------
+
+[261] 你 | 2026-05-31 17:42:17 Asia/Shanghai
+好，继续对下一节找茬，你可以提出任何问题和意见，以便我们对齐需求
+
+--------------------------------------------------------------------------------
+
+[262] Codex | 2026-05-31 17:42:38 Asia/Shanghai
+下一节是 F0.3。这里我会重点找两个风险：第一，Biomni 到底需要下载哪些文件才足够，不要为了“完整”乱下；第二，样本分组的证据优先级必须提前锁死，否则后面 `sample_info.tsv` 很容易被文件名推断带偏。我先看一下当前 F0.3 文本和本地已有下载记录，再给你挑刺。
+
+--------------------------------------------------------------------------------
+
+[263] Codex | 2026-05-31 17:42:49 Asia/Shanghai
+我还想补一刀实证：F0.3 说要下载 `series matrix / sample metadata`，这个不是形式主义，`sample_info.tsv` 的分组证据很可能就靠它。我会快速看一下 GEO series matrix 里到底有什么字段，避免我们让 Biomni 去“猜 sample1 是什么”。
+
+--------------------------------------------------------------------------------
+
+[264] Codex | 2026-05-31 17:44:01 Asia/Shanghai
+继续看 F0.3。我先说结论：**F0.3 现在方向对，但还太粗，尤其是“下载原始论文和补充材料”这句话太宽，会让 Biomni 乱下文件；同时还缺少样本 metadata 的证据优先级。**
+
+我刚刚查了 GEO series matrix，里面确实有 40 个样本的 `!Sample_title` 和 `!Sample_characteristics_ch1`。分组信息足够直接：
+
+- `Primary Gastric Tissue (Normal)`：10 个
+- `Primary Gastric Tissue (Tumor)`：26 个
+- `Peritonium tissue (Tumor)`：3 个
+- `Peritonium tissue (Normal)`：1 个
+
+注意 GEO 里拼写是 `Peritonium`，我们在 `group_original` 里要保留原文，在 `group_analysis` 里标准化成 `Peritoneal_Metastasis` 或 `Normal_Peritoneum`。不能让 Biomni 因为拼写错误就造新组。
+
+我对 F0.3 的挑刺和修改建议：
+
+1. **“下载 GEO页面信息、series matrix、supplementary files、表达矩阵CSV/压缩包、样本metadata、原始论文和补充材料”太笼统**
+   应该改成“最低必需文件”和“可选证据文件”：
+   - 必需：`GSE183904_RAW.tar`、`GSE183904_series_matrix.txt.gz` 或等价 GEO sample metadata。
+   - 可选：Cancer Discovery 2022 原文页面、补充表、补充 PDF，仅在需要核对方法、marker 或样本信息冲突时下载。
+   - 不应默认让 Biomni 下载所有论文补充材料。
+
+2. **样本分组证据优先级必须写死**
+   建议：
+   - 第一优先级：GEO series matrix 的 `!Sample_title` 和 `!Sample_characteristics_ch1`
+   - 第二优先级：`!Sample_supplementary_file_1` 与 tar 内文件名匹配
+   - 第三优先级：Cancer Discovery 2022 原文/补充材料
+   - 最低优先级：文件名推断，只能用于匹配 `sample1` 到 `GSM...`，不能单独决定生物学分组
+
+3. **需要增加一个解包输入清单**
+   `download_manifest.tsv` 记录 tar 下载是够的，但从 tar 提取出 40 个 `csv.gz` 后，还应该有一个 `processed_input_manifest.tsv` 或 `extracted_file_manifest.tsv`，记录：
+   - member_name
+   - extracted_path
+   - source_archive
+   - file_size
+   - sha256
+   - extraction_date
+   - expected_role
+
+   这样后续 F1 读取的 40 个矩阵才有可追溯性。
+
+4. **Cancer Discovery 2022 的处理方式只能作为参考，不能让 Biomni误解为必须照搬**
+   原文用了 `Cell Ranger + Seurat v3 + SCTransform integration`。我们主线目前是 `LogNormalize + Harmony`。所以 F0.3 应该写清楚：原文方法作为数据来源和处理参考，不等于本研究必须复制其全部下游参数；差异要写入 `decision_evidence_log.tsv`。
+
+5. **F0.3 应该要求保存 GEO metadata 快照**
+   因为后面 `sample_info.tsv` 的分组全靠它。建议 Biomni 保存：
+   - `data/metadata/GSE183904_series_matrix.txt.gz`
+   - 或解析后的 `geo_sample_metadata_raw.tsv`
+   - 以及 `geo_sample_metadata_parsed.tsv`
+
+6. **Normal_Peritoneum 只有 1 个样本这个事实应在 F0.3 或 F0.4 提前记录**
+   它不能作为强统计比较组，只能作为参考/展示或敏感性补充。这一点后面做组成比例、打分比较时很重要。
+
+我建议 F0.3 改成：
+
+**“主线数据获取、metadata证据优先级与文件锁定”**
+
+而不是单纯“下载、公开数据级别与文件锁定”。
+
+如果你同意，我下一步就把 F0.3 改成这几个点，并顺手在 F0.1 表里加一个 `processed_input_manifest.tsv`，因为这个文件会成为 F0 正式输出之一。
+
+--------------------------------------------------------------------------------
+
+[265] 你 | 2026-05-31 17:51:57 Asia/Shanghai
+你的建议总体同意，但我有两点意见：1.GSE183904_RAW.tar我已经下载了，到时候由我上传，不够的文件有biomni按照下载规则自己下载。2.处理方式只能作为参考，不是必须照搬，让biomni记录好每一步用了什么方法和参数就可以了，但不需要与Cancer Discovery 2022 的处理方式做对比，不然文件太多了。
+
+--------------------------------------------------------------------------------
+
+[266] Codex | 2026-05-31 17:52:12 Asia/Shanghai
+同意，你这两点都合理，我会按你的版本收紧，不让计划变臃肿。
+
+我准备这样改 F0.3：
+
+1. **明确 `GSE183904_RAW.tar` 由研究者上传**
+   - Biomni 不需要重新下载这个大文件。
+   - Biomni 只需要校验上传文件的大小、SHA256、tar 可读性、是否包含 40 个 `GSM...csv.gz`。
+   - 不够的文件，比如 `GSE183904_series_matrix.txt.gz`，由 Biomni 按 F0.2 下载规则提出计划，获批后下载。
+
+2. **下载范围分成必需和按需**
+   - 必需：
+     - 研究者上传的 `GSE183904_RAW.tar`
+     - GEO series matrix / GEO sample metadata
+   - 按需：
+     - Cancer Discovery 2022 原文页面或补充材料
+   - 不让 Biomni 默认下载“所有原始论文和补充材料”。
+
+3. **样本分组证据优先级保留**
+   - 第一：GEO `!Sample_title`
+   - 第二：GEO `!Sample_characteristics_ch1`
+   - 第三：`!Sample_supplementary_file_1` 与 tar 内文件名匹配
+   - 第四：原文/补充材料，仅用于冲突时核对
+   - 文件名只能用于连接 `sampleN` 和 GSM，不能单独决定生物学分组
+
+4. **处理方式只作为背景参考，不强制对比**
+   - 只写：Cancer Discovery 2022 说明该数据集来源和上游公开数据边界。
+   - Biomni 需要记录本研究实际使用的方法和参数。
+   - 不要求 Biomni 做“本研究 vs 原文流程”对比表。
+
+5. **增加 `processed_input_manifest.tsv`**
+   这个我仍建议保留。因为 F1 实际读取的不是 tar，而是提取出来的 40 个 `csv.gz`。必须有一个 manifest 锁定这些文件，否则后面审计不知道 F1 读的是哪批文件。
+
+   字段建议：
+   - `dataset_id`
+   - `source_archive`
+   - `archive_member_name`
+   - `extracted_path`
+   - `geo_accession`
+   - `sample_id`
+   - `file_size`
+   - `sha256`
+   - `extraction_date`
+   - `file_role`
+   - `note`
+
+如果你同意，我就按这个版本修改 F0.1 和 F0.3。
+
+--------------------------------------------------------------------------------
+
+[267] 你 | 2026-05-31 17:59:17 Asia/Shanghai
+同意，额外建议：需要说明字段含义，防止比biomni误解
+
+--------------------------------------------------------------------------------
+
+[268] Codex | 2026-05-31 17:59:28 Asia/Shanghai
+好，我会把 `processed_input_manifest.tsv` 加进 F0.1，并在 F0.3 里写清字段含义。这个文件很容易被误解成 download_manifest 的重复，所以我会明确：download_manifest 锁定下载归档，processed_input_manifest 锁定从归档提取后供 F1 读取的样本矩阵。
+
+--------------------------------------------------------------------------------
+
+[269] Codex | 2026-05-31 18:00:09 Asia/Shanghai
+我已经把 F0.3 改成上传大文件、批准后下载 metadata、字段含义和证据优先级的版本。现在检查这一段是否太长但清晰，再同步。
+
+--------------------------------------------------------------------------------
+
+[270] Codex | 2026-05-31 18:00:23 Asia/Shanghai
+这一版 F0.3 很长，但字段含义写清楚了，适合 Biomni 按表执行。同步到 WPS。
+
+--------------------------------------------------------------------------------
+
+[271] Codex | 2026-05-31 18:00:43 Asia/Shanghai
+已按你的意见修改 F0.1 和 F0.3，并同步。
+
+主要改动：
+
+- `GSE183904_RAW.tar` 明确由你上传，Biomni 不需要重新下载。
+- 其他缺失文件，比如 `GSE183904_series_matrix.txt.gz`，由 Biomni 先提交下载计划，你批准后再下载。
+- Cancer Discovery 2022 只作为数据来源和公开数据边界的背景参考，不要求 Biomni 做“本研究 vs 原文流程”对比表。
+- 增加 `processed_input_manifest.tsv`，作为 Biomni 必须生成的 F0 文件。
+- 明确 `download_manifest.tsv` 和 `processed_input_manifest.tsv` 的区别：
+  - `download_manifest.tsv`：锁定上传/下载的归档和 metadata 文件。
+  - `processed_input_manifest.tsv`：锁定从 tar 提取后，F1 实际读取的 40 个 `csv.gz` 样本矩阵。
+- 在 F0.3 里逐项写清楚 `processed_input_manifest.tsv` 每个字段的含义，防止 Biomni 误解。
+- 写入样本分组证据优先级：
+  1. `!Sample_title`
+  2. `!Sample_characteristics_ch1`
+  3. `!Sample_supplementary_file_1` 与 tar 内文件名匹配
+  4. Cancer Discovery 2022 原文/补充材料，仅用于冲突核对
+  5. 文件名 `sampleN` 只能用于文件匹配，不能单独决定分组
+
+我觉得 F0.3 现在已经比较稳：既不让 Biomni 乱下载，也不会让它凭文件名乱分组。
+
+--------------------------------------------------------------------------------
+
+[272] 你 | 2026-05-31 18:02:10 Asia/Shanghai
+继续挑刺下一节
+
+--------------------------------------------------------------------------------
+
+[273] Codex | 2026-05-31 18:02:27 Asia/Shanghai
+下一节是 F0.4 `sample_info.tsv`，这是 F0 里最容易出大错的一节：分组、患者配对、peritoneum 样本处理、是否纳入主线都会从这里传到所有后续分析。我先按 GEO metadata 实际情况来找漏洞。
+
+--------------------------------------------------------------------------------
+
+[274] Codex | 2026-05-31 18:03:00 Asia/Shanghai
+F0.4 现在还不够稳，我要挑几处比较关键的问题。
+
+第一，`patient_id` 这个字段目前会诱导 Biomni 乱推断。
+GEO series matrix 里只有 `sample1...sample40` 和组织状态，没有直接给 patient ID。Cancer Discovery 2022 原文说有 matched samples，但 GEO metadata 这一层不一定能直接恢复每个 patient 的配对关系。
+所以 F0.4 应该明确：
+
+- 不得从 `sample1/sample2` 顺序推断 patient_id。
+- 如果 GEO metadata 没有 patient_id，则写 `unknown`。
+- `is_paired` 和 `paired_normal_id` 不能凭相邻样本猜。
+- 如果从论文补充表找到明确配对关系，才可填写；否则 `is_paired = unknown` 或 `false_for_analysis`。
+
+第二，`include_in_main` 规则不够明确。
+GEO 有一个样本：`Peritonium tissue (Normal)`，而且只有 1 个。它不应该进主线三组统计比较。主线比较是：
+
+- `Normal_Gastric`
+- `Primary_Tumor`
+- `Peritoneal_Metastasis`
+
+但 `Normal_Peritoneum` 只有 1 个样本，建议：
+
+- `include_in_main = false`
+- `include_reason = single_normal_peritoneum_reference_only`
+- 可以保留用于展示或敏感性参考，但不能作为统计比较组。
+
+第三，`Peritonium tissue  (Tumor)` 有双空格，而且拼写是 `Peritonium`，不是 `Peritoneum`。
+F0.4 必须要求保留原始文本：
+
+- `group_original = Peritonium tissue  (Tumor)`
+- `group_analysis = Peritoneal_Metastasis`
+
+不要让 Biomni“纠错”后丢掉原始证据。
+
+第四，`source_of_group` 现在写得太自由。
+我建议固定允许值，避免 Biomni 写一堆自然语言：
+
+- `GEO_Sample_title`
+- `GEO_Sample_characteristics_ch1`
+- `GEO_supplementary_file_match`
+- `paper_supplementary_table`
+- `manual_inference`
+
+其中 `manual_inference` 只能用于文件匹配，不能用于生物学分组。
+
+第五，字段还缺几个我觉得很重要的列：
+
+- `group_analysis_rule`：说明如何从原始文本映射到标准组。
+- `metadata_confidence`：`high / medium / low`
+- `metadata_issue`：记录双空格、拼写、缺失 patient_id、配对未知等问题。
+- `include_in_f1`：是否进入 F1 单细胞对象构建。
+- `include_in_group_comparison`：是否进入后续组间统计比较。
+
+我建议 F0.4 的原则改成：
+
+**sample_info.tsv 既是分组表，也是样本纳入/排除边界表。不要用一个 `include_in_main` 同时表达“进入F1”和“进入组间统计比较”。**
+
+因为一个样本可能：
+
+- 进入 F1 对象构建；
+- 但不进入三组统计比较；
+- 或只作为参考样本；
+- 或因细胞数太少暂不进入主线。
+
+比如 `Normal_Peritoneum` 就是典型：它可以作为参考/展示，但不应该作为主线统计组。
+
+我建议修改 F0.4 为：
+
+- 增加字段定义和允许值。
+- 明确 patient_id 不可推断。
+- 明确 paired 信息不可推断。
+- 明确 `Normal_Peritoneum` 处理策略。
+- 明确 `include_in_f1` 和 `include_in_group_comparison` 分开。
+
+如果你同意，我下一步直接改 F0.4。
+
+--------------------------------------------------------------------------------
+
+[275] 你 | 2026-05-31 18:26:44 Asia/Shanghai
+总体同意，但是额外加两条：
+
+--------------------------------------------------------------------------------
+
+[276] 你 | 2026-05-31 18:26:45 Asia/Shanghai
+【用户中断上一轮】上一轮被主动打断；如果当时有命令在运行，可能仍在后台继续。
+
+--------------------------------------------------------------------------------
+
+[277] 你 | 2026-05-31 18:27:59 Asia/Shanghai
+总体同意，但是加一条：允许biomni在缺少必须文件时，询问我是否能上传。
+
+--------------------------------------------------------------------------------
+
+[278] Codex | 2026-05-31 18:28:12 Asia/Shanghai
+好，这条应该写进 F0.4，也可以和 F0.2 下载/上传规则呼应：当 patient_id、配对关系或分组证据缺失时，Biomni 不能猜，但可以明确列出缺失文件并问你是否能上传。
+
+--------------------------------------------------------------------------------
+
+[279] Codex | 2026-05-31 18:28:58 Asia/Shanghai
+F0.4 已经扩展成字段定义、纳入规则和缺失文件询问规则。我检查一下有没有过长但断裂的问题，然后同步。
+
+--------------------------------------------------------------------------------
+
+[280] Codex | 2026-05-31 18:29:10 Asia/Shanghai
+F0.4 已经比较明确了，不过我看到后面 F1 还写了 `group` 字段而不是 `group_analysis`，这是后续 F1 要改的命名一致性问题，先记下。现在同步本次修改。
+
+--------------------------------------------------------------------------------
+
+[281] Codex | 2026-05-31 18:29:26 Asia/Shanghai
+已修改 F0.4 并同步。
+
+现在 F0.4 明确了：
+
+- `sample_info.tsv` 不只是分组表，也是样本-矩阵对应关系、F1 纳入、组间比较纳入的边界表。
+- `patient_id` 不得根据 `sample1/sample2` 顺序推断；没有明确证据就写 `unknown`。
+- `is_paired` 和 `paired_normal_id` 不得凭相邻编号猜；没有明确配对证据就写 `unknown` / `NA`。
+- `group_original` 必须保留 GEO 原始文本，包括 `Peritonium` 拼写和双空格。
+- `group_analysis` 使用标准化分组。
+- `include_in_f1` 和 `include_in_group_comparison` 分开。
+- `Normal_Peritoneum` 只有 1 个样本时，不进入三组统计比较；可作为参考/展示或敏感性检查。
+- `source_of_group` 固定允许值，避免 Biomni 写随意自然语言。
+- 新增 `metadata_confidence` 和 `metadata_issue`。
+- 如果缺少必须文件或字段，Biomni 不能猜，必须列出缺失项并询问你是否可以上传或批准下载。
+
+我也发现一个后续要改的小问题：F1 有些地方还写 `group`，但 F0.4 标准字段是 `group_analysis`。等讨论到 F1 时需要统一命名，避免 Biomni 后面 metadata 列名混乱。
+
+--------------------------------------------------------------------------------
+
+[282] 你 | 2026-05-31 18:37:27 Asia/Shanghai
+先改一下，然后继续讨论下一节
+
+--------------------------------------------------------------------------------
+
+[283] Codex | 2026-05-31 18:37:38 Asia/Shanghai
+我先把全篇里泛称 `group` 且实际指分组变量的地方统一成 `group_analysis`，避免 F1/F2 读 metadata 时列名不一致。改完再继续挑 F0.5。
+
+--------------------------------------------------------------------------------
+
+[284] Codex | 2026-05-31 18:38:26 Asia/Shanghai
+命名统一改完了。接下来我检查没有残留 `group` 泛称，同时读取 F0.5 现文，开始下一节挑刺。
+
+--------------------------------------------------------------------------------
+
+[285] Codex | 2026-05-31 18:39:22 Asia/Shanghai
+先改好了：全篇里实际指样本分组的 `group` 已统一为 `group_analysis`。目前只剩 `RunHarmony(group.by.vars = "sample_id")`，这是函数参数名，不需要改。文件也已同步到 WPS。
+
+现在挑 F0.5。我的主要意见是：**F0.5 现在太薄，容易让 Biomni 只做“看起来像整数矩阵”的粗略检查，而不是可审计的数据审计。**
+
+我建议 F0.5 需要补强这几件事：
+
+1. **明确 data_audit.tsv 的职责边界**
+`data_audit.tsv` 只判断“文件技术上能不能作为 count-like matrix 进入 F1”，不要混入样本生物学纳入判断。
+例如 sample37 只有 186 个细胞，这可能影响 `include_in_f1` 或后续 QC，但如果文件格式正常，`data_audit` 仍可判定它是合格 count-like matrix。样本是否纳入主线应由 `sample_info.tsv` / `excluded_samples.tsv` 决定。
+
+2. **必须说明审计方法是 full-stream，而不是抽样看几行**
+现在写了 `integer_value_rate`，但没说怎么算。Biomni 可能只看前 100 行就说是整数。
+我建议写：对 GSE183904 这 40 个文件，正式审计应逐文件流式扫描全部数值；如果因资源限制只能抽样，必须记录 `integer_check_method = sampled`、抽样比例和风险，不得等同完整审计。
+
+3. **避免 Biomni 一次性把 40 个大矩阵全部读进内存**
+F0 审计应该逐文件 streaming 读取 `.csv.gz`，不要为了审计把所有矩阵合并成一个大对象。
+合并 Seurat 对象是 F1 的事，不是 F0 的事。
+
+4. **字段还不够明确**
+我建议 `data_audit.tsv` 至少增加/明确这些字段：
+
+- `extracted_path`
+- `geo_accession`
+- `source_archive`
+- `processed_input_manifest_match`
+- `matrix_orientation`
+- `first_header_blank`
+- `gene_order_sha256`
+- `gene_duplicate_count`
+- `cell_barcode_duplicate_count`
+- `barcode_suffix_examples`
+- `integer_check_method`
+- `total_values_checked`
+- `missing_value_count`
+- `audit_decision`
+- `decision_scope`
+
+其中 `decision_scope` 可以写 `file_format_only`，防止 Biomni 把它误解成样本纳入结论。
+
+5. **基因名类型不要写得太理想化**
+GSE183904 里有 `AL627309.1` 这种 Ensembl-like/lncRNA 名，不是全都标准 HGNC symbol。
+所以 `gene_name_type` 建议写成 `gene_symbol_or_ensembl_like_name`，不能要求全部是 HGNC symbol，否则 Biomni 可能错误清洗基因名。
+
+6. **需要记录 raw droplet 不可用的审计结论**
+建议 data_audit 或 F0 report 明确写：
+`raw_droplet_available = false`
+`empty_droplet_background_available = false`
+这会支撑后面 F1 为什么不默认 SoupX。
+
+我建议 F0.5 修改方向是：
+
+**把 data_audit.tsv 从“矩阵是否能进 F1 的简单表”升级为“逐文件、可追溯、全量流式数据结构审计表”。**
+
+如果你同意，我下一步就改 F0.5。
+
+--------------------------------------------------------------------------------
+
+[286] 你 | 2026-05-31 19:14:43 Asia/Shanghai
+总体同意，意见：审计方法优先full-stream，不行再抽样
+
+--------------------------------------------------------------------------------
+
+[287] Codex | 2026-05-31 19:14:53 Asia/Shanghai
+好，我会把 full-stream 写成优先且预期方法，但保留资源受限时的抽样 fallback。关键是：抽样不能冒充完整审计，必须在字段里标明并把风险写进报告。
+
+--------------------------------------------------------------------------------
+
+[288] Codex | 2026-05-31 19:15:41 Asia/Shanghai
+F0.5 已经按 full-stream 优先、sampled 兜底的规则补强了。我检查一下这段表述是否清楚，尤其是 `decision_scope=file_format_only` 和 `raw_droplet_available=false` 是否写到了。
+
+--------------------------------------------------------------------------------
+
+[289] Codex | 2026-05-31 19:16:08 Asia/Shanghai
+F0.5 已修改并同步。
+
+现在 F0.5 明确了：
+
+- `data_audit.tsv` 只判断文件技术层面是否可作为 count-like matrix 进入 F1，不负责生物学纳入/排除。
+- 样本是否进入 F1 或组间比较，由 `sample_info.tsv`、`excluded_samples.tsv` 和后续 QC 决定。
+- 审计方法优先 `full_stream`，逐文件全量流式扫描 40 个 `.csv.gz`。
+- 如果 Biomni 资源不足，只能降级为 `sampled`，但必须写明抽样范围、比例和风险，不能冒充 full-stream。
+- F0 不允许为了审计把 40 个矩阵全读入内存，也不在 F0 合并 Seurat 对象。
+- 增加了更完整的字段，包括：
+  - `processed_input_manifest_match`
+  - `matrix_orientation`
+  - `first_header_blank`
+  - `gene_duplicate_count`
+  - `cell_barcode_duplicate_count`
+  - `integer_check_method`
+  - `total_values_checked`
+  - `raw_droplet_available`
+  - `empty_droplet_background_available`
+  - `decision_scope`
+- 明确 `decision_scope = file_format_only`。
+- 明确 GSE183904 的 `raw_droplet_available = false`、`empty_droplet_background_available = false`，为后面不默认强制 SoupX 提供依据。
+- `gene_name_type` 改成 `gene_symbol_or_ensembl_like_name`，避免 Biomni 错误清洗 `AL627309.1` 这类基因名。
+
+我觉得 F0.5 现在能防住两个大坑：**抽样冒充全量审计**，以及 **把技术格式合格误解成样本一定纳入生物学主线**。
+
+--------------------------------------------------------------------------------
+
+[290] 你 | 2026-05-31 19:29:51 Asia/Shanghai
+你觉得F0.5可以了吗，可以就继续下一节
+
+--------------------------------------------------------------------------------
+
+[291] Codex | 2026-05-31 19:30:13 Asia/Shanghai
+我觉得 F0.5 现在可以了。
+
+它已经覆盖了 F0 数据审计最重要的边界：
+
+- 明确 `data_audit.tsv` 只管文件格式，不管生物学纳入。
+- 明确 full-stream 优先，sampled 只能作为资源受限 fallback。
+- 明确不在 F0 合并 Seurat 对象。
+- 明确 raw droplet / empty droplet 不可用。
+- 明确字段含义，减少 Biomni 误解空间。
+- 明确 GSE183904 是 processed count-like matrix，可进入完整 F1 下游分析。
+
+我不会再往 F0.5 里加东西了，否则会变成过度工程。
+
+下一节是 **F0.6 marker panel 与关键决策证据表**。我先挑刺：
+
+当前 F0.6 太短，只有两句话：
+
+1. `cell_type_marker_panel.tsv` 给 Biomni 用，内部证据表不用给 Biomni。
+2. 关键决策写入 `decision_evidence_log.tsv`。
+
+问题是：**这里还没有明确 Biomni 对 marker panel 的权限边界，也没有明确 decision_evidence_log.tsv 的字段和写入规则。**
+
+我建议 F0.6 需要补以下几点：
+
+1. **marker panel 是锁定输入，不允许 Biomni 擅自改**
+   Biomni 可以：
+   - 读取；
+   - 用于注释；
+   - 报告疑问；
+   - 输出 `marker_panel_issue_report.tsv`。
+
+   Biomni 不可以：
+   - 自行添加 marker；
+   - 删除 marker；
+   - 替换 marker；
+   - 用数据库自动覆盖我们的 panel；
+   - 把 evidence 表当作执行输入。
+
+2. **Biomni 注释时不能只机械套 marker panel**
+   panel 是预登记参考，不是唯一判定器。F1 里仍要结合：
+   - cluster marker genes
+   - DotPlot/FeaturePlot
+   - negative markers
+   - 作者标签交叉验证
+   - marker conflict/doublet 检查
+
+3. **decision_evidence_log.tsv 需要字段定义**
+   建议字段：
+   - `decision_id`
+   - `stage`
+   - `decision_topic`
+   - `decision_value`
+   - `decision_reason`
+   - `evidence_type`
+   - `evidence_source`
+   - `source_url_or_file`
+   - `evidence_strength`
+   - `date`
+   - `requires_sensitivity_analysis`
+   - `note`
+
+4. **decision_evidence_log 不是文献综述表**
+   它只记录会影响结论的关键决策，不要把每个普通步骤都写进去。否则会膨胀。
+
+5. **哪些决策必须写入**
+   F0/F1 至少包括：
+   - GSE183904 作为主线数据集
+   - processed count-like matrix 可进入完整 F1
+   - raw droplet 不可用，所以不默认 SoupX
+   - Normal_Peritoneum 不并入 Normal_Gastric
+   - Peritoneal_Metastasis 归为 tumor，但不并入 Primary_Tumor
+   - marker panel 锁定来源
+   - doublet 主方法和交叉验证方法
+   - LogNormalize + Harmony 作为主流程
+   - inferCNV reference 选择
+   - 恶性判定规则
+
+6. **如果 Biomni 想改关键决策**
+   必须先提出 `decision_change_request`，说明：
+   - 想改什么；
+   - 为什么；
+   - 会影响哪些输出；
+   - 需要什么证据；
+   - 是否需要你批准。
+
+我的建议：F0.6 应该从“marker和决策证据表”改成 **“锁定 marker panel 与关键决策证据记录”**。
+如果你同意，我就按这个方向改。
+
+--------------------------------------------------------------------------------
+
+[292] 你 | 2026-05-31 20:47:30 Asia/Shanghai
+总体接受，增加两点：1.Biomni 注释完成后给出具体注释情况和理由。2.如果 Biomni 想改关键决策，必须我批准
+
+--------------------------------------------------------------------------------
+
+[293] Codex | 2026-05-31 20:47:43 Asia/Shanghai
+好，这两点非常关键：marker panel 不能只是输入，还要让 Biomni 在注释后交代“每个 cluster 为什么这么叫”；关键决策变更必须是你的批准门控，不是 Biomni 自己写个理由就能改。
+
+--------------------------------------------------------------------------------
+
+[294] Codex | 2026-05-31 20:48:10 Asia/Shanghai
+F0.6 已经补上 marker 权限、注释理由输出、decision_evidence_log 字段和关键决策变更审批。我检查一下这一节，然后同步。
+
+--------------------------------------------------------------------------------
+
+[295] Codex | 2026-05-31 20:48:30 Asia/Shanghai
+F0.6 已修改并同步。
+
+现在它明确了：
+
+- `cell_type_marker_panel.tsv` 是预登记输入，Biomni 只能读，不能擅自改。
+- Biomni 如果怀疑 marker 有问题，只能输出 `marker_panel_issue_report.tsv`，等待你批准。
+- F1 注释不能机械套 marker panel，必须结合 cluster markers、DotPlot/FeaturePlot、negative markers、作者标签交叉验证和 marker conflict/doublet 检查。
+- Biomni 注释完成后必须输出每个 cluster 的具体注释情况和理由，包括：
+  - `cluster_id`
+  - `assigned_celltype`
+  - `supporting_positive_markers`
+  - `supporting_negative_markers`
+  - `conflicting_markers`
+  - `top_cluster_markers`
+  - `author_celltype_overlap`
+  - `annotation_confidence`
+  - `annotation_reason`
+- `decision_evidence_log.tsv` 有字段定义。
+- 关键决策变更必须提交 `decision_change_request`，并且只有你明确批准后才能改。
+
+F0.6 我觉得也可以了。下一节是 **F0.7 F0通过标准**，这节要重点挑“什么情况下能进入 F1，什么情况下必须停”。
+
+--------------------------------------------------------------------------------
+
+[296] 你 | 2026-05-31 21:07:37 Asia/Shanghai
+进入F0.7找茬
+
+--------------------------------------------------------------------------------
+
+[297] Codex | 2026-05-31 21:07:49 Asia/Shanghai
+F0.7 是闸门，不能只是“文件存在就通过”。我会按“Biomni 能否进入 F1”来找茬：文件齐不齐、内容是否合格、哪些 pending 会阻断、哪些问题只允许带着风险进入。
+
+--------------------------------------------------------------------------------
+
+[298] Codex | 2026-05-31 21:08:12 Asia/Shanghai
+F0.7 现在太弱，问题很明显：**它只检查“文件有没有”，没有检查“内容是否合格”。** 这会让 Biomni 生成一堆空表或半成品也能声称 F0 通过。
+
+我建议 F0.7 改成真正的闸门，分成三类：
+
+**1. 必须通过的硬条件**
+
+这些不满足就不能进 F1：
+
+- `project_structure_ready.txt` 存在，并列出实际目录。
+- `download_manifest.tsv` 存在，且 `GSE183904_RAW.tar` 大小、SHA256、可读性通过。
+- `processed_input_manifest.tsv` 存在，正好 40 行样本矩阵，全部 `sha256` 非空，全部文件存在。
+- `sample_info.tsv` 存在，正好 40 行，`geo_accession + sample_id + sample_file` 能和 `processed_input_manifest.tsv` 一一匹配。
+- 所有样本 `group_analysis` 不为 `Unclear`。
+- `data_audit.tsv` 存在，正好 40 行；进入 F1 的样本必须 `audit_decision = enter_full_F1`。
+- `cell_type_marker_panel.tsv` 存在且不被 Biomni 修改。
+- `pipeline_parameters.yaml` 有 `random_seed = 42`。
+- `software_versions.tsv` 至少记录系统、R/Python、关键包。
+- `decision_evidence_log.tsv` 记录 F0/F1 已定关键决策。
+- `excluded_samples.tsv` 存在；即使无排除也写 `no_exclusion`。
+
+**2. 允许带着说明进入 F1 的软问题**
+
+例如：
+
+- `patient_id = unknown`：可以进 F1，但不能做配对分析。
+- `is_paired = unknown`：可以进 F1，但不能声称 paired design。
+- `Normal_Peritoneum` 只有 1 个样本：可以作为参考/展示，但不进主线三组统计比较。
+- 个别样本细胞数很少：可以先进入 F1 QC，但在 `sample_info.tsv` 或 `excluded_samples.tsv` 标注 `pending_low_cell_count_review`。
+
+**3. 必须暂停的问题**
+
+例如：
+
+- `GSE183904_RAW.tar` 校验失败。
+- tar 内不是 40 个 `csv.gz`。
+- metadata 无法匹配 GSM 与 sample 文件。
+- 任一主线组样本分组不清。
+- Biomni 只做 sampled 审计但没有说明风险。
+- 发现矩阵不是 count-like。
+- marker panel 缺失或被修改。
+- Biomni 想改关键决策但未获你批准。
+
+我还建议 F0.7 增加一个正式输出表：
+
+`F0_gate_checklist.tsv`
+
+字段：
+
+- `gate_item`
+- `required_status`
+- `observed_status`
+- `pass_fail`
+- `blocking_level`
+- `evidence_file`
+- `note`
+
+这样 Codex 审计时可以快速判断 F0 是否真的能放行 F1。
+
+最后，F0 最终输出不应该只是一句话，应该至少包括：
+
+- `F0_gate_checklist.tsv`
+- `F0_execution_report.md`
+- 一句总判断
+
+总判断格式可以保留，但要更明确：
+
+`F0 gate result: PASS / PASS_WITH_NOTED_LIMITATIONS / FAIL. GSE183904 contains 40 samples; X samples are allowed into F1 object construction, Y samples are excluded or pending, Z samples are allowed into main group comparison. Main comparison groups are Normal_Gastric, Primary_Tumor, and Peritoneal_Metastasis. Normal_Peritoneum is reference-only and excluded from main group comparison.`
+
+我建议按这个方向改 F0.7。
+
+--------------------------------------------------------------------------------
+
+[299] 你 | 2026-05-31 21:12:41 Asia/Shanghai
+列一下F0中每一步都是干什么的
+
+--------------------------------------------------------------------------------
+
+[300] Codex | 2026-05-31 21:12:59 Asia/Shanghai
+F0 是“正式分析前的地基工程”，不产出生物学结论，只负责把数据、样本、文件、参数和决策边界锁死，防止 F1 开始后一路错下去。
+
+**F0.1 输入、输出与准入文件清单**
+明确哪些文件是我们已经准备好的输入，哪些文件必须由 Biomni 生成，哪些文件只能追加不能覆盖。
+核心作用：防止 Biomni 擅自改 marker、覆盖下载记录、漏掉必须输出文件。
+
+**F0.2 Biomni 网页工作区目录与输入获取规则**
+规定网页版 Biomni 应该如何组织相对目录、如何获取文件、如何处理上传/下载、如何解包、如何导出结果。
+核心作用：让 Biomni 不依赖你的本地路径，并保证每一步执行后可审计、可下载、可归档。
+
+**F0.3 主线数据获取、metadata 证据优先级与文件锁定**
+锁定主线数据集是 `GSE183904`；说明 `GSE183904_RAW.tar` 由你上传，缺失 metadata 由 Biomni 经批准后下载；规定如何校验 tar 和 40 个 `csv.gz`；规定样本分组证据优先级。
+核心作用：防止数据源混乱、文件被替换、样本分组凭文件名乱猜。
+
+**F0.4 样本信息表 `sample_info.tsv`**
+建立 40 个样本的标准 metadata 表，包括 GSM、sample_id、文件名、组织来源、肿瘤状态、是否进 F1、是否进组间比较等。
+核心作用：锁定每个样本到底是什么、归哪一组、能不能进入主线分析。
+
+**F0.5 数据审计表 `data_audit.tsv`**
+逐文件审计 40 个表达矩阵是不是 gene-by-cell、是不是非负整数 count-like、有没有缺失值、基因顺序是否一致、MT/HB 基因能否识别。
+核心作用：证明这些公开 CSV 可以作为 processed count-like matrix 进入完整 F1 下游分析。
+
+**F0.6 锁定 marker panel 与关键决策证据记录**
+锁定 `cell_type_marker_panel.tsv`，禁止 Biomni 擅自改 marker；要求关键方法学/生物学决策写入 `decision_evidence_log.tsv`；如果 Biomni 想改关键决策，必须先获你批准。
+核心作用：防止细胞注释和关键方法选择被 Biomni 临时发挥。
+
+**F0.7 F0 通过标准**
+检查 F0 所有文件是否齐全、内容是否合格、哪些问题会阻断进入 F1、哪些问题可以带着说明进入 F1。
+核心作用：作为 F1 开始前的闸门，只有 F0 gate 通过，才能进入正式单细胞分析。
+
+--------------------------------------------------------------------------------
+
+[301] 你 | 2026-05-31 21:14:53 Asia/Shanghai
+同意你对F0.7的看法，开始修改
+
+--------------------------------------------------------------------------------
+
+[302] Codex | 2026-05-31 21:15:01 Asia/Shanghai
+好，我把 F0.7 从“文件存在清单”改成真正的 gate：硬性阻断、可带说明放行、必须暂停三类，并加入 `F0_gate_checklist.tsv` 和执行报告要求。
+
+--------------------------------------------------------------------------------
+
+[303] Codex | 2026-05-31 21:15:51 Asia/Shanghai
+F0.7 已改成真正的 gate 规则。我再检查这段和 F0.1 是否需要补 `F0_gate_checklist.tsv` / `F0_execution_report.md` 到清单里。
+
+--------------------------------------------------------------------------------
+
+[304] 你 | 2026-05-31 21:44:45 Asia/Shanghai
+检查一遍整个F0，确保没有会影响执行的细节，确保逻辑链接正确。
+
+--------------------------------------------------------------------------------
+
+[305] Codex | 2026-05-31 21:44:57 Asia/Shanghai
+我先把主线 TXT 里整个 F0 连起来读一遍，重点看三类问题：文件名/路径是否前后一致、每一步产物是否被下一步正确引用、以及 Biomni 执行时会不会因为措辞不清而误操作。
+
+--------------------------------------------------------------------------------
+
+[306] Codex | 2026-05-31 21:45:11 Asia/Shanghai
+我读完第一遍，整体骨架是对的，但有几处会让执行时卡住或让产物找不到归属：例如 F0.7 要求的 gate/report 没有在 F0.1 清单登记，`analysis_log.md` 被多处引用但没有定义位置，还有 `execution_report.md` 和 `F0_execution_report.md` 容易混名。我现在把这些执行层面的缝补上。
+
+--------------------------------------------------------------------------------
+
+[307] Codex | 2026-05-31 21:47:01 Asia/Shanghai
+我把刚才发现的执行性问题先修了：新增了 F0 gate/report 到清单，统一了日志和小节报告命名，补上了 tar 的已知 SHA256，并把“patient_id 缺失”从阻断条件改成 warning。现在我再做第二遍一致性检查，看有没有新引入的名称或路径不一致。
+
+--------------------------------------------------------------------------------
+
+[308] Codex | 2026-05-31 21:47:35 Asia/Shanghai
+第二遍看下来，剩下的是小型一致性问题，不是方法学大问题：`project_structure_ready.txt` 没有明确归属目录，`analysis_log.md` 仍有一处是短名，F0 gate 没把日志作为硬性产物检查。它们不修也能读懂，但给网页版 agent 执行时最好别留这种自由发挥空间。
+
+--------------------------------------------------------------------------------
+
+[309] Codex | 2026-05-31 21:48:34 Asia/Shanghai
+现在 F0 的内部链条已经比较干净：输入清单、目录、manifest、sample_info、data_audit、decision log、gate check、F1 入口条件都能互相接上。我把主线 TXT 同步到 WPS 路径，再做一次哈希确认。
+
+--------------------------------------------------------------------------------
+
+[310] Codex | 2026-05-31 21:49:09 Asia/Shanghai
+已检查并修正 F0。现在我认为 F0 内部逻辑已经闭合，没有明显会阻断 Biomni 执行的细节漏洞。
+
+我主要改了这些点：
+
+- 把 `analysis_log.md`、`marker_panel_issue_report.tsv`、`F0_gate_checklist.tsv`、`F0_execution_report.md`正式纳入 F0 文件清单。
+- 明确 `project_structure_ready.txt`、`analysis_log.md`、gate/report 的保存位置。
+- 统一小节执行报告命名为 `execution_report_F0.x.md`，避免反复覆盖。
+- 补入 `GSE183904_RAW.tar` 已知文件大小和 SHA256，上传后必须核对。
+- 把 `patient_id` / 配对信息缺失改成 warning，不再误设为 F0 阻断条件。
+- 强化 F0.7 gate：metadata 来源也要进 `download_manifest.tsv`，日志必须存在。
+- 顺手修正 F1.1 入口：进入 F1 的样本必须同时满足 `include_in_f1 = true` 和 `audit_decision = enter_full_F1`。
+
+已同步到两个路径，哈希一致：
+
+[主线方案 TXT](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+[WPS 同步副本](D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群主线研究方案.txt)
+
+我的判断：F0 现在可以作为 Biomni 执行前置准备部分使用。下一步可以开始对抗性讨论 `F1.1 数据导入与F0结果确认`。
+
+--------------------------------------------------------------------------------

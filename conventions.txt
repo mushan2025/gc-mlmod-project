@@ -15,6 +15,16 @@
 
 如果 agent 意见与真实证据冲突，以真实证据为准。若证据不足，结论必须降级为探索性、方向性或不可评价。
 
+### 算法和参数适配原则
+
+任何算法、统计检验、阈值或软件默认参数都不能只因为“常用”“文献用过”或“工具默认”而直接进入主分析。每个正式方法在执行前必须能追溯到三层依据：
+
+1. **工具使用规范**：输入数据类型、表达单位、矩阵方向、基因ID、最小样本/细胞要求、版本接口和关键参数符合该工具或统计模型的适用范围。
+2. **项目数据要求**：与F0或对应F节专项审计确认的数据结构一致，例如raw integer counts、RSEM expected counts、processed microarray expression、normalized single-cell data layer、sample-level clinical endpoints等不得混用。
+3. **研究问题适配**：该方法确实回答本研究的问题，且不会主动消除目标生物学差异、制造循环定义、伪重复、p-hacking或超出解释边界的结论。
+
+每个F节或gate的method decision应记录：输入层/表达单位、独立统计单位、主方法、关键参数、禁用场景、失败或不适配时的fallback、需要用户批准的变更、以及结果最多允许支持的结论强度。若正式审计发现数据结构不满足预设方法，必须暂停并提交方法变更说明，不得为了跑通而静默换算法、四舍五入数据、改阈值或删样本。
+
 ## 1. 阶段边界
 
 ### 1a 阶段：主线方案讨论与审核
@@ -23,11 +33,12 @@
 
 ### 1b 阶段：执行准备
 
-与之前的网页agent模式不同，服务器执行阶段由Codex控制Linux服务器执行，Claude Code承担独立审核职责，因此1b阶段大幅简化：
+与之前的网页agent模式不同，执行阶段由Codex控制本地设备或获批的临时Linux服务器运行，Claude Code承担独立审核职责，因此1b阶段大幅简化：
 - 不再需要编写独立的"小节方案"和"提示词"
 - Codex 确认方案每个 F 节描述足够具体，使代码实现无需猜测即可落地
 - 检查跨 F 节文件传递关系（输入 / 输出 RDS、TSV 文件名前后一致）
-- 配置服务器环境、目录结构、依赖管理、git策略和数据上传/下载规则
+- 为每个F节/gate输出资源评估，优先配置本地环境；仅在本地不可行时配置临时服务器、数据上传/下载和删除前同步规则
+- 使用同一套R/Python锁文件、系统依赖清单、数据库版本、参数和seed管理本地与临时服务器环境
 - 如有需要，对关键节使用五块 contract 模板结构化
 
 ## 2. 结构化 contract 模板
@@ -60,6 +71,7 @@
 - reproduction_outputs：RDS、矩阵、模型对象、脚本、日志、source data、manifest 等复现文件
 - figure_outputs：图、source data 和生成代码
 - output_schema：关键输出字段、允许值、必填字段
+- output_classification：正式manifest分别记录artifact_class（core/gate_decision/audit_trail）、publication_destination（main_text/supplement/not_planned/undecided）和review_priority（full/standard/spot_check）；不得用同一个Tier字段同时表达文件用途、论文去向和证据强度
 - file_count_policy：核心审计文件优先控制在 5-8 个；补充复现文件可分目录组织
 
 ### gate_contract
@@ -81,9 +93,21 @@
 - required_limitation_sentences：必须保留的限制性表述
 - evidence_level_candidate：该小节可能达到的证据等级
 
-## 3. 服务器执行与审计分层
+## 3. 执行环境选择与审计分层
 
-Codex 在 Linux 服务器上逐 gate 执行。完成当前 gate 后必须暂停，产出 gate 报告、真实执行脚本、日志、输出文件和 manifest，并将必要文件同步回本地仓库。Claude Code审核后，由用户决定是否批准进入下一步。
+Codex逐gate执行，默认执行优先级为：`laptop_thinkbook16p`（默认笔记本）→ `desktop_i5_14600kf`（备用台式机）→ 临时Linux服务器。每个F节必须维护一个 `reports/environment_setup/F{N}_execution_resource_assessment.tsv`，每个gate或analysis_module一行，记录输入规模、candidate_machine、machine_priority_rank、os_or_runtime、两台本地设备的实测可用资源、预计峰值RAM/磁盘/运行时间、GPU适用性、pilot结果、本地可行性、fallback_trigger、临时服务器最低和推荐配置、最终执行位置及用户审批状态。不得因为过去使用过某种服务器配置就沿用，也不得因为本地程序能启动就认定可安全完成。
+
+默认笔记本不适合时必须先评估备用台式机；只有两条本地路径均不适合、备用设备当前不可用且等待不合理，或用户基于完整评估明确批准时，才可使用临时服务器。Windows原生可稳定支持的模块可原生运行；需要Linux依赖、编译链或与服务器统一用户态的模块可通过WSL2 Ubuntu 22.04或固定Linux容器运行。WSL属于对应宿主设备，不是独立算力，必须按宿主机实际分配给WSL的RAM、CPU、虚拟磁盘和I/O重新评估。服务器每次均按全新环境重新配置；正式运行前必须核对本地与服务器的R/Python包、外部工具、数据库、系统依赖、容器镜像、参数和seed。若Windows原生与Linux底层库不同，必须记录差异，不能只凭包版本号声明完全一致。
+
+完成当前gate后必须暂停，产出gate报告、真实执行脚本、日志、输出文件、资源实测和manifest。无论在何处运行，关键结果最终必须保存到本地。临时服务器删除前必须完成文件数量、大小和SHA256核对，并生成 `reports/environment_setup/F{N}_{gate_id}_server_to_local_sync_manifest.tsv`；存在任何missing、size_mismatch或sha256_mismatch时禁止删除服务器。Claude Code审核后，由用户决定是否批准进入下一步。
+
+### 文本编码和跨系统可读性
+
+所有正式文本、脚本、Markdown、TSV、CSV、YAML、JSON和日志文件必须使用UTF-8编码保存。Windows PowerShell读取或写入中文文本时必须显式使用 `-Encoding UTF8`；R/Python脚本读写文本时应显式指定 `encoding = "UTF-8"` 或 `encoding="utf-8"`。WSL、Linux服务器和容器应设置或记录 `LANG=C.UTF-8` 或等价UTF-8 locale。机器可读表格的列名优先使用ASCII英文，中文说明放在note或Markdown报告中。若发现乱码、不可解析字符或跨系统换行/编码不一致，必须先修复并记录，不得继续基于损坏文本执行分析。
+
+### 大文件下载和资源校验
+
+大文件、慢速下载、需要断点续传或下载失败会阻断后续分析的资源，不得混在方案文本修改、代码重构或结果解读同一轮中临时下载。必须作为独立资源准备任务处理：先生成下载计划和预期大小/checksum清单，使用专门脚本、断点续传、日志、manifest和校验规则；下载完成后再更新资源状态。未完成大小校验、MD5/SHA256或gzip/readability检查的资源只能标记为pending或partial，不得进入主分析或被写成available。GSE239676和SRP444325的当前下载入口以 `scripts/download_resources/`、`reports/download_resources/` 和 `logs/download_resources/` 为准。
 
 ### 审计分层
 
@@ -160,7 +184,7 @@ claim_evidence_matrix.tsv 不在 1a 阶段强制生成。建议在 F0-F8 分析�
 
 ### 本项目的主要循环风险链
 
-F2（MLMOD 签名构建与特异性验证）→ F5（从 MLMOD 亚群筛选核心基因）→ F6（用核心基因构建 bulk signature）→ F7（用 signature 做预后验证）
+F2（MLMOD签名、主分数和高低状态）→ F2.3/F3/F4（用该状态发现marker、通路和LR轴）→ F5（综合上游证据筛选核心基因）→ F6/F7/F8（用核心基因继续做免疫、多组学和单基因分析）
 
 **风险：如果 MLMOD 签名实际上主要捕获了通用应激/氧化磷酸化信号，那么 F5-F7 的整条链都是在验证这个偏差，而不是独立发现。**
 
@@ -169,11 +193,12 @@ F2（MLMOD 签名构建与特异性验证）→ F5（从 MLMOD 亚群筛选核�
 | 检验位置 | 检验内容 | 不通过时的后果 |
 |---------|---------|-------------|
 | F2 | MLMOD score vs 参照签名（OXPHOS / hypoxia / apoptosis）相关性 | specificity_status 降级，影响全项目解释上限 |
-| F2 | MLMOD score vs nCount_RNA / nFeature_RNA / percent.mt 相关性 | 如果主要由技术因素驱动，需回归掉技术因素后重新评估 |
+| F2 | MLMOD score vs nCount_RNA / nFeature_RNA / percent.mt 相关性 | 如果主要由技术因素驱动，先回查QC、signature和输入层；不得机械回归后宣称问题消失 |
 | F2.3 | 残差分析：去除参照签名贡献后 MLMOD 残差是否仍有生物学意义 | 如果残差无意义，MLMOD 不具有独立性 |
-| F5→F6 | F6 signature 基因与 MLMOD 打分基因的重叠比例 | 如果 > 50% 重叠，标记循环定义风险 |
-| F6 | 去除通用应激通路基因后 signature 预后效力 | 如果去除后失效，预后价值来自通用应激而非 MLMOD 特异性 |
-| F7 | 至少一个队列中调整肿瘤纯度（ESTIMATE/EPIC）后 signature 显著性 | 如果调整后消失，可能只反映样本细胞组成差异 |
+| F4 | LR轴中的配体/受体是否直接属于MLMOD signature或F2 marker | 样本层主证据必须标记循环定义；严重重叠最多探索性 |
+| F5 | 核心基因是否因同一F2/F3证据重复提升层级 | 同一来源不得在证据分层或tie-break中重复计入 |
+| F6/F7/F8 | 是否复用同一bulk队列、同一scRNA reference或同一状态定义并称为新增验证 | 标记same_data_method_robustness，不得升级独立证据等级 |
+| 外部验证 | 验证队列是否反向参与signature、参数、阈值、候选或排序规则选择 | 一旦参与即不再是最终验证队列，必须另找独立数据 |
 
 ### 1b 总体大纲审核时的跨节追溯
 
@@ -202,16 +227,26 @@ F2（MLMOD 签名构建与特异性验证）→ F5（从 MLMOD 亚群筛选核�
 
 ## 11. QC 要求（由 F0 审计结论驱动，不写死）
 
-* Doublet 检测：F0 先确认数据集是否已有 doublet 检测结果及其可信度；若需独立重做，推荐 scDblFinder，在 clustering 之前完成
+* Doublet 检测：F0 先确认数据集是否已有 doublet 检测结果及其可信度；若需独立重做，scDblFinder按样本作为预注册主方法，DoubletFinder仅作敏感性/异常复核；不要把Xi & Li 2021错误归因为“scDblFinder综合最优”
 * Ambient RNA 校正：F0 先评估 cross-expression 水平和原作者校正记录；若需补做，推荐 DecontX/SoupX，在归一化之前完成
 * 其他 QC 步骤：不预设"必须做"或"可以跳过"，根据 F0 审计报告中的具体发现决定
 
 ## 12. 差异表达
 
-* Pseudobulk：所有涉及差异表达的分析使用 patient 级 pseudobulk 聚合 + DESeq2
+* Pseudobulk：所有涉及差异表达的分析必须避免 cell-level 伪重复；优先使用 sample/patient 级 pseudobulk 聚合或样本级模型；DESeq2 仅限 raw/integer count 或获批 tximport 兼容输入，processed microarray、count-like 小数矩阵或其他数据类型按主线方案使用获批模型
 * CNV 独立报告：inferCNV 和 CopyKAT 结果分别报告，不合并为统一 support level
+* inferCNV按sample_id × epithelial_cluster_id解释；CopyKAT逐样本运行；两者同源于RNA表达，只提供方法稳健性而非独立DNA验证
+* sample_id固定/随机效应按设计决定：同一样本内高低状态可用`~ sample_id + state`；condition与sample完全嵌套时不得使用秩亏的`~ condition + sample_id`；混合模型不是pseudobulk的自动上位替代
 
 ## 13. 签名冻结
 
 * 签名冻结在 bulk 验证前：防止 p-hacking
-* interaction_padj 不显著不阻断基因集构建，只用于 Tier 分层/排序
+* GSE235046/SRP444325：F2.1主路线是获批后SRA重处理（STAR/RSEM/tximport/DESeq2）；GEO公开小数count-like表只能作为limma-voom条件fallback，不得四舍五入后作为主DESeq2输入
+* interaction/Torin rescue 不决定主signature准入，只作为annotation字段；主signature按原文三比较标准和目标数据适用性冻结
+* UCell为单细胞MLMOD唯一主分数，MLMOD_Score固定等于UCell_MLMOD_score，主maxRank冻结为1500；AUCell为关键rank-based敏感性，aucMaxRank = ceiling(0.05 × nGenes)，AddModuleScore、singscore、条件性ssGSEA/JASMINE为其他敏感性；不做多算法平均或投票
+* F2采用两层筛选：第一层在全细胞主要大类中筛查MLMOD信号分布，输出F2_candidate_cell_class_decision.tsv并暂停等待研究者批准；第二层只在获批候选大类内部定义MLMOD-high/low状态。当前主线优先假设为malignant_epithelial_main，但必须接受第一层反证；若主要信号不在恶性上皮，不得强行沿恶性上皮路线执行。F1完全不使用MLMOD分数、基因集或预后信息参与聚类、注释和恶性判定。
+* 主线MLMOD-high/low定义优先采用patient-stratified top/bottom 20%；patient_id不可用或不足时使用sample-stratified top/bottom 20%。Global阈值（Q3、top10%、mixture交叉点等）只作敏感性或展示。主对照为MLMOD_low_reference，中间60%为intermediate，不进入主high-vs-low DE。
+* Ferroptosis / lipid oxidation / lipid peroxidation为主机制支持模块，用于判断MLMOD-high是否更接近线粒体局部膜氧化损伤活性状态；基因集优先来自MSigDB GOBP_FERROPTOSIS、GOBP_LIPID_OXIDATION、FerrDb最新版和Cell 2025原文机制锚点。Cuproptosis和pyroptosis为对照/混杂死亡方式模块，不得与ferroptosis/lipid peroxidation平级作为主线机制结论；pyroptosis在髓系细胞分析中尤其需要作为控制模块。Apoptosis、necroptosis、stress、cell cycle、ribosomal、MT_transcript_burden等为其他对照/混杂模块。
+* 主分析不默认删除MT-encoded genes，但必须计算MLMOD_Score_no_MT_encoded，即从冻结签名中排除^MT-基因后用相同UCell参数重新打分。必须计算MT_transcript_burden_score作为混杂/解释变量，禁止命名为MLMOD_score_MT_encoded_only。若MLMOD_Score full高但no_MT_encoded后完全消失，解释必须降级为mitochondrial transcript burden-associated state。
+* F2.3必须输出MLMOD_mechanism_interpretation_matrix.tsv，按证据强度决定允许使用的最高表述。只有no_MT_encoded稳定、ferroptosis/lipid peroxidation支持，且cuproptosis/pyroptosis/apoptosis/stress/QC/patient bias均不能解释，并且bulk验证通过时，才允许最高表述为prognosis-associated MLMOD-high state。
+* 最终验证队列不得参与signature、主参数、阈值、候选或排序规则调整

@@ -1,0 +1,475 @@
+﻿Codex 会话增量上下文导出
+文件用途：before_F4.6_round
+会话 ID：019e68d9-9638-7951-8246-0187f2d19091
+源文件：C:\Users\14799\.codex\sessions\2026\05\27\rollout-2026-05-27T17-52-30-019e68d9-9638-7951-8246-0187f2d19091.jsonl
+指定文件名：before_F4.6_round.txt
+基准已有消息最大编号：706
+当前可见消息总数：759
+本次增量消息数：53（你 8 条，Codex 45 条）
+导出时间：2026-06-08 22:57:12 Asia/Shanghai
+
+整理说明：仅保留你和 Codex 在界面中可见的新增消息；已排除系统/开发者指令、environment_context、工具调用与输出。
+
+================================================================================
+
+[707] 你 | 2026-06-08 22:11:32 Asia/Shanghai
+继续挑刺F4.4
+
+--------------------------------------------------------------------------------
+
+[708] Codex | 2026-06-08 22:11:50 Asia/Shanghai
+我继续只挑刺 F4.4，不改文件。F4.4的核心风险是“PM n=3 + merged CellChat比较”很容易被误写成转移特异通讯机制，所以我会重点看方向性比较、缺失细胞群、liftCellChat异常和样本量边界是否够硬。
+
+--------------------------------------------------------------------------------
+
+[709] Codex | 2026-06-08 22:12:27 Asia/Shanghai
+**F4.4总体判断**
+F4.4现在已经把“PM仅3个样本”写进去了，这是对的。但它仍然偏薄：只说“方向性比较”，没有把“什么能比、怎么比、比出来后能说什么”钉死。这里最危险的误解是：把 `primary_tumor_CellChat` vs `peritoneal_metastasis_CellChat` 的网络差异写成“腹膜转移中特异增强通讯机制”。
+
+**按12维度挑刺**
+1. **科学假设与逻辑链**
+   F4.4要比较的不是普通Primary vs PM通讯，而是“高MLMOD恶性上皮相关通讯在PM中是否方向性增强”。现在没有明确比较对象必须锚定 `Malignant_epithelial_MLMOD_high`。建议规定只比较以下轴：高MLMOD恶性上皮作为sender、receiver，或F4.3锁定的候选LR/pathway。
+
+2. **统计方法学**
+   `prob_primary`、`prob_PM`、`delta_PM_minus_primary` 只是CellChat对象层描述值，不是样本层差异统计。表里应加 `is_descriptive_delta_only`、`requires_sample_level_confirmation`、`sample_level_PM_support_status`。
+
+3. **操作可行性**
+   PM对象可能没有足够高MLMOD细胞或TME target细胞。现在只说PM缺少TME群体，但没说高MLMOD source本身不足怎么办。建议加：若PM中高MLMOD source <50细胞或覆盖<2-3个PM样本，相关比较直接 `not_interpretable`。
+
+4. **内部一致性**
+   F4.2已把 `primary_tumor_CellChat` 定为主机制对象，F4.4应明确它只是“PM方向性补充”，不能影响F4主机制结论等级。现在这层关系还不够硬。
+
+5. **解释边界**
+   `directional_support` 这个词对PM n=3可能偏强。建议改成或补充定义为 `directional_observation`，并说明PM比较不能产生强统计支持，只能用于提出后续验证假设。
+
+6. **样本量与统计功效**
+   表里没有 `n_primary_samples`、`n_pm_samples`、`n_pm_samples_with_high_source`、`n_pm_samples_with_target`。这几个字段必须有，否则看不出方向性来自3个PM样本中的几个。
+
+7. **执行环境与容错**
+   已有 `merge_failed_independent_comparison_used`，不错。但还应加：即使merge成功，也要输出 `merged_object_diagnostics`，记录是否存在空群、NaN、缺失pathway、细胞群不对齐。
+
+8. **循环定义风险**
+   F4.3已经加了signature重叠字段，F4.4表也应继承这些字段：`ligand_is_MLMOD_signature_gene`、`receptor_is_MLMOD_signature_gene`、`signature_leakage_warning`。
+
+9. **跨文件引用一致性**
+   F4.4应明确只比较F4.3中 `result_tier` 至少为 `directional_support` 或研究者批准关注的候选通讯轴，而不是重新扫描所有PM差异找亮点。否则有p-hacking风险。
+
+10. **gate逻辑闭合**
+   F4.4没有阻断条件。建议写：如果PM对象高MLMOD source不足、关键TME target缺失、或merged对象异常，则F4.4结果为 `not_interpretable`，但不阻断F4.5主线样本层验证。
+
+11. **Biomni交付规则**
+   需要新增一个小表：`F4_primary_vs_PM_object_diagnostics.tsv`，记录两个对象的细胞群、样本覆盖、可比性、merge/lift状态、异常。否则只看最终directional table不够审计。
+
+12. **F大节边界与审批流程**
+   如果Biomni想把PM方向性结果提升为F4核心发现，必须请求批准。默认不能因为PM图好看就改变F4主叙事。
+
+**建议修改重点**
+- 新增 `F4_primary_vs_PM_object_diagnostics.tsv`。
+- F4.4比较对象限定为高MLMOD相关通讯轴，优先F4.3候选。
+- `F4_primary_vs_PM_directional_comparison.tsv` 增加样本覆盖、signature leakage、描述性delta标记、样本层支持状态。
+- 把PM解释层级限制为 `directional_observation / exploratory_only / not_interpretable`，不要让PM n=3产生强支持措辞。
+- 明确PM结果只能作为后续验证假设，不改变F4主机制结论。
+
+--------------------------------------------------------------------------------
+
+[710] 你 | 2026-06-08 22:13:59 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[711] Codex | 2026-06-08 22:14:25 Asia/Shanghai
+我来把F4.4改成“PM方向性补充”而不是“PM机制比较”。重点补一个对象诊断表、限制只比较F4.3候选通讯轴，并把PM结果等级从强支持里拿出来。
+
+--------------------------------------------------------------------------------
+
+[712] Codex | 2026-06-08 22:14:34 Asia/Shanghai
+我会替换F4.4两段，并同步改F4.6的输出清单和gate条件，让对象诊断表成为必交付物。
+
+--------------------------------------------------------------------------------
+
+[713] Codex | 2026-06-08 22:15:04 Asia/Shanghai
+F4.4正文已更新。现在把 `F4_primary_vs_PM_object_diagnostics.tsv` 加入F4.6输出清单，并在gate条件里明确PM对象诊断和方向性解释边界。
+
+--------------------------------------------------------------------------------
+
+[714] Codex | 2026-06-08 22:15:46 Asia/Shanghai
+我会做一轮机械检查和同步，确认新增PM诊断表、解释等级和哈希都没问题。
+
+--------------------------------------------------------------------------------
+
+[715] Codex | 2026-06-08 22:16:04 Asia/Shanghai
+已按建议修改 F4.4，并同步到两个路径。
+
+这次主要补了：
+
+- 明确 F4.4 只是 PM 方向性补充，不改变 F4 主机制结论等级。
+- 限定 F4.4 只能比较 F4.3 已锁定或你批准关注的高MLMOD相关通讯轴，不允许重新扫描 Primary vs PM 差异挑亮点。
+- 新增 `F4_primary_vs_PM_object_diagnostics.tsv`，用于审计 Primary/PM 两个对象的样本数、细胞群可比性、merge/lift 状态、空群/NaN等问题。
+- `F4_primary_vs_PM_directional_comparison.tsv` 增加 PM 样本覆盖、signature leakage、描述性delta、样本层PM支持状态等字段。
+- PM解释等级改为 `directional_observation`、`exploratory_only`、`not_interpretable`，禁止用 `candidate_main_supported` 或 `statistical_support` 描述PM方向性比较。
+- Gate条件加入“PM比较未被写成强统计结论或腹膜转移特异机制”。
+
+检查通过：`[TABLE]` 和 `[/TABLE]` 仍为 `16/16`。
+两个路径文件SHA256一致：`DA6F08AB056DA4600856B36B52984296AFAAD5211D091FE7214D010ACB985786`
+
+--------------------------------------------------------------------------------
+
+[716] 你 | 2026-06-08 22:16:59 Asia/Shanghai
+挑刺F4.5
+
+--------------------------------------------------------------------------------
+
+[717] Codex | 2026-06-08 22:17:18 Asia/Shanghai
+我继续只挑刺 F4.5，不改文件。F4.5是把CellChat候选轴拉回样本层证据的关键防线，所以我会重点看它能不能真正防伪重复、能不能和F4.3分层闭合，以及LR support score会不会被过度解释。
+
+--------------------------------------------------------------------------------
+
+[718] Codex | 2026-06-08 22:17:47 Asia/Shanghai
+**F4.5总体判断**
+F4.5已经抓住了关键点：把CellChat候选结果拉回 `sample_id` 层验证，这是必要的。但现在还不够细，主要问题是“样本层LR support到底怎么构建比较单位”没有完全说清。如果Biomni理解错，很可能又退回到细胞层平均或伪重复。
+
+**按12维度挑刺**
+1. **科学假设与逻辑链**
+   现在默认用 ligand/receptor表达乘积近似通讯潜力，这只是“表达共现支持”，不是通讯发生。建议再明确：F4.5只能回答“CellChat候选轴在样本层是否有表达支持”，不能证明细胞实际互作、空间邻近或蛋白水平互作。
+
+2. **统计方法学**
+   `sample_id` 层比较还没定义清楚“每个样本一行”的构建规则。应明确：每个 `sample_id + source_celltype + target_celltype + LR` 最多生成一个主线 `lr_support_score`。不能让一个样本因为有更多细胞或更多cluster而贡献多行。
+
+3. **操作可行性**
+   对某些LR，某样本可能缺source或target细胞。现在只说样本数不足给方向性结果，但没规定缺失怎么处理。建议加：缺source或target时该样本对应LR为 `not_evaluable`，不要填0；只有确实source/target存在但表达为0时才是0。
+
+4. **内部一致性**
+   F4.3有 `sample_level_support_status`，F4.4有 `sample_level_PM_support_status`，F4.5表里没有明确输出这些状态如何回填到F4.3/F4.4结果。建议要求输出一个 `F4_LR_support_status_update.tsv` 或在F4_sample_level_LR_support.tsv中加入 `updates_F4_result_id`。
+
+5. **解释边界**
+   已经写了LR support score是描述性指标，很好。但还应要求所有图注不得写“validated communication”，只能写“sample-level expression support”。
+
+6. **样本量与统计功效**
+   F4.5没要求记录实际参与比较的样本数，比如 `n_samples_high_evaluable`、`n_samples_low_evaluable`、`n_paired_samples_evaluable`。这必须加，否则 `p_value/effect_size` 看不出基础。
+
+7. **执行环境与容错**
+   这里计算不重，但容易因为矩阵层、细胞ID、source/target缺失出错。建议加 `F4_LR_support_input_audit.tsv`，记录表达矩阵layer、候选LR数量、可评估LR数量、缺失基因、缺source/target样本数。
+
+8. **循环定义风险**
+   F4.5表里没有继承 `ligand_is_MLMOD_signature_gene`、`receptor_is_MLMOD_signature_gene`、`signature_leakage_warning`。应该加，否则F4.3标记了，样本层支持却可能又把风险洗掉。
+
+9. **跨文件引用一致性**
+   F4.5说“对于F4.3和F4.4筛出的重点LR或pathway”，但应明确输入文件来自 `F4_high_vs_low_communication_results.tsv`、`F4_candidate_pathway_review.tsv`、`F4_primary_vs_PM_directional_comparison.tsv`，且只处理结果层级不是 `not_interpretable` 的候选。
+
+10. **gate逻辑闭合**
+   如果F4.5与F4.3方向冲突，现在说降级解释，但没有要求回写到F4.3 `result_tier`。建议必须生成一个最终整合表，例如 `F4_final_candidate_communication_axes.tsv`，作为F4最终可引用结果。
+
+11. **Biomni交付规则**
+   敏感性表名有了，但字段没定义。`F4_CellChat_sensitivity_triMean_vs_truncatedMean.tsv`、`F4_low_reference_communication_sensitivity.tsv`、`F4_primary_tumor_internal_consistency.tsv` 至少应有对象、LR/pathway、方向、是否一致、降级原因等字段。
+
+12. **F大节边界与审批流程**
+   如果F4.5发现主线候选全都没有样本层支持，Biomni不能继续写“通讯机制支持MLMOD”，应暂停并将F4 gate降级为 `PASS_WITH_NOTED_LIMITATIONS` 或 `FAIL`，等待研究者确认后再进入F5叙事。
+
+**建议修改重点**
+- 新增 `F4_LR_support_input_audit.tsv`。
+- 新增或定义 `F4_final_candidate_communication_axes.tsv`，作为F4最终引用表。
+- 明确每个样本每个LR只贡献一个score，缺source/target是 `not_evaluable`，不是0。
+- `F4_sample_level_LR_support.tsv` 增加可评估样本数、signature leakage字段、`updates_F4_result_id`。
+- 定义三个敏感性表字段。
+- 若F4.5推翻F4.3方向，必须回写降级，不允许只在报告里轻描淡写。
+
+--------------------------------------------------------------------------------
+
+[719] 你 | 2026-06-08 22:20:34 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[720] Codex | 2026-06-08 22:20:55 Asia/Shanghai
+我来把F4.5改成真正的“样本层证据整合层”。这一步会新增输入审计表和最终候选通讯轴表，重点防止Biomni把细胞层平均、缺失target填0、或未回写降级的结果混进最终叙事。
+
+--------------------------------------------------------------------------------
+
+[721] Codex | 2026-06-08 22:21:12 Asia/Shanghai
+我会替换F4.5三段，并顺带把F4.6输出清单、gate条件和F4→F5交接改成引用最终整合表。这样F4最终能交出一个“哪些通讯轴可用、哪些被降级”的单一入口。
+
+--------------------------------------------------------------------------------
+
+[722] Codex | 2026-06-08 22:22:10 Asia/Shanghai
+F4.5正文已经重构。现在我把新增的 `F4_LR_support_input_audit.tsv`、`F4_LR_support_status_update.tsv`、`F4_final_candidate_communication_axes.tsv` 加入输出清单和gate条件，并把F4→F5改为从最终表交接。
+
+--------------------------------------------------------------------------------
+
+[723] Codex | 2026-06-08 22:22:49 Asia/Shanghai
+补丁没贴上，是因为F4.5重构后行号和文字已经变化。我重新读取F4.6当前三行，按现文精确替换。
+
+--------------------------------------------------------------------------------
+
+[724] Codex | 2026-06-08 22:23:01 Asia/Shanghai
+我现在用精确行内容替换F4.6三条，确保新增输出和最终交接表都进入gate。
+
+--------------------------------------------------------------------------------
+
+[725] Codex | 2026-06-08 22:23:48 Asia/Shanghai
+F4.6也补齐了。现在我做关键词检查、表格闭合检查，并同步到WPS路径核对哈希。
+
+--------------------------------------------------------------------------------
+
+[726] Codex | 2026-06-08 22:24:08 Asia/Shanghai
+已按建议修改 F4.5，并同步到两个路径。
+
+主要补强点：
+
+- 新增 `F4_LR_support_input_audit.tsv`：审计候选LR、表达层、缺失基因、缺source/target等。
+- 明确每个 `sample_id + source + target + LR` 最多贡献一个主线 `lr_support_score`，防止伪重复。
+- 缺少source或target时标记 `not_evaluable`，不能填0；只有source/target存在但表达为0时才可为0。
+- `F4_sample_level_LR_support.tsv` 增加可评估样本数、signature leakage、`updates_F4_result_id` 等字段。
+- 新增 `F4_LR_support_status_update.tsv`，要求把样本层结果回写并降级F4.3/F4.4候选轴。
+- 定义敏感性表字段：triMean vs truncatedMean、low_reference、Primary内部一致性、06b敏感性。
+- 新增最终入口表 `F4_final_candidate_communication_axes.tsv`，F4最终可引用通讯结果必须以它为准。
+- F4→F5交接也改为只参考最终表中 `final_result_tier` 合格且 `final_include_for_F5_F8 = TRUE` 的LR/通路。
+
+检查通过：`[TABLE]` 和 `[/TABLE]` 仍为 `16/16`。
+两个路径文件SHA256一致：`5D6F10CAD98A5AA41877856F59CAAD5080283468E6FF71BF558884AA0563EFBE`
+
+--------------------------------------------------------------------------------
+
+[727] 你 | 2026-06-08 22:24:15 Asia/Shanghai
+挑刺F4.6
+
+--------------------------------------------------------------------------------
+
+[728] Codex | 2026-06-08 22:24:32 Asia/Shanghai
+我来只挑刺 F4.6，不改文件。F4.6是总出口，重点不是方法本身，而是“输出清单、gate结论、F4→F5交接”有没有闭合，避免前面F4.1-F4.5都写严了，最后出口却让Biomni钻空子。
+
+--------------------------------------------------------------------------------
+
+[729] Codex | 2026-06-08 22:26:38 Asia/Shanghai
+我会按你给的 12 维框架挑 F4.6，但这一节是“交付与 gate”，所以重点会放在输出闭合、条件文件、失败定义、F4→F5 审批边界这些容易实际执行时出问题的地方。
+
+--------------------------------------------------------------------------------
+
+[730] Codex | 2026-06-08 22:26:50 Asia/Shanghai
+我先看了原文定位，F4.6 现在已经覆盖了很多核心表，但我看到它把“文件清单”和“gate判定”写在同一层，后面执行时最容易出歧义。下面我直接挑刺。
+
+--------------------------------------------------------------------------------
+
+[731] Codex | 2026-06-08 22:27:16 Asia/Shanghai
+F4.6 总体方向对，但我不建议直接定稿。它现在像“结果清单”，还不够像一个可审计的最终 gate。主要问题在这里：
+
+1. **缺少总输出 manifest**
+   F4 通用规则里提到 manifest/checksum，但 F4.6 的必交付清单没有明确写 `F4_output_file_manifest.tsv`。这会导致 Codex 审计时只能靠肉眼对文件夹。建议加字段：`file_name`、`source_step`、`required_or_conditional`、`condition`、`exists`、`sha256`、`file_size`、`blocking_if_missing`、`acceptable_missing_reason`。
+
+2. **条件文件逻辑还不闭合**
+   例如 `F4_low_reference_communication_sensitivity.tsv`、`F4_CellChat_06b_sensitivity.tsv`、PM CellChat object 都是“若满足/若执行”。但 gate 没要求 Biomni 解释“为什么没输出”。需要新增 `F4_conditional_output_status.tsv`，否则缺文件时无法区分“合理未执行”和“Biomni漏交”。
+
+3. **PASS / PASS_WITH_NOTED_LIMITATIONS / FAIL 没有硬定义**
+   现在说如果全无支持要 pause，但 F4.6 gate 没定义最终状态。建议区分：
+   - `PASS`：主对象成功，最终表完整，至少有可进入 F5-F8 的 candidate/directional axis。
+   - `PASS_WITH_NOTED_LIMITATIONS`：技术流程完成，但候选弱、PM不足、样本层不支持或只能探索性解释。
+   - `FAIL`：关键输入/标签/对象构建/最终表缺失，或 fallback 未经批准。
+   还要明确：**生物学阴性结果不是技术失败**。
+
+4. **F4→F5 审批边界不够硬**
+   现在写了 F5 可否引用 F4，但没有明确“Biomni 生成 `F4_gate_cellchat_report.md` 后必须暂停，等待研究者批准后才进入 F5”。这个要加，不然网页版 agent 容易自动往后跑。
+
+5. **图表缺少 source data 交付**
+   图4-1到图4-10列出来了，但没要求每张图对应源数据。建议加 `F4_figure_source_data_manifest.tsv`，并要求每张图对应的 TSV/RDS/参数来源写清楚。否则图好看但不可复核。
+
+6. **最终 gate report 内容要更具体**
+   `F4_gate_cellchat_report.md` 不能只是“通过/不通过”。应强制包括：对象状态、候选轴数量、各 tier 数量、被降级原因、样本层支持结果、confounding/signature leakage、PM解释边界、可进入 F5-F8 的轴清单。
+
+7. **“所有已构建 CellChat 对象”表述仍偏模糊**
+   这句话对人能理解，对 Biomni 不够稳。建议由 `F4_CellChat_object_manifest.tsv` 明确每个对象：`object_name`、`object_role`、`expected_or_conditional`、`condition_status`、`rds_path`、`n_cells`、`n_groups`、`db_category_strategy`、`cellchat_version`、`usable_for_interpretation`。
+
+8. **解释边界要写进 gate 通过条件**
+   F4.6 应要求报告和图注不得出现“验证通讯”“证明机制”“PM特异机制”这类措辞，只能说“CellChat预测”“样本层表达支持”“候选通讯轴”。
+
+我的判断：F4.6 框架已经基本可用，但还需要补上 **总manifest、条件输出状态表、gate状态定义、F4→F5审批暂停、图表源数据manifest** 这五块。否则后面审计时最容易卡在“文件到底是没做、不能做、还是漏交”的问题上。
+
+--------------------------------------------------------------------------------
+
+[732] 你 | 2026-06-08 22:33:21 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[733] Codex | 2026-06-08 22:33:35 Asia/Shanghai
+我来把 F4.6 改成更“可审计”的 gate：补 manifest、条件输出状态、PASS/限制通过/失败定义，以及 F4 结束后的强制暂停审批。
+
+--------------------------------------------------------------------------------
+
+[734] Codex | 2026-06-08 22:33:52 Asia/Shanghai
+准备动 F4.6 这几段：我会保留原来的输出清单，但把它拆成“必交付、条件交付、对象清单、gate状态、F4→F5交接”几个更硬的规则，避免 Biomni 执行时靠自由发挥。
+
+--------------------------------------------------------------------------------
+
+[735] Codex | 2026-06-08 22:34:51 Asia/Shanghai
+F4.6 已改完本地版本。现在我同步到 WPS 路径，并做一次结构和哈希检查，防止两份文件漂移。
+
+--------------------------------------------------------------------------------
+
+[736] Codex | 2026-06-08 22:35:04 Asia/Shanghai
+我发现自己刚才引入了一个小不一致：前面限定 gate 只能有三种状态，后面又写了 `PASS_NO_POSITIVE_AXIS`。这个会扰乱 Biomni，我马上收掉，改成三态内的备注。
+
+--------------------------------------------------------------------------------
+
+[737] Codex | 2026-06-08 22:35:35 Asia/Shanghai
+不一致已修正。再同步并复核一次哈希。
+
+--------------------------------------------------------------------------------
+
+[738] Codex | 2026-06-08 22:35:55 Asia/Shanghai
+已按刚才的挑刺修改 F4.6，并同步到两份文件：
+
+- [本地方案 txt](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+- [WPS 同步方案 txt](D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群主线研究方案.txt)
+
+主要改动：补了 `F4_output_file_manifest.tsv`、`F4_conditional_output_status.tsv`、`F4_figure_source_data_manifest.tsv`；明确了条件文件缺失如何解释；定义了 `PASS / PASS_WITH_NOTED_LIMITATIONS / FAIL`；强化了 `F4_gate_cellchat_report.md` 必须包含的审计内容；并写明 F4.6 完成后 Biomni 必须暂停，等研究者批准后才能进入 F5。
+
+复核结果：`[TABLE]` 数量仍为 `16/16`，两路径 SHA256 一致：`D5527BC2022AD56AB99B7EA15ABC337DF4CC3F884AB9BF68A9A48EE681513350`。
+
+--------------------------------------------------------------------------------
+
+[739] 你 | 2026-06-08 22:40:34 Asia/Shanghai
+审一遍F4
+
+--------------------------------------------------------------------------------
+
+[740] Codex | 2026-06-08 22:40:52 Asia/Shanghai
+我来按我们现在的 12 维框架把整个 F4 从目标、输入、对象构建、结果解释、样本层支持到 gate 交接重新审一遍。先只审，不改；如果发现硬伤，我会明确区分“必须改”和“可优化”。
+
+--------------------------------------------------------------------------------
+
+[741] Codex | 2026-06-08 22:41:01 Asia/Shanghai
+刚才一次读取被中间的 F3 长段截断了一部分。我现在单独抓 F4 起始到 F4.3，避免漏审早段逻辑。
+
+--------------------------------------------------------------------------------
+
+[742] Codex | 2026-06-08 22:41:16 Asia/Shanghai
+我读完 F4 主体了。现在会额外做一个一致性扫查，主要看它引用的上游 gate、输出文件、状态名有没有前后打架。
+
+--------------------------------------------------------------------------------
+
+[743] Codex | 2026-06-08 22:42:37 Asia/Shanghai
+我审完 F4，结论是：**整体逻辑已经很强，但还不能定稿**。现在最大问题不是 CellChat 本身，而是几个执行时会让 Biomni 产生“时间顺序错乱”或“字段解释错”的点。
+
+**必须改**
+1. **F4.3 的 tier 判定提前使用了 F4.5 结果**
+   [F4.3](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:612) 里 `candidate_main_supported` 要求 F4.5 样本层支持一致，但 F4.5 还没运行。F4.4 又要用 F4.3 的 `candidate_main_supported/directional_support` 做输入，这形成时间顺序矛盾。
+   建议：F4.3 只输出 `preliminary_cellchat_tier`，样本层状态写 `pending_F4.5`；最终 `candidate_main_supported` 只能在 F4.5 回写后进入 `F4_final_candidate_communication_axes.tsv`。
+
+2. **配体/受体复合物处理缺失**
+   [F4.5](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:623) 默认 `ligand`、`receptor` 像单基因，但 CellChat 很多 receptor 是复合体，例如 TGFB receptor、MHC、integrin 相关轴。不能把复合物名字当成一个基因算表达。
+   建议增加字段：`ligand_subunits`、`receptor_subunits`、`complex_handling_rule`、`missing_subunits`、`complex_expression_score`。复合体表达默认用 subunit 几何均值或最小值，并记录规则。
+
+3. **F4.2 对象/参数执行计划没有落成文件**
+   [F4.2](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:599) 要求 Biomni 提交对象与参数计划并获批，但 F4.6 输出清单没有这个文件。审计时会找不到“批准前计划”。
+   建议新增 `F4_cellchat_object_parameter_plan.md/tsv`，并写入 manifest。
+
+4. **F4.1 的样本覆盖门槛仍有一点含糊**
+   [F4.1](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:596) 同时有 `n_primary_samples`、`n_pm_samples`、`n_samples_total`，但 `allowed_in_main_CellChat` 不够明确。主机制对象是 Primary_Tumor，不能用 total sample coverage 掩盖 Primary 覆盖不足。
+   建议拆成 `allowed_in_primary_tumor_CellChat`、`allowed_in_tumor_main_CellChat`、`allowed_in_PM_directional_comparison`。
+
+5. **F4.3 高低比较字段对 receiver 场景不够清楚**
+   [F4.3](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:612) 字段 `source_high_or_low` 对“高MLMOD作为 receiver”的比较会误导。
+   建议改为 `focus_role`、`focus_celltype`、`focus_MLMOD_group`，再保留 `source_celltype`、`target_celltype`。
+
+6. **F4.0 对上游 F3 的依赖略过强**
+   [F4.0](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:588) 要求 F3.1/F3.2/F3.3 都完成或降级。实际上 F4核心只依赖 F2 标签，F3.1/SCENIC只是 enrich candidate review，F3.2拟时序不是硬输入。
+   建议写成：F2高MLMOD标签是硬依赖；F3结果若缺失，则对应 prior 字段记为 `not_available_due_to_upstream_not_completed_or_failed`，不阻断 F4，经研究者批准可继续。
+
+**建议优化**
+7. `F4_cell_group_size_by_sample.tsv` 被多次要求输出，但没有字段定义，建议补字段，否则 Biomni 可能随意生成。
+
+8. `nboot = 100` 严谨，但网页版 Biomni 可能超时。建议允许 `nboot = 50` 作为获批降级敏感性路径，不能默认降级。
+
+9. 样本层 LR support score 需要强调只能在同一 LR axis 内比较 high vs low，不能跨不同 LR 对比较绝对大小；否则不同基因表达量尺度会误导排序。
+
+10. F4.6 现在已经很稳，但 `PASS_WITH_NOTED_LIMITATIONS` 中“没有可信通讯轴”的情况建议在最终报告里单独标记 `no_positive_axis = TRUE`，方便后面 F5-F8 不误引用。
+
+我的判断：F4 的科学边界、PM限制、样本层支持、manifest 和 gate 设计都已经到位；真正需要动刀的是 **F4.3→F4.4→F4.5 的时间顺序、复合体 LR 处理、F4.2计划文件化、对象覆盖字段拆清楚**。这些不改，Biomni执行时很可能表面跑通，但后面 Codex审计会抓出逻辑不闭合。
+
+--------------------------------------------------------------------------------
+
+[744] 你 | 2026-06-08 22:43:14 Asia/Shanghai
+按你说的改
+
+--------------------------------------------------------------------------------
+
+[745] Codex | 2026-06-08 22:43:33 Asia/Shanghai
+我来按这十条改 F4。重点会动 F4.0、F4.1、F4.2、F4.3、F4.4、F4.5 和 F4.6，尤其把“CellChat初步层级”和“F4最终层级”拆开，避免时间顺序自相矛盾。
+
+--------------------------------------------------------------------------------
+
+[746] Codex | 2026-06-08 22:43:59 Asia/Shanghai
+我会先做局部替换，不重写整段 F4，这样能最大限度保留已经敲定的内容。会特别注意不用新的状态名制造第二轮混乱。
+
+--------------------------------------------------------------------------------
+
+[747] Codex | 2026-06-08 22:44:11 Asia/Shanghai
+我现在开始改文件。第一组改动会把 F4 的硬依赖、标签覆盖字段和对象参数计划先补清楚。
+
+--------------------------------------------------------------------------------
+
+[748] Codex | 2026-06-08 22:45:10 Asia/Shanghai
+第一组已经落地。第二组我会处理最关键的顺序问题：F4.3 改为初步 CellChat 层级，F4.5 回写后才生成最终可引用 tier。
+
+--------------------------------------------------------------------------------
+
+[749] Codex | 2026-06-08 22:46:07 Asia/Shanghai
+第二组完成。第三组处理 LR 复合体和样本层支持，防止把 receptor complex 当单个基因算表达，也补上“同一 LR 轴内比较”的解释边界。
+
+--------------------------------------------------------------------------------
+
+[750] Codex | 2026-06-08 22:47:12 Asia/Shanghai
+复合体处理已经补进去了。最后一组我要补输出清单和 gate 里的字段一致性，尤其加入 `F4_cellchat_object_parameter_plan.tsv`，并把 no_positive_axis 写成正式审计字段。
+
+--------------------------------------------------------------------------------
+
+[751] Codex | 2026-06-08 22:48:21 Asia/Shanghai
+修改已经完成一轮。我现在做一致性扫查，重点找残留的旧字段名和潜在的状态名冲突。
+
+--------------------------------------------------------------------------------
+
+[752] Codex | 2026-06-08 22:48:31 Asia/Shanghai
+旧字段的关键残留没有了。现在我再查 F4 内所有 `result_tier` 和 `preliminary` 出现位置，确认最终 tier 只在 F4.5/F4.6 后出现。
+
+--------------------------------------------------------------------------------
+
+[753] Codex | 2026-06-08 22:48:39 Asia/Shanghai
+刚才命令没显示是因为我跳过了前面结果；我直接限定 F4 区间查看。
+
+--------------------------------------------------------------------------------
+
+[754] Codex | 2026-06-08 22:48:56 Asia/Shanghai
+一致性整体还可以，但我看到一个可以进一步减少执行歧义的点：F4.3/PM导出表也应该带复合体字段，不然 F4.5 虽能从 DB 反查，但审计链不够直。现在补上。
+
+--------------------------------------------------------------------------------
+
+[755] Codex | 2026-06-08 22:49:40 Asia/Shanghai
+我再顺手修一个中文歧义：F4.5 输入筛选里“preliminary_cellchat_tier或interpretation_level不是not_interpretable”容易被误读成任一字段存在即可，我会改成按来源字段分别判断。
+
+--------------------------------------------------------------------------------
+
+[756] Codex | 2026-06-08 22:49:54 Asia/Shanghai
+现在做最终检查：表格标签、关键旧字段残留、两路径同步哈希。
+
+--------------------------------------------------------------------------------
+
+[757] Codex | 2026-06-08 22:50:07 Asia/Shanghai
+哈希一致了。我再快速读一遍 F4 被改动后的核心段落，主要看有没有中文断裂或字段前后不连。
+
+--------------------------------------------------------------------------------
+
+[758] Codex | 2026-06-08 22:50:21 Asia/Shanghai
+最后两处小补丁之后还没同步，我现在重新同步到 WPS 并复核哈希。
+
+--------------------------------------------------------------------------------
+
+[759] Codex | 2026-06-08 22:50:40 Asia/Shanghai
+已按审稿意见修改 F4，并同步到两份 txt：
+
+- [本地方案 txt](D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt)
+- [WPS 同步方案 txt](D:/software/wps/云盘缓存/807350289/WPS云盘/LRY/0Ting/胃癌线粒体死亡亚群方案/胃癌MLMOD亚群主线研究方案.txt)
+
+主要改动包括：把 F4 硬依赖改为 F2 标签，F3 只作为 prior 补充；拆清 `allowed_in_primary_tumor_CellChat / tumor_main / PM`；新增 `F4_cellchat_object_parameter_plan.tsv`；把 F4.3 改成 `preliminary_cellchat_tier`，最终 `candidate_main_supported` 只能由 F4.5 回写后产生；补了 ligand/receptor 复合体处理规则和相关字段；补充 nboot=50 的获批降级路径；并强化最终 gate 的 no_positive_axis、复合体风险和 manifest 审计。
+
+复核结果：`[TABLE]` 数量仍为 `16/16`；两份文件 SHA256 一致：`BD90ABB43E8EBE0EC26E41911A5BB9100DABF2311B606D0B80ECD8E3D72418FE`。
+
+--------------------------------------------------------------------------------

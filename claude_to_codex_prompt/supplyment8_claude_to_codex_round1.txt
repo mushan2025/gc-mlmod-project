@@ -1,0 +1,121 @@
+# Codex修改指令：Supplyment8同步遗漏修复 Round 1
+
+## 背景
+
+Codex在消息1677-1751中完成了大量方法学升级：UCell替代AUCell为主分数、两层筛选结构、patient-stratified high/low定义、ferroptosis主机制模块层级、MT编码基因敏感性、low_reference主对照术语统一等。**主方案文件`胃癌MLMOD亚群主线研究方案.txt`中上述改动已全部正确落实，无需再改。**
+
+问题在于：`conventions.txt`、`AGENT.md`、`project_overview.txt`和`source_links.md`未同步更新，与主方案存在直接矛盾。此外，主方案中HVG作用域缺一句显式禁令。
+
+本prompt共4条修改，均为同步或补漏，不涉及主方案文本的新增或修改。
+
+---
+
+## 第1条：三个辅助文件的AUCell→UCell主分数同步
+
+**问题**：主方案F2.2 TABLE 8（line 563）已将UCell预注册为唯一主分数，AUCell降为key_sensitivity。但以下三处仍写AUCell为主分数，与主方案直接矛盾：
+
+- `conventions.txt:238` — "AUCell为单细胞MLMOD唯一主分数...UCell...只作敏感性"
+- `AGENT.md:249` — "AUCell唯一主方法...UCell...为敏感性"
+- `project_overview.txt:60` — "使用AUCell唯一主分数（主aucMaxRank = 5%可排序基因），UCell...作敏感性"
+
+**修改要求**：
+
+1. 将上述三处全部改为：UCell为唯一单细胞主分数（MLMOD_Score固定等于UCell_MLMOD_score），主maxRank冻结为1500；AUCell为关键rank-based敏感性（aucMaxRank = ceiling(0.05×nGenes)），AddModuleScore/singscore/条件性ssGSEA/JASMINE为其他敏感性；不做多算法平均或投票。
+
+2. `project_overview.txt:60`中对应的管线描述句也须同步替换。
+
+3. 替换后用全文搜索确认三个文件中不再存在"AUCell唯一主"、"AUCell主分数"、"AUCell为主"等旧表述（AUCell作为敏感性被提及是正确的，不需要删除）。
+
+---
+
+## 第2条：三个辅助文件补充本轮新增核心概念
+
+**问题**：主方案已写入以下关键规则，但`conventions.txt`、`AGENT.md`和`project_overview.txt`均完全未反映，导致Codex或新会话读取辅助文件时无法获知当前方法学状态。
+
+**修改要求**：
+
+在三个文件的适当位置（`conventions.txt`的方法学约定区、`AGENT.md`的已达成共识列表、`project_overview.txt`的分析管线描述）补充以下概念，措辞须与主方案一致：
+
+### 2a. 两层筛选结构
+
+- F2采用两层筛选：第一层在全细胞主要大类中筛查MLMOD信号分布，输出F2_candidate_cell_class_decision.tsv并暂停等待研究者批准；第二层只在获批候选大类内部定义MLMOD-high/low状态。
+- 当前主线优先假设为malignant_epithelial_main，但该假设必须接受第一层反证；若主要信号不在恶性上皮，不得强行沿恶性上皮路线执行。
+- F1完全不使用MLMOD分数、基因集或预后信息参与聚类、注释和恶性判定。
+
+### 2b. Patient/sample-stratified high/low为主定义
+
+- 主线MLMOD-high/low定义优先采用每个patient内top/bottom 20%（patient-stratified），patient_id不可用时使用sample-stratified top/bottom 20%。
+- Global阈值（Q3、top10%、mixture交叉点等）只作为敏感性或展示，不替代主patient/sample分层定义。
+- 主对照为MLMOD_low_reference，中间60%为intermediate，不进入主high-vs-low DE。
+
+### 2c. 机制模块层级
+
+- Ferroptosis / lipid oxidation / lipid peroxidation为**主机制支持模块**：用于判断MLMOD-high是否更接近线粒体局部膜氧化损伤活性状态。基因集优先来自MSigDB GOBP_FERROPTOSIS、GOBP_LIPID_OXIDATION、FerrDb最新版和Cell 2025原文机制锚点。
+- Cuproptosis、pyroptosis为**对照/混杂死亡方式模块**：不得与ferroptosis/lipid peroxidation平级作为主线机制结论。Pyroptosis在髓系细胞分析中尤其需要作为控制模块。
+- Apoptosis、necroptosis、stress、cell cycle、ribosomal、MT_transcript_burden等为其他对照/混杂模块。
+
+### 2d. MT编码基因敏感性
+
+- 主分析不默认删除MT-encoded genes，但必须计算MLMOD_Score_no_MT_encoded（从冻结签名中排除^MT-基因后用相同UCell参数重新打分）。
+- 必须计算MT_transcript_burden_score作为混杂/解释变量，禁止命名为MLMOD_score_MT_encoded_only。
+- 若MLMOD_Score full高但no_MT_encoded后完全消失，解释必须降级为mitochondrial transcript burden-associated state。
+
+### 2e. 机制解释分级矩阵
+
+- F2.3必须输出MLMOD_mechanism_interpretation_matrix.tsv，按证据强度分级决定允许使用的最高表述（从mitochondrial transcript burden-associated state到prognosis-associated MLMOD-high state）。
+- 只有no_MT_encoded稳定、ferroptosis/lipid peroxidation支持、cuproptosis/pyroptosis/apoptosis/stress/QC/patient bias均不能解释、且bulk验证通过时，才允许最高表述。
+
+---
+
+## 第3条：source_links.md补充新增引用来源
+
+**问题**：`docs/source_verification/supplyment6_round1_source_links.md`在F2 signature and scoring部分仍只列出AUCell/SCENIC引用，缺少本轮新增的核心工具和基因集来源。主方案F2.2（line 560, 578）已引用这些来源，但source_links.md未同步。
+
+**修改要求**：
+
+在`supplyment6_round1_source_links.md`的F2 signature and scoring部分（或新建适当小节）补充以下引用：
+
+```
+## F2 scoring method and mechanism modules (Supplyment8新增)
+
+- UCell paper (NAR 2021): https://pubmed.ncbi.nlm.nih.gov/34285779/
+- UCell Bioconductor/CRAN documentation: [执行时确认当前官方文档URL]
+- FerrDb V3 (NAR 2025): https://academic.oup.com/nar/article/54/D1/D572/8307356
+- FerrDb V2 (NAR 2023): https://pmc.ncbi.nlm.nih.gov/articles/PMC9825716/
+- MSigDB GOBP_FERROPTOSIS: https://www.gsea-msigdb.org/gsea/msigdb/human/geneset/GOBP_FERROPTOSIS
+- MSigDB GOBP_LIPID_OXIDATION: https://www.gsea-msigdb.org/gsea/msigdb/cards/GOBP_LIPID_OXIDATION
+- Cuproptosis mechanism (Tsvetkov et al. Science 2022): https://www.science.org/doi/10.1126/science.abf0529
+- REACTOME_PYROPTOSIS (MSigDB): https://www.gsea-msigdb.org/gsea/msigdb/human/geneset/REACTOME_PYROPTOSIS.html
+- GSDMD pyroptosis mechanism (Shi et al. Cell Research 2015): https://www.nature.com/articles/cr2015139
+- Cell 2025 mitoxyperiosis original paper: https://pubmed.ncbi.nlm.nih.gov/41317732/
+```
+
+注意：Cell 2025 mitoxyperiosis原文可能已在现有列表中，若已有则不重复。UCell文档URL需在执行时确认当前有效页面。
+
+---
+
+## 第4条：主方案补充HVG作用域显式声明
+
+**问题**：主方案F1.3（line 307）说明了HVG中技术基因的审计规则，F2.2（line 569）明确打分使用data layer，F3.2（line 651）说明拟时序HVG需重新选择。这些规则**隐含**了"F1 HVG只用于降维/聚类，不充当F2打分、DE或GSEA的基因宇宙"的意图。但缺少一句**显式禁令**，而用户和Codex在消息1686-1694中对此有过详细讨论，属于已达成共识但未显式写入的规则。
+
+**修改要求**：
+
+在F1.3聚类段落（当前line 316附近，"F1不得用MLMOD分数指导聚类"那一段的末尾）追加一句：
+
+> F1的HVG（FindVariableFeatures输出）只用于F1降维、PCA、整合和聚类；不得作为F2 MLMOD签名构建、F2打分、F2/F3差异表达或GSEA的基因宇宙或过滤依据。F2打分使用冻结MLMOD_human_scoring_signature中的全部基因在RNA data layer上计算，不受F1 HVG子集限制；F2/F3差异表达和GSEA背景基因集由各自模块的统计框架定义，不继承F1 HVG。
+
+---
+
+## 修改后确认清单
+
+1. [ ] `conventions.txt` 中 AUCell主分数表述已替换为UCell主分数
+2. [ ] `AGENT.md` 中 AUCell主方法表述已替换为UCell主方法
+3. [ ] `project_overview.txt` 中 AUCell主分数表述已替换为UCell主分数
+4. [ ] 三个文件全文搜索"AUCell唯一主""AUCell主分数""AUCell为主"返回0处（AUCell作为敏感性被提及不算）
+5. [ ] `conventions.txt` 已补充两层筛选、patient-stratified high/low、ferroptosis机制层级、MT敏感性、low_reference和机制解释分级矩阵
+6. [ ] `AGENT.md` 已补充上述同一组概念
+7. [ ] `project_overview.txt` 管线描述已补充上述同一组概念
+8. [ ] `source_links.md` 已补充UCell NAR 2021、FerrDb V2/V3、MSigDB GOBP_FERROPTOSIS/LIPID_OXIDATION、cuproptosis Science 2022、REACTOME_PYROPTOSIS、GSDMD Cell Research 2015
+9. [ ] 主方案F1.3（line 316附近）已追加HVG作用域显式声明
+10. [ ] 主方案中原有F2.2/F2.3/F4/F5文本未被本次修改误改
+11. [ ] 全文搜索"低/非高""low_or_nonhigh"在主方案和三个辅助文件中均返回0处（禁令说明中出现的"不得命名为..."不算）

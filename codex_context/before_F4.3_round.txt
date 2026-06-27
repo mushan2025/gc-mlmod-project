@@ -1,0 +1,471 @@
+﻿Codex 会话增量上下文导出
+文件用途：before_F4.3_round
+会话 ID：019e68d9-9638-7951-8246-0187f2d19091
+源文件：C:\Users\14799\.codex\sessions\2026\05\27\rollout-2026-05-27T17-52-30-019e68d9-9638-7951-8246-0187f2d19091.jsonl
+指定文件名：before_F4.3_round.txt
+基准已有消息最大编号：653
+当前可见消息总数：695
+本次增量消息数：42（你 8 条，Codex 34 条）
+导出时间：2026-06-08 21:16:38 Asia/Shanghai
+
+整理说明：仅保留你和 Codex 在界面中可见的新增消息；已排除系统/开发者指令、environment_context、工具调用与输出。
+
+================================================================================
+
+[654] 你 | 2026-06-08 14:33:05 Asia/Shanghai
+继续挑刺下一节
+
+--------------------------------------------------------------------------------
+
+[655] Codex | 2026-06-08 14:33:26 Asia/Shanghai
+我先把下一节的边界找准，再按“目的是否能实现、Biomni是否会误解、统计和生物学是否站得住”三条线来挑刺。这个任务属于生命科学研究方案审阅，我会轻量调用 life-science research 的路由技能，只取它对证据和边界判断的工作方式。
+
+--------------------------------------------------------------------------------
+
+[656] Codex | 2026-06-08 14:33:41 Asia/Shanghai
+下一节是 F4「细胞通讯分析（CellChat）」。我现在读它的原文和前后交接规则，重点看它是否真的能回答“高MLMOD恶性上皮亚群如何与微环境互作”，而不是只跑一遍CellChat图。
+
+--------------------------------------------------------------------------------
+
+[657] Codex | 2026-06-08 14:35:35 Asia/Shanghai
+F4这一节现在问题比较大，不是小修，是需要重构。当前 [主线方案 F4](/D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:581) 太像“跑CellChat标准流程”，还没有变成“回答高MLMOD恶性上皮如何影响微环境”的严谨设计。
+
+**主要挑刺**
+1. **“对照、原发、腹膜转移三组CellChat对象”不应作为F4主线。**
+   Normal_Gastric里没有“高MLMOD恶性上皮”，所以不能和肿瘤组做同构比较。主线应是：在肿瘤样本内，把恶性上皮拆成 `Malignant_MLMOD_high` 和 `Malignant_MLMOD_low_or_nonhigh`，再与TME细胞比较通讯。Normal_Gastric最多做参考背景，不是主比较对象。
+
+2. **F4输入对象没说清楚。**
+   F3用的是恶性上皮对象，但CellChat需要恶性上皮 + 免疫/成纤维/内皮等TME细胞。F4应明确从F1全细胞注释对象 + F2高MLMOD标签回填后的对象构建，而不是只用 `08_malignant_epithelial_MLMOD_labeled.rds`。
+
+3. **缺少“通讯标签”的冻结规则。**
+   必须新增 `communication_celltype` 字段，例如：
+   `Malignant_epithelial_MLMOD_high`、`Malignant_epithelial_MLMOD_low_or_nonhigh`、`Macrophage`、`T_cell_CD8`、`CAF`、`Endothelial` 等。
+   不能临时用过细cluster，否则小群体会让CellChat结果很不稳。
+
+4. **当前统计上有伪重复风险。**
+   CellChat在合并细胞后推断通讯，不能天然提供严格的样本层统计。F4必须规定：CellChat图用于网络推断和可视化，正式比较要尽量做 sample-level 汇总，例如每个 `sample_id` 内高/低MLMOD来源细胞到TME目标细胞的通讯强度或LR表达分数。PM只有3个样本，仍只能方向性解释。
+
+5. **`MeanTrunc方法`写法不准确。**
+   官方参数是 `computeCommunProb(type = "triMean")` 或 `type = "truncatedMean", trim = ...`。我建议主线用更保守的 `triMean`，再用 `truncatedMean(trim=0.1)` 做敏感性分析，避免只靠更宽松参数找阳性。
+
+6. **标准CellChat预处理步骤缺失。**
+   F4应写完整：`subsetData()`、`identifyOverExpressedGenes()`、`identifyOverExpressedInteractions()`、`computeCommunProb()`、`filterCommunication()`、`computeCommunProbPathway()`、`aggregateNet()`、`netAnalysis_computeCentrality()`。现在直接从 `computeCommunProb()` 开始，不够可执行。
+
+7. **最小细胞数和样本覆盖需要预注册。**
+   官方 `filterCommunication(min.cells=10)` 是最低过滤，不等于本研究的主解释门槛。建议主线要求每个通讯细胞群在对应比较中至少 `>=50` 细胞且覆盖 `>=3` 个样本；不足的保留为探索性，不进入主结论。
+
+8. **重点通路不能只挑好看的。**
+   SPP1、MK、VEGF、TGFβ、MHC-I/II可以作为先验重点，但必须输出所有显著LR和pathway，再单独做“候选机制通路面板”。否则会有选择性汇报嫌疑。
+
+9. **需要明确解释边界。**
+   scRNA CellChat只能说明配体/受体转录层面的潜在通讯，不证明空间邻近、蛋白互作或真实功能效应。F4文字里必须禁止写成“高MLMOD细胞通过某通路诱导某细胞功能改变”。
+
+**我建议F4改成这样**
+F4.0：输入和准入，包括全细胞对象、恶性高/低MLMOD标签回填、communication_celltype冻结。
+F4.1：CellChat对象构建，主线肿瘤内高/低MLMOD通讯，Normal只作参考。
+F4.2：CellChat参数和敏感性，主 `triMean`，敏感性 `truncatedMean(trim=0.1)`。
+F4.3：高MLMOD sender/receiver通讯分析。
+F4.4：PM vs Primary方向性比较，强调PM n=3限制。
+F4.5：样本层LR验证和混杂审计。
+F4.6：输出文件、图表和F4-Gate通过标准。
+
+参考依据：CellChat原始论文说明它用于系统推断和比较细胞通讯网络；官方文档显示 `computeCommunProb()` 的正式参数是 `triMean/truncatedMean/median`，`filterCommunication()` 默认 `min.cells=10`，但这只是包级过滤阈值，不应替代本研究的样本层解释标准。来源：[CellChat Nat Commun 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7889871/)、[computeCommunProb文档](https://www.rdocumentation.org/packages/CellChat/versions/1.0.0/topics/computeCommunProb)、[filterCommunication文档](https://www.rdocumentation.org/packages/CellChat/versions/1.0.0/topics/filterCommunication)。
+
+--------------------------------------------------------------------------------
+
+[658] 你 | 2026-06-08 14:40:23 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[659] Codex | 2026-06-08 14:40:50 Asia/Shanghai
+我来直接重写 F4，而不是在原来的短流程上补几句。核心改动会把F4从“三组CellChat常规比较”改成“肿瘤内高/低MLMOD恶性上皮与TME通讯差异”的可审计流程，并保留PM方向性比较的限制。
+
+--------------------------------------------------------------------------------
+
+[660] Codex | 2026-06-08 14:41:20 Asia/Shanghai
+我还会顺手补 F0.2 的目录清单，因为现在F4变成正式gate后，需要给Biomni明确 `scripts/F4_communication/`、`results/F4_communication/` 和日志目录。否则后面执行时输出路径会变成自由发挥。
+
+--------------------------------------------------------------------------------
+
+[661] Codex | 2026-06-08 14:42:17 Asia/Shanghai
+我会把F4写得比原来长不少，但仍然保持给Biomni看的“执行规约”风格：明确输入、标签、参数、样本层验证、输出和gate，而不是写成综述段落。
+
+--------------------------------------------------------------------------------
+
+[662] Codex | 2026-06-08 14:42:31 Asia/Shanghai
+目录清单已经补上。接下来替换F4正文，我会保留“重点通路”但把它降为先验审查面板，主结果必须来自全量LR/通路输出和样本层支持，避免只挑好看的通路。
+
+--------------------------------------------------------------------------------
+
+[663] Codex | 2026-06-08 14:44:04 Asia/Shanghai
+F4正文已经替换完成。现在我做一轮机械检查：表格闭合、关键词是否落进去、目录和正文是否同步，然后复制到WPS路径保持两边一致。
+
+--------------------------------------------------------------------------------
+
+[664] Codex | 2026-06-08 14:44:18 Asia/Shanghai
+机械检查发现一个小格式问题：字段清单里有一处 `p_value_high, p_value_low` 用了英文逗号，容易被Biomni理解成一个字段或产生表头歧义。我把它改成两个明确字段后再同步。
+
+--------------------------------------------------------------------------------
+
+[665] Codex | 2026-06-08 14:44:44 Asia/Shanghai
+小格式已修好。我现在做最终一致性检查并同步到WPS云盘路径，顺便比对两个文件的SHA256。
+
+--------------------------------------------------------------------------------
+
+[666] Codex | 2026-06-08 14:45:01 Asia/Shanghai
+已按这个方向重写 F4，并同步到两个路径。
+
+主要改动在 [胃癌MLMOD亚群主线研究方案.txt](/D:/胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:584)：
+
+- F4改为“高/低MLMOD恶性上皮与TME通讯差异”主线，不再把Normal、Primary、PM三组简单并列做CellChat。
+- 新增 `09_all_cells_for_cellchat_MLMOD_labeled.rds`、`communication_celltype`冻结规则、CellChat参数、样本层LR支持验证、PM n=3限制、敏感性和混杂审计。
+- 补充F0目录清单中的 `scripts/F4_communication/`、`results/F4_communication/`、`logs/F4_communication/`。
+- 更新F4预期图表为约10图，更贴合新的执行逻辑。
+
+已同步到WPS路径，两个文件SHA256一致：
+`FBC09410D3F1311257A4128463DBFE196296F2C54F751D2AC030AF75704AD1D2`
+
+机械检查通过：`[TABLE]` 与 `[/TABLE]` 数量均为 16。
+
+--------------------------------------------------------------------------------
+
+[667] 你 | 2026-06-08 14:46:25 Asia/Shanghai
+挑刺F4.1。
+审核维度（12维度框架）
+进行综合审核时使用以下维度。每个维度是通用审核原则，适用于所有F节和所有阶段；括号内为典型检查点示例，不限于此。审核不能只从数学或统计角度评价，每个维度都必须同时考虑生物学意义和是否与本研究的具体科学问题适配。方案设计、算法选择和参数设定不能只看技术上能否跑通，必须评判它是否服务于我们的生物学问题和研究目标。
+
+科学假设与逻辑链 — 每一步分析的生物学前提是否成立、推理链是否有跳跃（如跨物种迁移合理性、CellChat配受体数据库适用性、WGCNA共表达≠因果、虚拟敲除≠实验验证）
+统计方法学 — 统计检验选择是否恰当、多重比较校正、p-hacking风险、PH假设检验、效应量报告、样本独立性（如pseudobulk vs cell-level统计）；统计显著性必须结合生物学效应量和研究背景解读，不能只看p值
+操作可行性 — 方案中描述的步骤在Biomni环境中是否真的能执行（RAM/CPU/超时/文件大小/包可用性/数据库可下载性）
+内部一致性 — 文件名、变量名、目录结构、参数值、gate条件在全文中是否前后统一、无矛盾引用
+解释边界 — 结论是否超出数据支持范围（如processed data不等于FASTQ复现、关联不等于因果、横断面拟时序不等于真实发育、单细胞趋势不等于样本层统计证据）
+样本量与统计功效 — 样本量是否足以支撑所声称的结论（如PM仅3样本只能做方向性观察、多变量Cox的事件数/变量数比）
+执行环境与容错 — 运行超时、内存不足、包安装失败等技术风险的预案是否充分（降级策略、分批策略、失败阻断规则）
+循环定义风险 — 是否存在用定义变量的基因去验证该变量的逻辑循环（如MLMOD打分基因出现在高MLMOD差异基因中、签名基因驱动富集结果）
+跨文件引用一致性 — 上下游节之间引用的RDS文件名、输出清单、输入前提、gate条件是否匹配闭合
+gate逻辑闭合 — 每个gate的输入来源、通过条件、阻断条件、warning处理、输出清单是否完整且无歧义
+Biomni交付规则 — 所有关键结果是否要求以可下载文件输出（不得只口头报告）、manifest/checksum是否齐全、是否要求记录系统/软件/程序包版本和随机种子、对复现有关键作用的中间文件（如.rds对象、参数文件等）是否要求保存，根据具体分析内容灵活判断哪些中间产物属于复现关键文件
+F大节边界与审批流程 — F之间是否防止自动连续执行、研究者批准节点是否明确、阶段间数据交接是否清晰
+
+--------------------------------------------------------------------------------
+
+[668] Codex | 2026-06-08 14:46:41 Asia/Shanghai
+我先只审 F4.1，不动文件。会按你给的12维度框架逐项挑刺，但重点放在“communication_celltype冻结是否真的服务高MLMOD-TME通讯问题”。
+
+--------------------------------------------------------------------------------
+
+[669] Codex | 2026-06-08 14:47:51 Asia/Shanghai
+**F4.1总体判断**
+现在F4.1的方向是对的：先冻结 `communication_celltype`，再跑CellChat，这是必须的。但它还不够“防误用”。最大问题是：标签层级、样本覆盖、审批暂停和逐细胞映射还不够明确，Biomni仍可能自由发挥分组，导致后续CellChat结果被分组方式支配。
+
+**主要问题**
+1. **高/低MLMOD对照还不够干净。**
+   现在只有 `MLMOD_high` vs `MLMOD_low_or_nonhigh`。如果高MLMOD是Q3定义，那么“nonhigh”其实包含中等和低分细胞，生物学对照会被稀释。建议增加一个敏感性标签：`Malignant_epithelial_MLMOD_low_reference`，例如最低Q1或最低20%，前提是样本覆盖足够。主线仍可 high vs nonhigh，但必须用 high vs low_reference 检查方向。
+
+2. **TME细胞分组层级需要预注册，而不是只列例子。**
+   现在写“默认可合并为Macrophage、Monocyte、Dendritic_cell、CD8_T_cell...”是合理的，但Biomni可能临时决定怎么合并。应要求一个固定的层级合并规则：先尝试minor subtype，若不达标则合并到major lineage，再不达标则排除或探索性展示。比如 `CD8_T_cell/CD4_T_cell/Treg` 只有F1.4证据支持时才能拆，否则回到 `T_cell`。
+
+3. **`CAF_or_Fibroblast`可能过粗。**
+   对胃癌转移和细胞通讯，CAF/基质细胞是重点。如果F1.4能稳定识别CAF或Fibroblast subtype，主分析至少应允许CAF作为独立群；如果直接合并成 `CAF_or_Fibroblast`，可能稀释TGFβ、COLLAGEN、LAMININ、SPP1等信号。建议写成“优先CAF/Fibroblast分开，覆盖不足时合并”。
+
+4. **样本覆盖字段不够。**
+   现在只有 `n_samples_total` 和 `dominant_sample_fraction`。对F4核心问题，更重要的是：高MLMOD source来自几个样本、低/非高MLMOD source来自几个样本、目标TME细胞来自几个样本、同一样本内是否同时有source和target。建议加字段：`n_primary_samples`、`n_pm_samples`、`n_samples_with_high_source`、`n_samples_with_low_source`、`n_samples_with_target`、`n_samples_with_high_low_pair`。
+
+5. **>=50细胞、>=3样本的规则还太单层。**
+   这可以作为最低进入CellChat的门槛，但不应直接等于“主解释门槛”。建议分三层：
+   `main_interpretable`：覆盖较好，可进入主解释；
+   `directional_only`：样本少但方向可展示；
+   `exploratory_only`：细胞数或样本覆盖不足。
+   PM只有3个样本，所以PM相关标签即使达标也只能方向性。
+
+6. **缺少F4.1审批暂停点。**
+   F4.1会决定所有后续通讯结果，应该是明确的审批节点：Biomni输出 `F4_communication_celltype_plan.tsv` 后必须暂停，等研究者批准后才能进入F4.2。现在有 `approval_required` 字段，但没有写“必须暂停”。
+
+7. **缺少逐细胞标签表。**
+   只有汇总plan还不够审计。建议新增 `F4_communication_celltype_assignment.tsv`，逐细胞记录 `cell_id_final`、`sample_id`、`group_analysis`、`celltype_major/minor/state`、`MLMOD_high_label`、`communication_celltype`、`include_in_F4_main`、`exclude_reason`。这对Codex后续审计非常关键。
+
+8. **跨文件引用还可以更闭合。**
+   F4.1应该明确读取 `celltype_usage_plan.tsv`，而不是只读取F1 metadata字段。因为F1已经规定哪些细胞可用于TME组成、哪些应排除。否则Biomni可能把F1标记为不适合后续用途的细胞又纳入F4。
+
+9. **标签不是新发现，需要写解释边界。**
+   `communication_celltype` 是为了CellChat建模而设的分析分组，不是新的细胞类型注释。尤其 `Malignant_epithelial_MLMOD_high` 是功能状态标签，不是独立谱系。建议加一句防止后续文字写过头。
+
+10. **循环定义风险在F4.1可轻轻铺垫。**
+   F4.1本身不做基因分析，但高MLMOD标签来自打分。后续LR解释里如果配体/受体恰好是MLMOD signature gene或F2高低marker，需要标记循环风险。这个主要放F4.3/F4.5，但F4.1可以要求保留 `MLMOD_high_definition_status` 和 `definition_version` 到逐细胞表。
+
+**建议修改方向**
+F4.1需要补四件事：
+- 加 `F4_communication_celltype_assignment.tsv` 逐细胞映射表。
+- 加“F4.1标签冻结后必须暂停等待研究者批准”。
+- 加分层合并规则：minor subtype优先，覆盖不足合并到major lineage，仍不足则探索/排除。
+- 加高MLMOD对照敏感性：`high vs nonhigh` 主线，`high vs low_reference` 敏感性。
+
+我的判断：F4.1现在可以跑，但不够抗审稿人，也不够防Biomni误分组。建议修改后再进入F4.2。
+
+--------------------------------------------------------------------------------
+
+[670] 你 | 2026-06-08 15:16:58 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[671] Codex | 2026-06-08 15:17:20 Asia/Shanghai
+我按刚才的挑刺点改 F4.1，同时会把相关输出清单和gate条件一起补齐。这里的关键是让Biomni先产出“逐细胞标签表 + 汇总计划表”，暂停等你批准后才能进入F4.2。
+
+--------------------------------------------------------------------------------
+
+[672] Codex | 2026-06-08 15:17:33 Asia/Shanghai
+我会集中替换 F4.1 两段，并在F4.6输出清单加入逐细胞assignment和F4.1冻结报告。这样修改范围小，但能把审批和审计闭环补起来。
+
+--------------------------------------------------------------------------------
+
+[673] Codex | 2026-06-08 15:18:10 Asia/Shanghai
+F4.1正文已经补强。接下来我把F4.6输出清单和gate条件补齐，让新增的assignment表、冻结报告和审批暂停不只是正文要求，而是进入最终通过条件。
+
+--------------------------------------------------------------------------------
+
+[674] Codex | 2026-06-08 15:18:38 Asia/Shanghai
+我现在做一致性检查：确认新增字段都出现、表格闭合没坏、F4.1没有留下旧逻辑冲突，然后同步到WPS路径。
+
+--------------------------------------------------------------------------------
+
+[675] Codex | 2026-06-08 15:18:55 Asia/Shanghai
+检查时我发现一个前后衔接点还要补：F4.1新增了 `low_reference`，但F4.2/F4.5/F4.6还没明确它作为“单独敏感性对象”怎么跑。否则Biomni可能把同一批细胞同时放进两个identity，CellChat会乱。
+
+--------------------------------------------------------------------------------
+
+[676] Codex | 2026-06-08 15:19:44 Asia/Shanghai
+low_reference的下游衔接也补上了。现在做最终机械检查和双路径同步。
+
+--------------------------------------------------------------------------------
+
+[677] Codex | 2026-06-08 15:19:57 Asia/Shanghai
+已按要求修改 F4.1，并同步到两个路径。
+
+这次主要补了四类内容：
+
+- 新增 `F4_communication_celltype_assignment.tsv`：逐细胞记录F4通讯标签、MLMOD定义版本、是否纳入主分析/敏感性分析和排除理由。
+- 增加 `Malignant_epithelial_MLMOD_low_reference` 敏感性对照：默认全局最低25%，不允许为显著性临时改阈值。
+- 明确TME标签层级合并规则：minor subtype优先，覆盖不足合并到major/中层谱系，再不足就降级或排除。
+- 明确F4.1是强审批暂停点：Biomni产出标签冻结表和报告后必须暂停，等你批准后才能进F4.2。
+
+我还补了下游闭环：F4.2中 `low_reference` 必须单独建 `tumor_main_low_reference_sensitivity_CellChat`，不能让同一个细胞在同一个CellChat对象里同时属于 `low_or_nonhigh` 和 `low_reference`。
+
+检查结果：`[TABLE]` / `[/TABLE]` 仍为 `16/16`，两个路径文件SHA256一致：
+`D9A4829175913585C1514C32049E7CC86B3581712EA5011AA969796CD2FF5495`
+
+--------------------------------------------------------------------------------
+
+[678] 你 | 2026-06-08 20:51:40 Asia/Shanghai
+按12维度框架挑刺F4.2
+
+--------------------------------------------------------------------------------
+
+[679] Codex | 2026-06-08 20:51:56 Asia/Shanghai
+我来只审 F4.2，不改文件。F4.2是CellChat对象和参数层，容易出现“能跑但解释错”的问题，所以我会重点盯对象构建、参数含义、低参考敏感性、内存可行性和gate衔接。
+
+--------------------------------------------------------------------------------
+
+[680] Codex | 2026-06-08 20:52:59 Asia/Shanghai
+**F4.2总体判断**
+F4.2现在比原来强很多，但还有一个核心风险：它把 `tumor_main_CellChat` 写成主对象，可能把“高MLMOD效应”和“Primary/PM组织来源差异”混在一起。对我们的问题来说，这不是小问题，属于会影响结论方向的设计点。
+
+**按12维度挑刺**
+1. **科学假设与逻辑链**
+   `tumor_main_CellChat` 合并Primary和PM后做高/低MLMOD通讯，逻辑上有混杂风险。因为高MLMOD本身可能在PM中比例更高，通讯差异可能反映“PM微环境”而不是“MLMOD状态”。建议把 `primary_tumor_CellChat` 设为主机制对象，如果Primary内高/低MLMOD覆盖足够；`tumor_main_CellChat` 作为总体概览；PM只做方向性展示。
+
+2. **统计方法学**
+   F4.2写了 `nboot = 100` 和 `seed.use = 42`，但没有说明CellChat的p值不能当作样本层显著性。虽然F4.5会做样本层验证，但F4.2参数段应提前写清：CellChat内部p值用于配体-受体推断过滤，不等于患者/样本层比较证据。
+
+3. **操作可行性**
+   全肿瘤对象可能很大，CellChat在Biomni网页环境里可能超时或内存不足。F4.2缺少技术preflight。建议加：正式全量运行前，先用F4.1冻结后的标签构建小规模或对象级preflight，检查CellChat包、对象大小、内存、运行时间、是否能成功生成非空network。
+
+4. **内部一致性**
+   F4.1新增了标签冻结审批，但F4.2开头没有明确“必须读取F4_gate1_celltype_freeze_report.md且已获研究者批准”。这需要补，否则Biomni可能跳过F4.1直接跑CellChat。
+
+5. **解释边界**
+   目前说了不用raw counts，也解释了 `raw.use`，不错。但还应加一条：`CellChatDB.human` 是已知配体-受体知识库，不完整；没有预测到某通路不等于该通路不存在。这个对阴性结果解释很重要。
+
+6. **样本量与统计功效**
+   F4.2说PM对象用于方向性展示，但没有要求Primary对象高/低MLMOD各自的样本覆盖门槛。建议写：若Primary内高/低MLMOD source任一组覆盖不足，则Primary机制主分析降级，不能只用tumor_main补上。
+
+7. **执行环境与容错**
+   缺少CellChat安装失败、版本不兼容、函数参数变化的fallback。建议：若CellChat不可用，不能换工具自行分析；应先报告失败。可作为获批fallback的是“基于CellChatDB或等价LR库的样本层ligand/receptor表达支持分析”，但不能冒充CellChat网络分析。
+
+8. **循环定义风险**
+   F4.2没有要求检查CellChatDB中配体/受体是否与MLMOD scoring signature重叠。虽然主要应放F4.3/F4.5，但对象构建和数据库准备时就可以输出 `F4_LR_database_signature_overlap.tsv`，标记ligand/receptor是否为MLMOD打分基因或F2高低marker。
+
+9. **跨文件引用一致性**
+   F4.2应明确使用F4.1输出的 `F4_communication_celltype_assignment.tsv` 作为CellChat metadata来源，而不是重新从Seurat metadata临时生成identity。否则标签冻结会失去意义。
+
+10. **gate逻辑闭合**
+   现在F4.2没有自己的技术准入报告。建议新增 `F4_gate2_cellchat_object_preflight_report.md`，内容包括对象列表、每个对象细胞数、每个communication_celltype细胞数、包版本、内存风险、是否允许进入正式computeCommunProb。
+
+11. **Biomni交付规则**
+   `F4_CellChat_object_manifest.tsv` 有了，但应明确每个CellChat对象本体必须保存为RDS，例如 `F4_CellChat_objects/tumor_main_CellChat.rds`、`primary_tumor_CellChat.rds` 等。否则后续Codex无法复查对象内部metadata、DB和参数。
+
+12. **F大节边界与审批流程**
+   F4.1审批后，F4.2仍应让Biomni提交“对象与参数执行计划”再跑正式CellChat。尤其是否把Primary设为主对象、是否构建PM对象、是否构建low_reference敏感性对象，都应该在F4.2开始时明确给你批准。
+
+**我建议的关键修改**
+- 把 `primary_tumor_CellChat` 提升为主机制对象，前提是高/低MLMOD覆盖足够；`tumor_main_CellChat` 改为总体概览对象。
+- F4.2开头加入“必须读取并通过F4.1冻结报告”。
+- 新增 `F4_gate2_cellchat_object_preflight_report.md`。
+- 明确保存每个CellChat RDS对象。
+- 增加CellChat失败fallback和LR数据库/signature重叠审计。
+
+这一节不是推翻，主要是把“对象主次”和“技术preflight”补牢。现在的版本能跑，但还不足以抵抗“你的高MLMOD通讯其实是PM样本驱动”的质疑。
+
+--------------------------------------------------------------------------------
+
+[681] 你 | 2026-06-08 20:58:01 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[682] Codex | 2026-06-08 20:58:25 Asia/Shanghai
+我会把F4.2的主次关系改掉：Primary内高/低MLMOD通讯作为主机制对象，tumor_main只做总体概览，PM只做方向性。顺手补CellChat对象preflight、对象RDS保存、数据库重叠审计和失败降级边界，避免“跑出来了但对象不对”。
+
+--------------------------------------------------------------------------------
+
+[683] Codex | 2026-06-08 20:58:44 Asia/Shanghai
+我会把F4.2从“三类对象都可选”改成“Primary机制主对象 + tumor_main总体概览 + PM方向性对象”的主次结构。这样后续不会把PM微环境差异误当成高MLMOD状态差异。
+
+--------------------------------------------------------------------------------
+
+[684] Codex | 2026-06-08 20:59:38 Asia/Shanghai
+F4.2主段已经重写。我再补两个衔接点：F4.3要明确主解释优先来自Primary对象，F4.6输出和gate要把preflight报告、LR数据库/签名重叠审计纳入必交付项。
+
+--------------------------------------------------------------------------------
+
+[685] Codex | 2026-06-08 21:00:23 Asia/Shanghai
+我现在做机械检查：确认旧的“tumor_main是主对象”说法已经消失，新增preflight和signature overlap都进入输出清单，并同步到WPS路径。
+
+--------------------------------------------------------------------------------
+
+[686] Codex | 2026-06-08 21:00:36 Asia/Shanghai
+已按你的要求修改 F4.2，并同步到两个路径。
+
+关键变化：
+
+- `primary_tumor_CellChat` 改为主机制对象，回答“原发肿瘤内高MLMOD状态是否有不同TME通讯”。
+- `tumor_main_CellChat` 降为总体概览和方向一致性支持，不能替代Primary内机制证据。
+- 新增 `F4_gate2_cellchat_object_preflight_report.md`：正式跑CellChat前必须做对象/参数/资源preflight。
+- 新增 `F4_LR_database_signature_overlap.tsv`：检查CellChatDB配体/受体是否与MLMOD签名或高低MLMOD marker重叠，标记循环定义风险。
+- 明确所有CellChat对象必须保存为RDS。
+- 明确CellChat失败后的降级方案只能叫“LR表达支持分析”，不能冒充CellChat网络分析。
+- F4.3、F4.6和图4-3也同步改了主次关系。
+
+检查通过：`[TABLE]` 和 `[/TABLE]` 均为 16。
+两个路径文件SHA256一致：`8D55982952D4CA17AC1E765FBB5ED4C2332185F198232A3A41FC858C4E43A672`
+
+--------------------------------------------------------------------------------
+
+[687] 你 | 2026-06-08 21:04:31 Asia/Shanghai
+继续挑刺F4.3
+
+--------------------------------------------------------------------------------
+
+[688] Codex | 2026-06-08 21:04:46 Asia/Shanghai
+我继续只审 F4.3，不改文件。F4.3是结果解释层，最容易从“潜在通讯概率变化”滑到“机制通路成立”，所以我会重点看主对象、全量输出、差异定义、LR解释和循环风险是否闭合。
+
+--------------------------------------------------------------------------------
+
+[689] Codex | 2026-06-08 21:05:25 Asia/Shanghai
+**F4.3总体判断**
+F4.3方向正确，但现在还太像“把CellChat结果整理成高低组差异表”。真正需要补的是：什么结果能算主证据、什么只能算描述性趋势、如何避免小概率/小群体/签名基因把结论带偏。
+
+**按12维度挑刺**
+1. **科学假设与逻辑链**
+   F4.3说“高MLMOD作为sender/receiver是否不同”，但CellChat的 `prob` 是基于细胞群平均表达和数据库推断的通讯概率，不是直接测到的通讯。建议明确：F4.3只能提出“高MLMOD相关候选通讯轴”，不能直接说“高MLMOD细胞通过某LR调控TME”。
+
+2. **统计方法学**
+   `p_value_high` 和 `p_value_low` 不是高低MLMOD差异检验p值。现在表里有 `delta_prob_high_minus_low` 和 `ratio_high_vs_low`，但没有差异显著性定义。建议加字段：`is_descriptive_delta_only`、`requires_sample_level_confirmation`、`sample_level_support_status`。最终强弱由F4.5样本层验证决定。
+
+3. **操作可行性**
+   “导出所有显著和非显著候选”不一定能靠 `subsetCommunication()` 直接完成；CellChat常规导出多半偏显著通讯。应要求Biomni若要导出非显著候选，需从CellChat对象内部 `net` / `netP` 槽或等价结构完整展开，并记录导出方法。否则它可能只导出显著结果却写成全量。
+
+4. **内部一致性**
+   F4.2新增了 `object_role`，F4.3的 `F4_high_vs_low_communication_results.tsv` 还没要求记录 `object_role`。必须补，否则后面分不清结果来自 `primary_tumor_CellChat`、`tumor_main_CellChat` 还是敏感性对象。
+
+5. **解释边界**
+   现在写了 `delta_prob` 依赖F4.5验证，这是好事，但还应加一句：若CellChat方向与样本层LR支持方向冲突，以样本层支持为主，CellChat结果降级为不稳定候选。
+
+6. **样本量与统计功效**
+   表里有 `source_group_n_samples`、`target_group_n_samples`，但高低比较需要知道同一样本是否同时有高/低source和target。建议在F4.3结果表加：`n_samples_with_high_source`、`n_samples_with_low_source`、`n_samples_with_target`、`n_paired_samples_available`。
+
+7. **执行环境与容错**
+   F4.3没有写“primary_tumor_CellChat未达main_mechanistic_object时怎么办”。建议明确：若Primary对象降级，F4.3仍可输出表，但 `main_interpretation` 只能是 `exploratory_primary_limited` 或 `tumor_main_directional_only`。
+
+8. **循环定义风险**
+   F4.2有 `F4_LR_database_signature_overlap.tsv`，但F4.3结果表没有把这个风险带进去。建议给每个LR结果加字段：`ligand_is_MLMOD_signature_gene`、`receptor_is_MLMOD_signature_gene`、`ligand_or_receptor_is_F2_marker`、`signature_leakage_warning`。
+
+9. **跨文件引用一致性**
+   F4.3应该明确读取 `F4_CellChat_object_manifest.tsv` 和 `F4_CellChat_parameters.tsv`，只分析 `preflight_status = PASS` 或获批降级的对象。否则可能分析未通过preflight的对象。
+
+10. **gate逻辑闭合**
+   F4.3缺少结果分层标准。建议增加 `result_tier`：
+   `candidate_main_supported`：Primary对象方向明确、覆盖合格、样本层支持一致；
+   `directional_support`：方向一致但样本层或对象覆盖有限；
+   `exploratory_only`：仅CellChat描述性差异；
+   `not_interpretable`：覆盖不足或方向冲突。
+
+11. **Biomni交付规则**
+   `F4_high_MLMOD_sender_receiver_summary.tsv` 在输出清单里有，但F4.3正文没有定义字段。应补字段，比如 sender/receiver role、target/source celltype、total_weight、total_count、rank、object_role、interpretation_tier。
+
+12. **F大节边界与审批流程**
+   F4.3不一定需要单独审批暂停，但若F4.3发现主机制对象不可解释、主要通讯由签名基因驱动、或CellChat与样本层方向明显冲突，应要求Biomni暂停并提交问题清单，不能自动进入F4.4/F4.5继续堆结果。
+
+**建议修改重点**
+- 给F4.3增加结果分层 `result_tier`。
+- 在所有LR/pathway结果中加入 `object_role` 和签名/marker重叠字段。
+- 明确 `p_value_high/low` 不是高低差异p值。
+- 明确全量导出方法，不能只导出显著LR。
+- 给 `F4_high_MLMOD_sender_receiver_summary.tsv` 定义字段。
+- 若Primary对象不合格，F4.3自动降级，不允许用tumor_main顶替主机制证据。
+
+--------------------------------------------------------------------------------
+
+[690] 你 | 2026-06-08 21:06:11 Asia/Shanghai
+先按你说的改
+
+--------------------------------------------------------------------------------
+
+[691] Codex | 2026-06-08 21:06:34 Asia/Shanghai
+我会把F4.3从“结果表字段”升级成“结果分层和解释规则”。重点是防止Biomni把 `delta_prob` 当成差异显著性、把tumor_main结果冒充Primary机制证据，或者只导出显著LR却写成全量。
+
+--------------------------------------------------------------------------------
+
+[692] Codex | 2026-06-08 21:06:45 Asia/Shanghai
+我会替换F4.3三段，加入全量导出审计、结果分层、签名重叠字段、Primary对象降级规则，以及必要的暂停条件。然后再把输出清单和gate条件补上新增的导出审计表。
+
+--------------------------------------------------------------------------------
+
+[693] Codex | 2026-06-08 21:07:36 Asia/Shanghai
+F4.3正文已补强。我现在把新增的 `F4_all_LR_export_audit.tsv` 加进F4输出清单和gate条件，这样“全量导出”会变成必须审计的交付物。
+
+--------------------------------------------------------------------------------
+
+[694] Codex | 2026-06-08 21:08:12 Asia/Shanghai
+现在我做机械检查和同步：看新增字段是否落地、表格闭合是否正常、两份文件哈希是否一致。
+
+--------------------------------------------------------------------------------
+
+[695] Codex | 2026-06-08 21:08:28 Asia/Shanghai
+已按你的要求修改 F4.3，并同步到两个路径。
+
+这次主要补强了：
+
+- 明确F4.3只能提出“候选通讯轴”，不能写成因果机制。
+- 新增 `F4_all_LR_export_audit.tsv`，审计到底是不是全量导出LR，而不是只导出显著结果。
+- 明确CellChat `p_value` 不是高低MLMOD差异检验p值，`delta_prob`/`ratio` 只能作为描述性指标。
+- 给 `F4_high_vs_low_communication_results.tsv` 增加 `object_role`、样本覆盖、签名/marker重叠、`sample_level_support_status` 和 `result_tier`。
+- 定义 `result_tier`：`candidate_main_supported`、`directional_support`、`exploratory_only`、`not_interpretable`。
+- 定义 `F4_high_MLMOD_sender_receiver_summary.tsv` 字段，防止只输出一张热图。
+- 如果Primary对象不可解释、主要结果由MLMOD签名/marker驱动，或CellChat与样本层方向冲突，Biomni必须暂停提交问题清单。
+
+检查通过：`[TABLE]` 和 `[/TABLE]` 均为 16。
+两个路径文件SHA256一致：`DBE1700FEF524FA0E130075886FBFFFAF766105683469CD8EB7CE64079EABBD0`
+
+--------------------------------------------------------------------------------

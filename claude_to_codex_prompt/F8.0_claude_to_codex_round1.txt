@@ -1,0 +1,62 @@
+# Codex修改指令：F0.8+F7+F8第三方审查修订 Round 1
+
+## 背景
+
+第三方审查者完成了F0.8（第191-199行）、F7（第782-835行）和F8（第836-874行）的全面审核，总计101行新增/重写内容。
+
+结构层面检查全部通过：TABLE 17/17配平、F2-Gate4传递链从F3(543)→F4(620)→F5(667)→F6(722)→F7(784)→F8(840)完整闭合、claim_control_table在F6/F7/F8三节均有、F5 allowed_for_Fx读取和缺失字段暂停规则在F7/F8落地、F0数据地图引用在F7正确实现（F8为纯单细胞分析不需要）、mandatory/conditional输出分层在F7/F8落地、method_execution_plan审批gate在F7/F8落地、F7→F8非机械阻断在两节均写明、样本量门槛在F7(20/30/50)和F8(PM方向性)落地、循环定义防护在F7(GSEA/WGCNA)和F8(leave-one-out)落地、SHA256双路径一致（2E5C5DC30AA0ED44F2DF2E35BFF634CC60EFC5563F82E7C2E2AB782AE779C675）。
+
+内容审核发现0个Blocking、1个Warning、0个Suggestion。核心问题是F8.4 CellChat的TME细胞群分组未显式链接F4.1的communication_celltype冻结。
+
+修改涉及F8.0第840行和F8.4第855行共两处。修改后需同步WPS路径并验证`[TABLE]`标签平衡和SHA256一致。
+
+---
+
+## Warning 修改（必须完成）
+
+### W1. F8.4 CellChat TME细胞群标签显式链接F4.1 communication_celltype冻结
+
+**问题**：F4.1（624行）是F4的强审批暂停点，冻结了communication_celltype标签——即哪些TME细胞群参与通讯分析、如何合并小群体、如何命名。F4的所有CellChat结果建立在这套冻结标签上。
+
+F8.4（855行）声明"核心基因高/低表达来源细胞与主要TME细胞群的通讯比较"，但"主要TME细胞群"指的是F4.1冻结的communication_celltype还是F1的原始cell_type注释？方案没有说明。
+
+F8.0（840行）在F4条件性读取列表中只列了`F4_final_candidate_communication_axes.tsv`（F4的通讯结果），没有列`F4_communication_celltype_assignment.tsv`和`F4_communication_celltype_plan.tsv`（F4的TME分组定义）。F8知道F4发现了什么通讯轴，但不知道F4用了什么TME细胞群分组。
+
+后果：F8.4可能使用与F4不同的TME粒度（如F4合并了monocytes和macrophages，F8没有），导致论文中F4和F8的CellChat图使用不同的细胞群名称。F8_single_gene_CellChat_results.tsv已有`F4_consistency_status`字段（事后检查），但事前对齐比事后发现不一致更稳妥。
+
+**修改涉及两处**：
+
+#### W1a. F8.0 第840行——F4条件性读取清单追加celltype分组文件
+
+**精确位置**：第840行，"还应读取F4_final_candidate_communication_axes.tsv、"之后、"F6_gate_immunity_report.md"之前。
+
+**新增内容**（逗号分隔插入）：
+> F4_communication_celltype_assignment.tsv、F4_communication_celltype_plan.tsv、
+
+修改后该段应为：`...还应读取F4_final_candidate_communication_axes.tsv、F4_communication_celltype_assignment.tsv、F4_communication_celltype_plan.tsv、F6_gate_immunity_report.md...`
+
+#### W1b. F8.4 第855行——TME分组来源显式规定
+
+**精确位置**：第855行，"不得替代或推翻F4主通讯结论。"这句句号之后、"主分析默认限于Primary_Tumor"之前。
+
+**新增内容**（插在两句之间，作为独立一句）：
+> 若F4已完成，F8 CellChat必须使用F4.1冻结的communication_celltype标签作为TME细胞群分组依据，确保F8与F4的CellChat结果使用相同的TME粒度和命名；若F4未完成，F8 CellChat使用F1 cell_metadata_final.tsv中的celltype_major或研究者批准的合并规则，并在F8_CellChat_grouping_plan.tsv中记录TME分组来源和依据。
+
+---
+
+## 修改后确认清单
+
+完成所有修改后，请逐项验证：
+
+1. [ ] W1a: grep `F4_communication_celltype_assignment.tsv` 确认在第840行附近存在
+2. [ ] W1a: grep `F4_communication_celltype_plan.tsv` 确认在第840行附近存在
+3. [ ] W1a: 确认两个新文件位于`F4_final_candidate_communication_axes.tsv`之后、`F6_gate_immunity_report.md`之前，逗号分隔格式正确
+4. [ ] W1b: grep `F4.1冻结的communication_celltype标签` 或类似表述确认在第855行附近存在
+5. [ ] W1b: 确认新增内容位于"不得替代或推翻F4主通讯结论"之后、"主分析默认限于Primary_Tumor"之前
+6. [ ] W1b: 确认包含F4已完成和F4未完成两种情况的处理规则
+7. [ ] F8.0其他内容（核心基因准入、对象一致性、解释边界）未被误改
+8. [ ] F8.1-F8.3未被误改
+9. [ ] F8.5 gate条件和claim control未被误改
+10. [ ] F4.1（624行）communication_celltype冻结原文未被误改
+11. [ ] `[TABLE]` / `[/TABLE]` 配平检查（应仍为17/17）
+12. [ ] 两个路径SHA256一致
