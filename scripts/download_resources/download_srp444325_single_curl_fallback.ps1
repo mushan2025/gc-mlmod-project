@@ -1,7 +1,7 @@
 param(
     [string]$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
     [string]$FileName = "SRR24947496_1.fastq.gz",
-    [string]$TempRoot = "C:\srp444325_curl_tmp",
+    [string]$TempRoot = (Join-Path ([System.IO.Path]::GetTempPath()) "srp444325_curl_tmp"),
     [int]$MaxAttempts = 3
 )
 
