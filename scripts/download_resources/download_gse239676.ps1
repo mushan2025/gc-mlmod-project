@@ -50,6 +50,15 @@ function Test-GzipFile {
     if ($SkipGzipTest) {
         return "skipped"
     }
+    $fs = [System.IO.File]::OpenRead($Path)
+    try {
+        $b1 = $fs.ReadByte()
+        $b2 = $fs.ReadByte()
+    } finally {
+        $fs.Close()
+    }
+
+    if (($b1 -eq 0x1f) -and ($b2 -eq 0x8b)) {
     $code = @"
 import gzip
 import sys
@@ -62,7 +71,22 @@ with gzip.open(path, "rb") as fh:
     Set-Content -Path $tmp -Value $code -Encoding UTF8
     & python $tmp $Path
     if ($LASTEXITCODE -eq 0) { return "gzip_read_ok" }
-    return "gzip_read_failed"
+        return "gzip_read_failed"
+    }
+
+    $textCode = @"
+import sys
+path = sys.argv[1]
+with open(path, "rt", encoding="utf-8", errors="strict") as fh:
+    for _ in range(5):
+        if fh.readline() == "":
+            break
+"@
+    $textTmp = Join-Path $logDir "plain_text_test.py"
+    Set-Content -Path $textTmp -Value $textCode -Encoding UTF8
+    & python $textTmp $Path
+    if ($LASTEXITCODE -eq 0) { return "plain_text_read_ok_gz_suffix" }
+    return "gzip_and_plain_text_read_failed"
 }
 
 $rows = New-Object System.Collections.Generic.List[object]
@@ -83,6 +107,8 @@ foreach ($file in $files) {
         & curl.exe `
             --location `
             --fail `
+            --silent `
+            --show-error `
             --ssl-no-revoke `
             --retry 10 `
             --retry-delay 30 `

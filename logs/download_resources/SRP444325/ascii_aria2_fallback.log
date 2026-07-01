@@ -1,0 +1,10 @@
+﻿[2026-06-29 13:16:18] Starting ASCII aria2 fallback for SRR24947496_1.fastq.gz
+[2026-06-29 13:16:18] URL: https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+[2026-06-29 13:16:18] Temp path: C:\srp444325_aria2_tmp\SRR24947496_1.fastq.gz
+[2026-06-29 22:14:13] Starting ASCII aria2 fallback for SRR24947496_1.fastq.gz
+[2026-06-29 22:14:13] URL: https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+[2026-06-29 22:14:13] Temp path: C:\srp444325_aria2_tmp\SRR24947496_1.fastq.gz
+[2026-06-29 22:38:47] ASCII fallback MD5: 01ef73515ed8ef671984bc0ffba922f4
+[2026-06-29 22:38:48] Moved verified file into project: D:\服务器_胃癌线粒体亚群\data\public_downloads\SRP444325\fastq\SRR24947496_1.fastq.gz
+[2026-06-29 22:42:36] Manifest written: D:\服务器_胃癌线粒体亚群\reports\download_resources\SRP444325_fastq_download_manifest.tsv; md5_ok=30/30
+[2026-06-29 22:42:36] All SRP444325 main FASTQ files pass final size+MD5 checks.

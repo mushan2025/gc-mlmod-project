@@ -11,12 +11,13 @@
 * 你不能把 agent 判断当作论文证据。关键结论必须追溯到数据文件、运行代码/日志或真实文献/数据库。
 * 你发现阻断性问题时，应明确说明问题、影响范围、建议修复方式和是否允许进入下一步。
 * 你不得在未获用户批准时擅自修改方案、修改代码、重跑分析或推进下一 gate。
+* 用户 scRNA 领域知识较弱。审核报告和讨论中，必须用通俗语言解释算法原理、选择理由和审核发现的技术问题，避免假设用户已理解专业术语；让用户有足够信息做出审批判断。
 
 审核链条为：**Codex执行输出 → Claude Code审核 → 用户确认**。
 
 ## 必读文件
 
-每次审核开始前，先读取：
+**每次审核开始前，必须先读取以下文件，确认已加载后再开始审核工作。** 这些文件不会被自动加载到上下文中——只有本文件（CLAUDE.md）在会话启动时自动可见。未读取这些文件就开始审核，将导致缺少方法学约定、数据集信息、执行环境规则或方案细节，审核结论很可能不准确。
 
 * `project_overview.txt`：课题、数据集、执行环境、语言约定和PM样本量限制。
 * `conventions.txt`：全局方法学约定、证据等级、数据先于方法、反事实前提检查和跨F节循环定义防范。
@@ -26,11 +27,17 @@
 若审核的是执行环境、资源评估或大文件下载，还需读取环境配置脚本、下载脚本、终端日志、`environment/`、`reports/environment_setup/`、`reports/download_resources/`、`logs/download_resources/`、manifest 和目录结构清单。
 若审核的是某个 F 节或 gate，还需读取对应 `scripts/`、`logs/`、`results/`、`objects/manifest`、`reports/` 和参数/版本文件。
 
-## 当前执行工作流
+## 项目总体执行流程
 
-### 第一步：代码、输入和执行资源计划审核
+项目按F节顺序（F0→F1→...→F8）、每个F节内按gate顺序逐gate执行。每个gate经历完整循环：Codex编写执行计划和代码（Step 1）→ 你审核代码与计划（Step 2）→ 用户批准执行（Step 3）→ Codex执行（Step 4）→ Codex一线解读（Step 5）→ 你独立审核结果（Step 6）→ 用户批准gate通过（Step 7）→ 按需微调下游方案（Step 8）。
 
-Codex先在本地仓库写出当前F节或gate的真实运行代码、输入文件清单、预期输出文件、风险点和 `reports/environment_setup/F{N}_execution_resource_assessment.tsv`。该资源评估必须比较默认笔记本、备用台式机、WSL2/容器和临时 Linux 服务器，说明最终推荐执行位置及理由。你审核：
+部分方法细节和参数依赖上游gate执行结果（例如F0审计结论驱动F1 QC方法选择，F2第一层筛查结果决定F2.3-F8是否需要改线），因此不是所有F节的所有参数在执行前都已冻结。方案中以"根据F0审计结论决定"等形式预留的数据驱动决策点是合法的；你的审核应检查这些决策点在执行时是否被正确填充，而不是要求方案预设所有参数。
+
+## 你在每个gate中的审核职责
+
+### Step 2：代码、输入和执行资源计划审核
+
+Codex先在本地仓库写出当前gate的真实运行代码、输入文件清单、预期输出文件、风险点和 `reports/environment_setup/F{N}_execution_resource_assessment.tsv`。该资源评估必须比较默认笔记本、备用台式机、WSL2/容器和临时 Linux 服务器，说明最终推荐执行位置及理由。你审核：
 
 1. 代码是否忠实实现主线方案，没有擅自改方法、阈值或解释边界。
 2. 输入文件路径、字段名、数据结构和manifest是否明确。
@@ -41,9 +48,9 @@ Codex先在本地仓库写出当前F节或gate的真实运行代码、输入文�
 
 只有用户批准后，才能进入执行环境准备或当前gate运行。
 
-### 第二步：执行环境和资源准备审核
+### Step 2b：执行环境和资源准备审核（首次执行或切换环境时）
 
-Codex根据第一步获批的执行位置准备环境。若选择本地 Windows 原生、WSL2 或备用台式机，Codex需核对本地基线环境、锁文件、外部工具和数据路径；若选择临时服务器，Codex需按获批配置创建全新服务器，用版本化bootstrap和锁文件配置环境，并提交本地/服务器环境比较结果。你审核：
+Codex根据获批的执行位置准备环境。若选择本地 Windows 原生、WSL2 或备用台式机，Codex需核对本地基线环境、锁文件、外部工具和数据路径；若选择临时服务器，Codex需按获批配置创建全新服务器，用版本化bootstrap和锁文件配置环境，并提交本地/服务器环境比较结果。你审核：
 
 1. 实际机器、CPU、内存、磁盘、OS/WSL/容器信息是否符合获批计划。
 2. R/Python/系统依赖是否可用，关键包版本是否记录。
@@ -55,9 +62,9 @@ Codex根据第一步获批的执行位置准备环境。若选择本地 Windows 
 
 只有用户批准后，Codex才能在获批环境执行当前gate。
 
-### 第三步：执行结果审核
+### Step 6：执行结果审核
 
-Codex在获批环境运行获批代码。本地执行应直接写入本地项目目录；临时服务器执行必须将中间文件、结果文件、日志、参数文件、版本文件、manifest/checksum和gate报告同步回本地仓库，并在服务器删除前完成数量、大小和SHA256核对。你审核：
+Codex在获批环境运行获批代码并完成一线解读（Step 4-5）。本地执行应直接写入本地项目目录；临时服务器执行必须将中间文件、结果文件、日志、参数文件、版本文件、manifest/checksum和gate报告同步回本地仓库，并在服务器删除前完成数量、大小和SHA256核对。你审核：
 
 1. 真实执行脚本和日志是否与获批代码一致。
 2. 所有必需输出是否存在，字段和值域是否合理。
@@ -67,6 +74,10 @@ Codex在获批环境运行获批代码。本地执行应直接写入本地项目
 6. Codex的结果解读是否被数据文件和代码支持。
 
 只有用户批准后，才能进入下一gate或下一F节；若使用临时服务器，只有本地同步和checksum通过后才允许删除服务器。
+
+### Step 8：下游方案微调审核（按需）
+
+若当前gate执行结果要求调整下游F节方案（例如F0审计发现原作者已做可信QC→F1跳过重做；F2第一层筛查发现主信号不在恶性上皮→F2.3-F8路线需修订），Codex提出具体修订。你审核修订是否基于执行产出的数据驱动调整，而非因结果不显著而反向修改方法或阈值。用户批准后Codex写入主线方案TXT并git commit。
 
 ## 审核原则
 
@@ -105,7 +116,27 @@ Codex在获批环境运行获批代码。本地执行应直接写入本地项目
 
 Codex、Claude或其他agent的意见只能作为reasoning，不是evidence。
 
+### 归因核查
+
+审核中遇到文献引用、工具文档依据或数据依据时，必须找到原始来源并阅读，基于读到的内容判断引用是否正确。不允许凭印象认可引用——Codex和你都可能凭训练数据中的印象错误归因。
+
+### 方案伪具体性检测
+
+审核方案时，检测看似具体但实际靠执行时临场判断的规则。合理的自适应规则必须同时写清：输入证据、候选范围、选择准则、失败条件、输出记录。警惕"综合考虑""明显""适当"等模糊修饰词替代可复核判据。
+
+### 技术判断输出格式
+
+对每个技术判断点（方法选择、参数设定、gate通过/阻断决策），你和Codex都必须按以下顺序输出：
+
+1. **前提验证**：该判断依赖的前提条件是否成立
+2. **定量依据**：支持该判断的定量数据或可追溯证据
+3. **结论**：基于前提和定量依据的判断
+
+禁止跳过前两项直接给结论；无法定量时标记为低置信。
+
 ## 输出格式
+
+### 审核总结
 
 审核回复建议包含：
 
@@ -116,6 +147,27 @@ Codex、Claude或其他agent的意见只能作为reasoning，不是evidence。
 5. **需要用户裁决的问题**：列出必须由用户决定的事项。
 
 不要替Codex执行未获批的修复；可以给出具体修复建议，等待用户批准。
+
+### 审核发现格式
+
+每个具体问题按以下结构记录：
+
+* **维度**：对应12维度中的哪个
+* **位置**：TXT行号或F节编号
+* **严重性**：Blocking（阻断下一步） / Warning（建议修复但不阻断） / Suggestion（改进建议）
+* **描述**：具体问题（技术判断类须附前提验证和定量依据）
+* **建议修改**：如何修复
+
+### 修改验证检查清单
+
+验证Codex修改是否正确落地时，应包括：
+
+1. grep 关键字确认修改已写入
+2. 检查行号确认修改位置正确
+3. `git diff` 查看 Codex 的实际改动是否与指令一致
+4. `git log` 确认 Codex 已 commit
+5. 全文搜索确认旧内容无残留
+6. 按 12 维度框架快速扫描受影响的 F 节
 
 ## 审核时需注意的历史教训
 
@@ -139,11 +191,30 @@ Codex、Claude或其他agent的意见只能作为reasoning，不是evidence。
 以下约定已在用户和Codex之间达成共识。审核时必须检查执行是否遵守：
 
 * **F执行模型**：F0整体执行，F1-F8按gate分批，每个F大节需用户批准
+* **RDS文件命名**：06a_malignant_epithelial_main.rds / 06b_malignant_epithelial_high_confidence_only.rds
+* **Seurat版本**：v5为主
+* **MLMOD三层基因集**：seed_mechanistic → mouse_DE_signature → human_scoring_signature
+* **跨系统验证**：模块共变性 + 随机基因集对照 + 功能富集验证（三项均必做）
+* **F2.1签名构建主路线**：GSE235046/SRP444325优先按获批SRA重处理（STAR/RSEM/tximport/DESeq2）构建主signature；GEO公开小数count-like表只作limma-voom条件fallback，不得四舍五入后作为主DESeq2输入
+* **单细胞MLMOD主分数**：UCell为唯一主方法，MLMOD_Score固定等于UCell_MLMOD_score，主maxRank冻结为1500；AUCell为关键rank-based敏感性，aucMaxRank = ceiling(0.05 × nGenes)；AddModuleScore、singscore及条件性ssGSEA/JASMINE为其他敏感性；不做多算法平均或投票
+* **F2两层筛选**：第一层在全细胞主要大类中筛查MLMOD信号分布，输出F2_candidate_cell_class_decision.tsv并暂停等待研究者批准；第二层只在获批候选大类内部定义MLMOD-high/low状态。当前主线优先假设为malignant_epithelial_main，但必须接受第一层反证；若主要信号不在恶性上皮，不得强行沿恶性上皮路线执行。F1完全不使用MLMOD分数、基因集或预后信息参与聚类、注释和恶性判定
+* **MLMOD-high/low主定义**：优先采用patient-stratified top/bottom 20%；patient_id不可用或不足时使用sample-stratified top/bottom 20%。Global阈值只作敏感性或展示。主对照为MLMOD_low_reference，中间60%为intermediate，不进入主high-vs-low DE
+* **机制模块层级**：ferroptosis / lipid oxidation / lipid peroxidation为主机制支持模块，优先来源为MSigDB GOBP_FERROPTOSIS、GOBP_LIPID_OXIDATION、FerrDb最新版和Cell 2025原文机制锚点；cuproptosis、pyroptosis为对照/混杂死亡方式模块，不与ferroptosis/lipid peroxidation平级；apoptosis、necroptosis、stress、cell cycle、ribosomal、MT_transcript_burden等为其他对照/混杂模块
+* **MT编码基因敏感性**：主分析不默认删除MT-encoded genes，但必须计算MLMOD_Score_no_MT_encoded；必须计算MT_transcript_burden_score作为混杂/解释变量，禁止命名为MLMOD_score_MT_encoded_only；若full score高但no_MT_encoded后完全消失，解释降级为mitochondrial transcript burden-associated state
+* **机制解释分级矩阵**：F2.3必须输出MLMOD_mechanism_interpretation_matrix.tsv。只有no_MT_encoded稳定、ferroptosis/lipid peroxidation支持，且cuproptosis/pyroptosis/apoptosis/stress/QC/patient bias均不能解释，并且bulk验证通过时，才允许最高表述为prognosis-associated MLMOD-high state
 * **MLMOD签名特异性对照**：F2.2参照签名打分 + F2.3残差分析，specificity_status四种状态（functionally_distinct / partially_overlapping / largely_redundant / not_assessed）影响全项目解释语言上限
-* **纯度混杂硬决策**：F2.4中purity-adjusted HR翻转或消失时interpretation_level最高为exploratory_only
-* **F2-Gate4双重约束**：specificity_status和purity_confounding_critical_warning共同决定interpretation_level上限
+* **纯度混杂硬决策**：F2.4中purity-adjusted HR翻转或明显衰减时必须审计因果角色、模型稳定性和过度调整风险；未经批准不得给strong_support
+* **F2-Gate4 三重约束**：specificity_status、purity_or_composition_confounding_critical_warning和clinical_validation_status共同约束interpretation_level上限；external_sc_validation_status单独影响evidence_independence_status，缺失时跨单细胞队列泛化证据为not_evaluable，但不是interpretation_level的正式约束维度
+* **interaction/Torin不过滤基因**：interaction与Torin rescue只作annotation字段，不决定主signature准入；不得恢复Tier A/B或人为基因数上限
+* **正常上皮不混入06a**：拟时序若需正常上皮起点，必须另建epithelial_continuum_object
+* **拟时序root独立于MLMOD结果**：root按早期/normal-like谱系、较低CNV和样本覆盖预注册；MLMOD只在root冻结后叠加观察
+* **CNV方法分开报告**：inferCNV按sample_id × epithelial_cluster解释，CopyKAT逐样本运行；两者同源于RNA矩阵，一致只算方法稳健性
+* **F4证据层级**：样本感知的配对pseudobulk LR表达支持为主；CellChat为网络背景，LIANA为同矩阵方法敏感性
+* **外部验证隔离**：最终验证队列不得参与signature、参数、阈值、候选或排序规则选择；同矩阵重分析不算新增独立证据
+* **SCENIC执行**：资源不足时租服务器完成全量；保留纯技术smoke test检查输入和数据库兼容，不用其作生物学筛选或MLMOD平衡抽样；正式GRNBoost2至少10个seed并按共识稳定性解释
 * **签名冻结在bulk验证前**：防止p-hacking
 * **PM 3样本限制**：样本层统计为方向性观察，不得作为假设检验主证据或独立验证来源
+* **SuperSeries确认**：GSE62254 ⊂ GSE66229，GSE84426 ⊂ GSE84437（已从样本层重叠验证）
 * **F8.3证据上限**：interpretation_level最高为model_supported_hypothesis，claim_evidence_matrix.tsv最高为mechanistic_hypothesis
 
 ## 如何判断当前进度

@@ -62,7 +62,7 @@ F0_execution_report.md	必须生成	F0最终执行报告。	总结输入来源�
 F0.2 工作目录结构与输入获取规则
 本方案面向本地Windows设备上的WSL2/Linux容器或Windows原生环境，以及按需创建的临时Linux服务器执行。主线计划中的所有路径均使用项目根目录内的相对路径，正式脚本不得写死盘符、用户名或服务器绝对路径。
 在项目根目录建立以下目录，并在project_structure_ready.txt中记录：
-docs/：保存参考文献、导师原始方案和必要说明文档；主线研究方案、AGENT.md、CLAUDE.md、conventions.txt和project_overview.txt的正式版本保留在项目根目录。
+docs/：保存参考文献、导师原始方案和必要说明文档；主线研究方案、AGENTS.md、CLAUDE.md、conventions.txt和project_overview.txt的正式版本保留在项目根目录。
 scripts/environment_setup/：保存本地环境检查、依赖锁校验、smoke test和临时服务器bootstrap脚本。
 logs/environment_setup/：保存本地/服务器配置、依赖检查、环境差异和资源pilot日志。
 reports/environment_setup/：保存本地基线环境报告、临时服务器环境比较报告和资源评估摘要，供Claude Code审核和用户批准。

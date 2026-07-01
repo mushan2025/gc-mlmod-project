@@ -1,0 +1,35 @@
+2026-06-28 19:54:52.501078 [NOTICE] [Context.cc:310] Downloading 7 item(s)
+2026-06-28 19:54:52.504080 [NOTICE] [RequestGroupMan.cc:424] Download GID#b0fe1254aae01aa9 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+2026-06-28 20:36:39.589305 [ERROR] [AbstractCommand.cc:377] CUID#10 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 20:36:39.593155 [ERROR] [AbstractCommand.cc:377] CUID#8 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 20:36:39.596154 [ERROR] [AbstractCommand.cc:377] CUID#9 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 20:36:39.599155 [ERROR] [AbstractCommand.cc:377] CUID#12 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 20:36:39.602358 [ERROR] [AbstractCommand.cc:377] CUID#17 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 20:36:39.604365 [ERROR] [AbstractCommand.cc:377] CUID#14 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 20:36:39.610197 [NOTICE] [RequestGroupMan.cc:424] Download GID#3221703005053997 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947506_1.fastq.gz
+2026-06-28 20:36:39.623374 [NOTICE] [RequestGroupMan.cc:424] Download GID#71712ee2d8c90c6d not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947503_2.fastq.gz
+2026-06-28 20:36:39.635378 [NOTICE] [RequestGroupMan.cc:424] Download GID#b39d73cf4b18983e not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947507_1.fastq.gz
+2026-06-28 20:36:39.661945 [ERROR] [AbstractCommand.cc:377] CUID#23 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 20:36:39.663951 [NOTICE] [RequestGroupMan.cc:424] Download GID#9a7730175344c20d not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947507_2.fastq.gz
+2026-06-28 20:36:39.665959 [ERROR] [AbstractCommand.cc:377] CUID#25 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/008/SRR24947508/SRR24947508_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 20:36:39.666956 [NOTICE] [RequestGroupMan.cc:424] Download GID#19380b71bfa8d442 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947508_1.fastq.gz
+2026-06-28 20:36:39.668960 [ERROR] [AbstractCommand.cc:377] CUID#26 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/008/SRR24947508/SRR24947508_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 20:36:39.670951 [NOTICE] [RequestGroupMan.cc:424] Download GID#187c6f32b23ea11b not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947508_2.fastq.gz

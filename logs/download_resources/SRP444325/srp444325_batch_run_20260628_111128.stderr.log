@@ -1,0 +1,9 @@
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260628_111130.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0628_111130.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260628_111130.log
+ 

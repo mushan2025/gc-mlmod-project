@@ -1,0 +1,7 @@
+aria2c failed for SRR24947496_1.fastq.gz with exit code 18
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq.ps1:156 字符: 17
++ ...             throw "aria2c failed for $($job.file_name) with exit code ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2c failed f...th exit code 18:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2c failed for SRR24947496_1.fastq.gz with exit code 18
+ 

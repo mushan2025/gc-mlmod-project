@@ -1,0 +1,212 @@
+2026-06-28 03:03:35.453176 [NOTICE] [Context.cc:310] Downloading 30 item(s)
+2026-06-28 03:03:35.462084 [NOTICE] [RequestGroupMan.cc:424] Download GID#a05209f3d77e9a1b not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+2026-06-28 03:04:50.019060 [ERROR] [AbstractCommand.cc:349] CUID#16 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/004/SRR24947504/SRR24947504_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/004/SRR24947504/SRR24947504_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 03:04:50.903910 [ERROR] [AbstractCommand.cc:349] CUID#24 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/099/SRR24947499/SRR24947499_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/099/SRR24947499/SRR24947499_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 03:04:51.623659 [ERROR] [AbstractCommand.cc:349] CUID#26 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/009/SRR24947509/SRR24947509_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/009/SRR24947509/SRR24947509_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 03:04:52.207223 [ERROR] [AbstractCommand.cc:349] CUID#20 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/099/SRR24947499/SRR24947499_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/099/SRR24947499/SRR24947499_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 03:04:53.836655 [ERROR] [AbstractCommand.cc:349] CUID#17 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 03:05:32.898046 [ERROR] [AbstractCommand.cc:377] CUID#18 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_2.fastq.gz
+Exception: [FtpConnection.cc:327] errorCode=1 Got EOF from the server.
+2026-06-28 03:06:04.272007 [ERROR] [AbstractCommand.cc:349] CUID#29 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/004/SRR24947504/SRR24947504_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/004/SRR24947504/SRR24947504_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 03:06:05.810020 [ERROR] [AbstractCommand.cc:349] CUID#15 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/004/SRR24947504/SRR24947504_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/004/SRR24947504/SRR24947504_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 03:06:36.696803 [ERROR] [AbstractCommand.cc:377] CUID#31 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/004/SRR24947504/SRR24947504_1.fastq.gz
+Exception: [FtpConnection.cc:327] errorCode=1 Got EOF from the server.
+2026-06-28 03:09:19.887581 [ERROR] [AbstractCommand.cc:349] CUID#14 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/004/SRR24947504/SRR24947504_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/004/SRR24947504/SRR24947504_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 03:09:20.350637 [ERROR] [AbstractCommand.cc:349] CUID#13 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/009/SRR24947509/SRR24947509_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/009/SRR24947509/SRR24947509_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 04:12:24.919306 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947499_2.fastq.gz
+2026-06-28 04:12:24.929296 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947499_2.fastq.gz
+2026-06-28 04:27:47.481091 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947504_1.fastq.gz
+2026-06-28 04:27:47.490771 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947504_1.fastq.gz
+2026-06-28 04:28:57.314124 [ERROR] [AbstractCommand.cc:349] CUID#64 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/010/SRR24947510/SRR24947510_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/010/SRR24947510/SRR24947510_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 04:30:02.816530 [ERROR] [AbstractCommand.cc:349] CUID#63 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/010/SRR24947510/SRR24947510_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/010/SRR24947510/SRR24947510_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 04:37:47.011612 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947499_1.fastq.gz
+2026-06-28 04:37:47.021633 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947499_1.fastq.gz
+2026-06-28 04:40:02.798086 [ERROR] [AbstractCommand.cc:349] CUID#72 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/010/SRR24947510/SRR24947510_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/010/SRR24947510/SRR24947510_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 04:40:03.275511 [ERROR] [AbstractCommand.cc:349] CUID#73 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/010/SRR24947510/SRR24947510_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/010/SRR24947510/SRR24947510_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 04:46:54.494258 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947496_2.fastq.gz
+2026-06-28 04:46:54.497693 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947496_2.fastq.gz
+2026-06-28 04:48:04.326335 [ERROR] [AbstractCommand.cc:349] CUID#80 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/000/SRR24947500/SRR24947500_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/000/SRR24947500/SRR24947500_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 04:48:04.335062 [ERROR] [AbstractCommand.cc:349] CUID#81 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/000/SRR24947500/SRR24947500_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/000/SRR24947500/SRR24947500_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:05:20.269823 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947509_2.fastq.gz
+2026-06-28 05:05:20.272675 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947509_2.fastq.gz
+2026-06-28 05:39:58.759451 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947500_2.fastq.gz
+2026-06-28 05:39:58.762188 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947500_2.fastq.gz
+2026-06-28 05:40:29.545930 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947510_1.fastq.gz
+2026-06-28 05:40:29.549703 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947510_1.fastq.gz
+2026-06-28 05:41:40.004141 [ERROR] [AbstractCommand.cc:349] CUID#98 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/001/SRR24947501/SRR24947501_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/001/SRR24947501/SRR24947501_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:43:52.393680 [ERROR] [AbstractCommand.cc:349] CUID#100 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/001/SRR24947501/SRR24947501_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/001/SRR24947501/SRR24947501_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:46:40.116718 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947504_2.fastq.gz
+2026-06-28 05:46:40.120001 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947504_2.fastq.gz
+2026-06-28 05:47:28.659432 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947509_1.fastq.gz
+2026-06-28 05:47:28.662616 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947509_1.fastq.gz
+2026-06-28 05:47:44.845225 [ERROR] [AbstractCommand.cc:377] CUID#111 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_2.fastq.gz
+Exception: [FtpConnection.cc:327] errorCode=1 Got EOF from the server.
+2026-06-28 05:47:44.847019 [NOTICE] [RequestGroupMan.cc:424] Download GID#39fad5649343e3d5 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947505_2.fastq.gz
+2026-06-28 05:47:45.612626 [ERROR] [AbstractCommand.cc:349] CUID#106 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:47:50.057142 [ERROR] [AbstractCommand.cc:349] CUID#107 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:48:06.472450 [ERROR] [AbstractCommand.cc:377] CUID#117 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+Exception: [FtpConnection.cc:327] errorCode=1 Got EOF from the server.
+2026-06-28 05:48:08.108229 [ERROR] [AbstractCommand.cc:377] CUID#118 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+Exception: [FtpConnection.cc:327] errorCode=1 Got EOF from the server.
+2026-06-28 05:48:51.315171 [ERROR] [AbstractCommand.cc:349] CUID#112 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:48:55.075714 [ERROR] [AbstractCommand.cc:349] CUID#109 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:48:55.562788 [ERROR] [AbstractCommand.cc:349] CUID#119 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:48:55.573428 [NOTICE] [RequestGroupMan.cc:424] Download GID#a3fbcc6b44490c9f not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947506_1.fastq.gz
+2026-06-28 05:50:01.419566 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947500_1.fastq.gz
+2026-06-28 05:50:01.422316 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947500_1.fastq.gz
+2026-06-28 05:50:08.017782 [ERROR] [AbstractCommand.cc:349] CUID#130 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:50:22.037872 [ERROR] [AbstractCommand.cc:377] CUID#135 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/097/SRR24947497/SRR24947497_1.fastq.gz
+Exception: [FtpConnection.cc:327] errorCode=1 Got EOF from the server.
+2026-06-28 05:50:25.291372 [ERROR] [AbstractCommand.cc:377] CUID#134 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/097/SRR24947497/SRR24947497_1.fastq.gz
+Exception: [FtpConnection.cc:327] errorCode=1 Got EOF from the server.
+2026-06-28 05:51:11.050059 [ERROR] [AbstractCommand.cc:349] CUID#128 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:51:13.775149 [ERROR] [AbstractCommand.cc:349] CUID#129 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:51:56.736211 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947510_2.fastq.gz
+2026-06-28 05:51:56.746463 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947510_2.fastq.gz
+2026-06-28 05:53:06.663338 [ERROR] [AbstractCommand.cc:349] CUID#148 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/097/SRR24947497/SRR24947497_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/097/SRR24947497/SRR24947497_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:54:14.093819 [ERROR] [AbstractCommand.cc:349] CUID#147 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/097/SRR24947497/SRR24947497_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/097/SRR24947497/SRR24947497_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 05:59:40.221162 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947501_1.fastq.gz
+2026-06-28 05:59:40.231366 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947501_1.fastq.gz
+2026-06-28 06:25:14.037560 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947498_1.fastq.gz
+2026-06-28 06:25:14.041077 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947498_1.fastq.gz
+2026-06-28 06:33:33.028800 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947501_2.fastq.gz
+2026-06-28 06:33:33.032298 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947501_2.fastq.gz
+2026-06-28 06:34:42.856289 [ERROR] [AbstractCommand.cc:349] CUID#166 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 07:23:46.707698 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947498_2.fastq.gz
+2026-06-28 07:23:46.717430 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947498_2.fastq.gz
+2026-06-28 07:25:50.010874 [ERROR] [AbstractCommand.cc:349] CUID#133 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/097/SRR24947497/SRR24947497_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/097/SRR24947497/SRR24947497_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 07:43:00.596253 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947497_1.fastq.gz
+2026-06-28 07:43:00.605544 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947497_1.fastq.gz
+2026-06-28 07:43:35.826957 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947505_1.fastq.gz
+2026-06-28 07:43:35.830241 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947505_1.fastq.gz
+2026-06-28 07:43:56.514934 [ERROR] [AbstractCommand.cc:377] CUID#186 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_2.fastq.gz
+Exception: [FtpConnection.cc:327] errorCode=1 Got EOF from the server.
+2026-06-28 07:44:11.193829 [ERROR] [AbstractCommand.cc:349] CUID#180 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 07:44:45.655764 [ERROR] [AbstractCommand.cc:349] CUID#185 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 07:46:07.723329 [ERROR] [AbstractCommand.cc:349] CUID#187 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 07:52:26.352300 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947497_2.fastq.gz
+2026-06-28 07:52:26.355014 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947497_2.fastq.gz
+2026-06-28 07:53:36.864276 [ERROR] [AbstractCommand.cc:349] CUID#201 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 07:53:37.255126 [ERROR] [AbstractCommand.cc:349] CUID#200 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 08:56:04.761261 [ERROR] [AbstractCommand.cc:377] CUID#175 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.765507 [ERROR] [AbstractCommand.cc:377] CUID#173 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.769899 [ERROR] [AbstractCommand.cc:377] CUID#127 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.773204 [ERROR] [AbstractCommand.cc:377] CUID#165 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.776200 [NOTICE] [RequestGroupMan.cc:424] Download GID#2a73e9f6bc9ac0c5 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947506_2.fastq.gz
+2026-06-28 08:56:04.778992 [ERROR] [AbstractCommand.cc:377] CUID#164 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.778992 [ERROR] [AbstractCommand.cc:377] CUID#207 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.782672 [ERROR] [AbstractCommand.cc:377] CUID#181 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.786536 [NOTICE] [RequestGroupMan.cc:424] Download GID#9755ace1dcf83bcd not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947502_1.fastq.gz
+2026-06-28 08:56:04.790071 [ERROR] [AbstractCommand.cc:377] CUID#172 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.792849 [ERROR] [AbstractCommand.cc:377] CUID#179 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.795331 [ERROR] [AbstractCommand.cc:377] CUID#184 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/003/SRR24947503/SRR24947503_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.797341 [ERROR] [AbstractCommand.cc:377] CUID#198 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.802049 [NOTICE] [RequestGroupMan.cc:424] Download GID#616cb509fd913b36 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947502_2.fastq.gz
+2026-06-28 08:56:04.803334 [NOTICE] [RequestGroupMan.cc:424] Download GID#66c7f948ef1ce583 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947503_1.fastq.gz
+2026-06-28 08:56:04.809133 [NOTICE] [RequestGroupMan.cc:424] Download GID#d3fa5a2a4951cc7b not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947503_2.fastq.gz
+2026-06-28 08:56:04.814823 [ERROR] [AbstractCommand.cc:377] CUID#223 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.819279 [NOTICE] [RequestGroupMan.cc:424] Download GID#3412b2770f6736da not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947507_1.fastq.gz
+2026-06-28 08:56:04.840994 [ERROR] [AbstractCommand.cc:377] CUID#213 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/007/SRR24947507/SRR24947507_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.844818 [NOTICE] [RequestGroupMan.cc:424] Download GID#01fee2c32614745d not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947507_2.fastq.gz
+2026-06-28 08:56:04.847574 [ERROR] [AbstractCommand.cc:377] CUID#219 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/008/SRR24947508/SRR24947508_1.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.848631 [NOTICE] [RequestGroupMan.cc:424] Download GID#a8c7dba4fd3a9591 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947508_1.fastq.gz
+2026-06-28 08:56:04.852648 [ERROR] [AbstractCommand.cc:377] CUID#226 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/008/SRR24947508/SRR24947508_2.fastq.gz
+Exception: [AbstractCommand.cc:312] errorCode=1 Network problem has occurred. cause:A socket operation was attempted to an unreachable network.
+
+2026-06-28 08:56:04.854399 [NOTICE] [RequestGroupMan.cc:424] Download GID#a3eec5d51aafcfa0 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947508_2.fastq.gz

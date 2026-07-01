@@ -1,0 +1,55 @@
+﻿[2026-06-28 17:22:39] Starting SRP444325 resume supervisor; max_attempts=80; sleep_seconds=120; max_concurrent=3; connections_per_file=2
+[2026-06-28 17:22:39] Attempt 1/80 preflight: complete=22/30; partial=5; missing=3; complete_bytes=34414983006
+[2026-06-28 19:52:50] Attempt 1 batch exit code: 1
+[2026-06-28 19:52:50] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-28 19:54:50] Attempt 2/80 preflight: complete=23/30; partial=4; missing=3; complete_bytes=35544206334
+[2026-06-28 20:36:39] Attempt 2 batch exit code: 1
+[2026-06-28 20:36:39] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-28 23:29:25] Attempt 3/80 preflight: complete=23/30; partial=4; missing=3; complete_bytes=35544206334
+[2026-06-29 06:36:09] Attempt 3 batch exit code: 1
+[2026-06-29 06:36:09] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 06:38:09] Attempt 4/80 preflight: complete=26/30; partial=4; missing=0; complete_bytes=39777317439
+[2026-06-29 07:38:22] Attempt 4 batch exit code: 1
+[2026-06-29 07:38:22] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:40:22] Attempt 5/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:40:23] Attempt 5 batch exit code: 1
+[2026-06-29 07:40:23] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:42:23] Attempt 6/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:42:24] Attempt 6 batch exit code: 1
+[2026-06-29 07:42:24] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:44:24] Attempt 7/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:44:25] Attempt 7 batch exit code: 1
+[2026-06-29 07:44:25] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:46:25] Attempt 8/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:46:26] Attempt 8 batch exit code: 1
+[2026-06-29 07:46:26] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:48:26] Attempt 9/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:48:27] Attempt 9 batch exit code: 1
+[2026-06-29 07:48:27] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:50:28] Attempt 10/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:50:29] Attempt 10 batch exit code: 1
+[2026-06-29 07:50:29] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:52:29] Attempt 11/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:52:30] Attempt 11 batch exit code: 1
+[2026-06-29 07:52:30] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:54:30] Attempt 12/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:54:31] Attempt 12 batch exit code: 1
+[2026-06-29 07:54:31] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:56:31] Attempt 13/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:56:32] Attempt 13 batch exit code: 1
+[2026-06-29 07:56:32] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 07:58:32] Attempt 14/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 07:58:33] Attempt 14 batch exit code: 1
+[2026-06-29 07:58:33] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 08:00:33] Attempt 15/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 08:00:34] Attempt 15 batch exit code: 1
+[2026-06-29 08:00:34] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 08:02:34] Attempt 16/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 08:02:35] Attempt 16 batch exit code: 1
+[2026-06-29 08:02:35] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 08:04:35] Attempt 17/80 preflight: complete=29/30; partial=1; missing=0; complete_bytes=44167571638
+[2026-06-29 08:04:37] Attempt 17 batch exit code: 1
+[2026-06-29 08:04:37] Not complete yet; sleeping 120 seconds before retry.
+[2026-06-29 08:06:37] Attempt 18/80 preflight: complete=29/30; partial=0; missing=1; complete_bytes=44167571638
+[2026-06-29 08:06:38] Attempt 18 batch exit code: 1
+[2026-06-29 08:06:38] Not complete yet; sleeping 120 seconds before retry.

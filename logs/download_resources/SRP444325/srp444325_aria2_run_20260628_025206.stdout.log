@@ -1,0 +1,469 @@
+[2026-06-28 02:52:07] Using aria2c for segmented resume downloads: C:\Users\14799\AppData\Local\Microsoft\WinGet\Packages\aria2.aria2_Microsoft.Winget.Source_8wekyb3d8bbwe\aria2-1.37.0-win-64bit-build1\aria2c.exe; connections=8
+[2026-06-28 02:52:07] Prepared 31 FASTQ file jobs from 15 runs; processing 31.
+[2026-06-28 02:52:07] DOWNLOAD/RESUME SRR24947496_1.fastq.gz; existing=18239488 expected=1198147091
+
+                                                                               
+[#c8dbd1 0B/0B CN:1 DL:0B]
+                                                                               
+[#c8dbd1 0B/0B CN:1 DL:0B]
+                                                                               
+[#c8dbd1 0B/0B CN:1 DL:0B]
+                                                                               
+[#c8dbd1 0B/0B CN:1 DL:0B]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:1 DL:0B] [FileAlloc:#c8dbd1 783MiB/1.1GiB(68%)]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:8 DL:0B]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:8 DL:0B]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:8 DL:0B]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:8 DL:0B]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:8 DL:0B]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:8 DL:0B]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:8 DL:0B]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:8 DL:119KiB ETA:2h40m49s]
+                                                                               
+[#c8dbd1 17MiB/1.1GiB(1%) CN:8 DL:263KiB ETA:1h12m53s]
+                                                                               
+[#c8dbd1 18MiB/1.1GiB(1%) CN:8 DL:341KiB ETA:56m6s]
+                                                                               
+[#c8dbd1 18MiB/1.1GiB(1%) CN:8 DL:316KiB ETA:1h36s]
+                                                                               
+[#c8dbd1 19MiB/1.1GiB(1%) CN:8 DL:380KiB ETA:50m20s]
+                                                                               
+[#c8dbd1 19MiB/1.1GiB(1%) CN:8 DL:411KiB ETA:46m34s]
+                                                                               
+[#c8dbd1 20MiB/1.1GiB(1%) CN:8 DL:443KiB ETA:43m8s]
+                                                                               
+[#c8dbd1 20MiB/1.1GiB(1%) CN:8 DL:453KiB ETA:42m11s]
+                                                                               
+[#c8dbd1 21MiB/1.1GiB(1%) CN:8 DL:450KiB ETA:42m26s]
+                                                                               
+[#c8dbd1 21MiB/1.1GiB(1%) CN:8 DL:482KiB ETA:39m39s]
+                                                                               
+[#c8dbd1 21MiB/1.1GiB(1%) CN:8 DL:468KiB ETA:40m51s]
+                                                                               
+[#c8dbd1 22MiB/1.1GiB(1%) CN:8 DL:431KiB ETA:44m21s]
+                                                                               
+[#c8dbd1 22MiB/1.1GiB(1%) CN:8 DL:401KiB ETA:47m38s]
+                                                                               
+[#c8dbd1 22MiB/1.1GiB(1%) CN:8 DL:388KiB ETA:49m10s]
+                                                                               
+[#c8dbd1 22MiB/1.1GiB(1%) CN:8 DL:336KiB ETA:56m48s]
+                                                                               
+[#c8dbd1 22MiB/1.1GiB(1%) CN:8 DL:279KiB ETA:1h8m29s]
+                                                                               
+[#c8dbd1 22MiB/1.1GiB(1%) CN:8 DL:225KiB ETA:1h24m40s]
+                                                                               
+[#c8dbd1 22MiB/1.1GiB(2%) CN:8 DL:200KiB ETA:1h35m9s]
+                                                                               
+[#c8dbd1 23MiB/1.1GiB(2%) CN:8 DL:173KiB ETA:1h49m53s]
+                                                                               
+[#c8dbd1 23MiB/1.1GiB(2%) CN:8 DL:151KiB ETA:2h5m46s]
+                                                                               
+[#c8dbd1 23MiB/1.1GiB(2%) CN:8 DL:148KiB ETA:2h8m13s]
+                                                                               
+[#c8dbd1 23MiB/1.1GiB(2%) CN:8 DL:156KiB ETA:2h2m8s]
+                                                                               
+[#c8dbd1 23MiB/1.1GiB(2%) CN:8 DL:168KiB ETA:1h53m26s]
+                                                                               
+[#c8dbd1 24MiB/1.1GiB(2%) CN:8 DL:174KiB ETA:1h49m9s]
+                                                                               
+[#c8dbd1 24MiB/1.1GiB(2%) CN:8 DL:192KiB ETA:1h38m56s]
+                                                                               
+[#c8dbd1 24MiB/1.1GiB(2%) CN:8 DL:196KiB ETA:1h37m2s]
+                                                                               
+[#c8dbd1 24MiB/1.1GiB(2%) CN:8 DL:205KiB ETA:1h32m36s]
+                                                                               
+[#c8dbd1 25MiB/1.1GiB(2%) CN:8 DL:232KiB ETA:1h21m52s]
+                                                                               
+[#c8dbd1 25MiB/1.1GiB(2%) CN:8 DL:243KiB ETA:1h18m14s]
+                                                                               
+[#c8dbd1 25MiB/1.1GiB(2%) CN:8 DL:244KiB ETA:1h17m58s]
+                                                                               
+[#c8dbd1 25MiB/1.1GiB(2%) CN:8 DL:243KiB ETA:1h18m22s]
+                                                                               
+[#c8dbd1 26MiB/1.1GiB(2%) CN:8 DL:236KiB ETA:1h20m25s]
+                                                                               
+[#c8dbd1 26MiB/1.1GiB(2%) CN:8 DL:234KiB ETA:1h21m23s]
+                                                                               
+[#c8dbd1 26MiB/1.1GiB(2%) CN:8 DL:225KiB ETA:1h24m21s]
+                                                                               
+[#c8dbd1 26MiB/1.1GiB(2%) CN:8 DL:223KiB ETA:1h25m7s]
+                                                                               
+[#c8dbd1 26MiB/1.1GiB(2%) CN:8 DL:239KiB ETA:1h19m21s]
+                                                                               
+[#c8dbd1 27MiB/1.1GiB(2%) CN:8 DL:255KiB ETA:1h14m29s]
+                                                                               
+[#c8dbd1 27MiB/1.1GiB(2%) CN:8 DL:269KiB ETA:1h10m36s]
+                                                                               
+[#c8dbd1 28MiB/1.1GiB(2%) CN:8 DL:311KiB ETA:1h1m4s]
+                                                                               
+[#c8dbd1 28MiB/1.1GiB(2%) CN:8 DL:330KiB ETA:57m25s]
+                                                                               
+[#c8dbd1 29MiB/1.1GiB(2%) CN:8 DL:366KiB ETA:51m46s]
+                                                                               
+[#c8dbd1 29MiB/1.1GiB(2%) CN:8 DL:385KiB ETA:49m13s]
+                                                                               
+[#c8dbd1 30MiB/1.1GiB(2%) CN:8 DL:400KiB ETA:47m21s]
+                                                                               
+[#c8dbd1 30MiB/1.1GiB(2%) CN:8 DL:419KiB ETA:45m13s]
+                                                                               
+[#c8dbd1 30MiB/1.1GiB(2%) CN:8 DL:430KiB ETA:44m5s]
+                                                                               
+ *** Download Progress Summary as of Sun Jun 28 02:53:07 2026 *** 
+===============================================================================
+[#c8dbd1 31MiB/1.1GiB(2%) CN:8 DL:432KiB ETA:43m51s]
+FILE: D:/服务器_胃癌线粒体亚�?data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+-------------------------------------------------------------------------------
+
+[#c8dbd1 31MiB/1.1GiB(2%) CN:8 DL:432KiB ETA:43m51s]
+                                                                               
+[#c8dbd1 31MiB/1.1GiB(2%) CN:8 DL:404KiB ETA:46m50s]
+                                                                               
+[#c8dbd1 31MiB/1.1GiB(2%) CN:8 DL:376KiB ETA:50m23s]
+                                                                               
+[#c8dbd1 32MiB/1.1GiB(2%) CN:8 DL:358KiB ETA:52m50s]
+                                                                               
+[#c8dbd1 32MiB/1.1GiB(2%) CN:8 DL:326KiB ETA:58m3s]
+                                                                               
+[#c8dbd1 32MiB/1.1GiB(2%) CN:8 DL:299KiB ETA:1h3m14s]
+                                                                               
+[#c8dbd1 32MiB/1.1GiB(2%) CN:8 DL:274KiB ETA:1h8m59s]
+                                                                               
+[#c8dbd1 32MiB/1.1GiB(2%) CN:8 DL:256KiB ETA:1h13m46s]
+                                                                               
+[#c8dbd1 32MiB/1.1GiB(2%) CN:8 DL:238KiB ETA:1h19m33s]
+                                                                               
+[#c8dbd1 33MiB/1.1GiB(2%) CN:8 DL:217KiB ETA:1h27m14s]
+                                                                               
+[#c8dbd1 33MiB/1.1GiB(2%) CN:8 DL:204KiB ETA:1h32m33s]
+                                                                               
+[#c8dbd1 33MiB/1.1GiB(2%) CN:8 DL:178KiB ETA:1h46m8s]
+                                                                               
+[#c8dbd1 33MiB/1.1GiB(2%) CN:8 DL:156KiB ETA:2h1m20s]
+                                                                               
+[#c8dbd1 33MiB/1.1GiB(2%) CN:8 DL:151KiB ETA:2h4m34s]
+                                                                               
+[#c8dbd1 33MiB/1.1GiB(2%) CN:8 DL:145KiB ETA:2h10m4s]
+                                                                               
+[#c8dbd1 33MiB/1.1GiB(2%) CN:8 DL:140KiB ETA:2h14m23s]
+                                                                               
+[#c8dbd1 33MiB/1.1GiB(2%) CN:8 DL:138KiB ETA:2h16m24s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(2%) CN:8 DL:143KiB ETA:2h12m15s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(2%) CN:8 DL:138KiB ETA:2h16m44s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(3%) CN:8 DL:125KiB ETA:2h31m6s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(3%) CN:8 DL:129KiB ETA:2h26m19s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(3%) CN:8 DL:122KiB ETA:2h34m18s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(3%) CN:8 DL:116KiB ETA:2h42m21s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(3%) CN:8 DL:105KiB ETA:2h59m27s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(3%) CN:8 DL:101KiB ETA:3h5m47s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(3%) CN:8 DL:92KiB ETA:3h25m15s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(3%) CN:8 DL:77KiB ETA:4h4m32s]
+                                                                               
+[#c8dbd1 34MiB/1.1GiB(3%) CN:8 DL:71KiB ETA:4h24m5s]
+                                                                               
+[#c8dbd1 35MiB/1.1GiB(3%) CN:8 DL:76KiB ETA:4h6m11s]
+                                                                               
+[#c8dbd1 35MiB/1.1GiB(3%) CN:8 DL:76KiB ETA:4h5m52s]
+                                                                               
+[#c8dbd1 35MiB/1.1GiB(3%) CN:8 DL:82KiB ETA:3h47m49s]
+                                                                               
+[#c8dbd1 35MiB/1.1GiB(3%) CN:8 DL:86KiB ETA:3h38m25s]
+                                                                               
+[#c8dbd1 35MiB/1.1GiB(3%) CN:8 DL:93KiB ETA:3h22m34s]
+                                                                               
+[#c8dbd1 35MiB/1.1GiB(3%) CN:8 DL:100KiB ETA:3h7m14s]
+                                                                               
+[#c8dbd1 35MiB/1.1GiB(3%) CN:8 DL:106KiB ETA:2h57m44s]
+                                                                               
+[#c8dbd1 35MiB/1.1GiB(3%) CN:8 DL:118KiB ETA:2h38m45s]
+                                                                               
+[#c8dbd1 36MiB/1.1GiB(3%) CN:8 DL:131KiB ETA:2h24m1s]
+                                                                               
+[#c8dbd1 36MiB/1.1GiB(3%) CN:8 DL:144KiB ETA:2h10m52s]
+                                                                               
+[#c8dbd1 36MiB/1.1GiB(3%) CN:8 DL:147KiB ETA:2h7m39s]
+                                                                               
+[#c8dbd1 36MiB/1.1GiB(3%) CN:8 DL:151KiB ETA:2h4m54s]
+                                                                               
+[#c8dbd1 36MiB/1.1GiB(3%) CN:8 DL:146KiB ETA:2h9m14s]
+                                                                               
+[#c8dbd1 36MiB/1.1GiB(3%) CN:8 DL:144KiB ETA:2h10m54s]
+                                                                               
+[#c8dbd1 36MiB/1.1GiB(3%) CN:8 DL:135KiB ETA:2h19m3s]
+                                                                               
+[#c8dbd1 36MiB/1.1GiB(3%) CN:8 DL:133KiB ETA:2h21m50s]
+                                                                               
+[#c8dbd1 37MiB/1.1GiB(3%) CN:8 DL:127KiB ETA:2h28m5s]
+                                                                               
+[#c8dbd1 37MiB/1.1GiB(3%) CN:8 DL:109KiB ETA:2h53m]
+                                                                               
+[#c8dbd1 37MiB/1.1GiB(3%) CN:8 DL:100KiB ETA:3h7m39s]
+                                                                               
+[#c8dbd1 37MiB/1.1GiB(3%) CN:8 DL:101KiB ETA:3h6m25s]
+                                                                               
+[#c8dbd1 37MiB/1.1GiB(3%) CN:8 DL:101KiB ETA:3h5m35s]
+                                                                               
+[#c8dbd1 37MiB/1.1GiB(3%) CN:8 DL:106KiB ETA:2h56m48s]
+                                                                               
+[#c8dbd1 37MiB/1.1GiB(3%) CN:8 DL:108KiB ETA:2h53m34s]
+                                                                               
+[#c8dbd1 37MiB/1.1GiB(3%) CN:8 DL:108KiB ETA:2h53m51s]
+                                                                               
+[#c8dbd1 37MiB/1.1GiB(3%) CN:8 DL:112KiB ETA:2h47m55s]
+                                                                               
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:108KiB ETA:2h53m41s]
+                                                                               
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:104KiB ETA:3h29s]
+                                                                               
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:103KiB ETA:3h2m25s]
+                                                                               
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:94KiB ETA:3h20m13s]
+                                                                               
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:90KiB ETA:3h28m14s]
+                                                                               
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:93KiB ETA:3h20m42s]
+                                                                               
+ *** Download Progress Summary as of Sun Jun 28 02:54:08 2026 *** 
+===============================================================================
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:96KiB ETA:3h15m37s]
+FILE: D:/服务器_胃癌线粒体亚�?data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+-------------------------------------------------------------------------------
+
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:96KiB ETA:3h15m37s]
+                                                                               
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:98KiB ETA:3h12m]
+                                                                               
+[#c8dbd1 38MiB/1.1GiB(3%) CN:8 DL:111KiB ETA:2h49m6s]
+                                                                               
+[#c8dbd1 39MiB/1.1GiB(3%) CN:8 DL:128KiB ETA:2h26m55s]
+                                                                               
+[#c8dbd1 39MiB/1.1GiB(3%) CN:8 DL:143KiB ETA:2h11m33s]
+                                                                               
+[#c8dbd1 39MiB/1.1GiB(3%) CN:8 DL:156KiB ETA:2h26s]
+                                                                               
+[#c8dbd1 39MiB/1.1GiB(3%) CN:8 DL:162KiB ETA:1h55m54s]
+                                                                               
+[#c8dbd1 39MiB/1.1GiB(3%) CN:8 DL:166KiB ETA:1h52m47s]
+                                                                               
+[#c8dbd1 39MiB/1.1GiB(3%) CN:8 DL:165KiB ETA:1h53m52s]
+                                                                               
+[#c8dbd1 40MiB/1.1GiB(3%) CN:8 DL:159KiB ETA:1h58m19s]
+                                                                               
+[#c8dbd1 40MiB/1.1GiB(3%) CN:8 DL:155KiB ETA:2h46s]
+                                                                               
+[#c8dbd1 40MiB/1.1GiB(3%) CN:8 DL:144KiB ETA:2h10m6s]
+                                                                               
+[#c8dbd1 40MiB/1.1GiB(3%) CN:8 DL:130KiB ETA:2h24m39s]
+                                                                               
+[#c8dbd1 40MiB/1.1GiB(3%) CN:8 DL:114KiB ETA:2h44m42s]
+                                                                               
+[#c8dbd1 40MiB/1.1GiB(3%) CN:8 DL:100KiB ETA:3h7m33s]
+                                                                               
+[#c8dbd1 40MiB/1.1GiB(3%) CN:8 DL:96KiB ETA:3h15m17s]
+                                                                               
+[#c8dbd1 40MiB/1.1GiB(3%) CN:8 DL:96KiB ETA:3h14m35s]
+                                                                               
+[#c8dbd1 40MiB/1.1GiB(3%) CN:8 DL:102KiB ETA:3h2m52s]
+                                                                               
+[#c8dbd1 41MiB/1.1GiB(3%) CN:8 DL:107KiB ETA:2h55m37s]
+                                                                               
+[#c8dbd1 41MiB/1.1GiB(3%) CN:8 DL:111KiB ETA:2h48m57s]
+                                                                               
+[#c8dbd1 41MiB/1.1GiB(3%) CN:8 DL:115KiB ETA:2h42m46s]
+                                                                               
+[#c8dbd1 41MiB/1.1GiB(3%) CN:8 DL:125KiB ETA:2h29m42s]
+                                                                               
+[#c8dbd1 41MiB/1.1GiB(3%) CN:8 DL:135KiB ETA:2h18m51s]
+                                                                               
+[#c8dbd1 41MiB/1.1GiB(3%) CN:8 DL:138KiB ETA:2h15m26s]
+                                                                               
+[#c8dbd1 41MiB/1.1GiB(3%) CN:8 DL:134KiB ETA:2h19m57s]
+                                                                               
+[#c8dbd1 41MiB/1.1GiB(3%) CN:8 DL:131KiB ETA:2h22m53s]
+                                                                               
+[#c8dbd1 42MiB/1.1GiB(3%) CN:8 DL:124KiB ETA:2h30m21s]
+                                                                               
+[#c8dbd1 42MiB/1.1GiB(3%) CN:8 DL:114KiB ETA:2h43m30s]
+                                                                               
+[#c8dbd1 42MiB/1.1GiB(3%) CN:8 DL:108KiB ETA:2h53m35s]
+                                                                               
+[#c8dbd1 42MiB/1.1GiB(3%) CN:8 DL:105KiB ETA:2h57m53s]
+                                                                               
+[#c8dbd1 42MiB/1.1GiB(3%) CN:8 DL:109KiB ETA:2h51m52s]
+                                                                               
+[#c8dbd1 42MiB/1.1GiB(3%) CN:8 DL:121KiB ETA:2h34m15s]
+                                                                               
+[#c8dbd1 42MiB/1.1GiB(3%) CN:8 DL:129KiB ETA:2h24m54s]
+                                                                               
+[#c8dbd1 43MiB/1.1GiB(3%) CN:8 DL:145KiB ETA:2h8m55s]
+                                                                               
+[#c8dbd1 43MiB/1.1GiB(3%) CN:8 DL:160KiB ETA:1h57m9s]
+                                                                               
+[#c8dbd1 43MiB/1.1GiB(3%) CN:8 DL:169KiB ETA:1h50m45s]
+                                                                               
+[#c8dbd1 43MiB/1.1GiB(3%) CN:8 DL:188KiB ETA:1h39m22s]
+                                                                               
+[#c8dbd1 43MiB/1.1GiB(3%) CN:8 DL:199KiB ETA:1h33m50s]
+                                                                               
+[#c8dbd1 44MiB/1.1GiB(3%) CN:8 DL:218KiB ETA:1h25m53s]
+                                                                               
+[#c8dbd1 44MiB/1.1GiB(3%) CN:8 DL:229KiB ETA:1h21m45s]
+                                                                               
+[#c8dbd1 44MiB/1.1GiB(3%) CN:8 DL:217KiB ETA:1h26m5s]
+                                                                               
+[#c8dbd1 45MiB/1.1GiB(3%) CN:8 DL:238KiB ETA:1h18m40s]
+                                                                               
+[#c8dbd1 45MiB/1.1GiB(3%) CN:8 DL:240KiB ETA:1h17m59s]
+                                                                               
+[#c8dbd1 45MiB/1.1GiB(3%) CN:8 DL:237KiB ETA:1h18m47s]
+                                                                               
+[#c8dbd1 45MiB/1.1GiB(3%) CN:8 DL:239KiB ETA:1h18m10s]
+                                                                               
+[#c8dbd1 45MiB/1.1GiB(4%) CN:8 DL:232KiB ETA:1h20m29s]
+                                                                               
+[#c8dbd1 45MiB/1.1GiB(4%) CN:8 DL:229KiB ETA:1h21m33s]
+                                                                               
+[#c8dbd1 46MiB/1.1GiB(4%) CN:8 DL:213KiB ETA:1h27m49s]
+                                                                               
+[#c8dbd1 46MiB/1.1GiB(4%) CN:8 DL:201KiB ETA:1h32m47s]
+                                                                               
+[#c8dbd1 46MiB/1.1GiB(4%) CN:8 DL:200KiB ETA:1h33m9s]
+                                                                               
+[#c8dbd1 46MiB/1.1GiB(4%) CN:8 DL:185KiB ETA:1h40m51s]
+                                                                               
+[#c8dbd1 46MiB/1.1GiB(4%) CN:8 DL:177KiB ETA:1h45m14s]
+                                                                               
+[#c8dbd1 47MiB/1.1GiB(4%) CN:8 DL:180KiB ETA:1h43m38s]
+                                                                               
+[#c8dbd1 47MiB/1.1GiB(4%) CN:8 DL:175KiB ETA:1h46m29s]
+                                                                               
+[#c8dbd1 47MiB/1.1GiB(4%) CN:8 DL:186KiB ETA:1h40m16s]
+                                                                               
+[#c8dbd1 47MiB/1.1GiB(4%) CN:8 DL:210KiB ETA:1h28m39s]
+                                                                               
+[#c8dbd1 48MiB/1.1GiB(4%) CN:8 DL:241KiB ETA:1h17m24s]
+                                                                               
+[#c8dbd1 48MiB/1.1GiB(4%) CN:8 DL:260KiB ETA:1h11m41s]
+                                                                               
+[#c8dbd1 48MiB/1.1GiB(4%) CN:8 DL:272KiB ETA:1h8m31s]
+                                                                               
+[#c8dbd1 49MiB/1.1GiB(4%) CN:8 DL:286KiB ETA:1h5m13s]
+                                                                               
+ *** Download Progress Summary as of Sun Jun 28 02:55:09 2026 *** 
+===============================================================================
+[#c8dbd1 49MiB/1.1GiB(4%) CN:8 DL:292KiB ETA:1h3m48s]
+FILE: D:/服务器_胃癌线粒体亚�?data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+-------------------------------------------------------------------------------
+
+[#c8dbd1 49MiB/1.1GiB(4%) CN:8 DL:292KiB ETA:1h3m48s]
+                                                                               
+[#c8dbd1 49MiB/1.1GiB(4%) CN:8 DL:298KiB ETA:1h2m32s]
+                                                                               
+[#c8dbd1 50MiB/1.1GiB(4%) CN:8 DL:312KiB ETA:59m41s]
+                                                                               
+[#c8dbd1 50MiB/1.1GiB(4%) CN:8 DL:303KiB ETA:1h1m30s]
+                                                                               
+[#c8dbd1 50MiB/1.1GiB(4%) CN:8 DL:292KiB ETA:1h3m42s]
+                                                                               
+[#c8dbd1 50MiB/1.1GiB(4%) CN:8 DL:282KiB ETA:1h5m58s]
+                                                                               
+[#c8dbd1 50MiB/1.1GiB(4%) CN:8 DL:262KiB ETA:1h10m59s]
+                                                                               
+[#c8dbd1 51MiB/1.1GiB(4%) CN:8 DL:251KiB ETA:1h13m56s]
+                                                                               
+[#c8dbd1 51MiB/1.1GiB(4%) CN:8 DL:242KiB ETA:1h16m51s]
+                                                                               
+[#c8dbd1 51MiB/1.1GiB(4%) CN:8 DL:236KiB ETA:1h18m52s]
+                                                                               
+[#c8dbd1 51MiB/1.1GiB(4%) CN:8 DL:224KiB ETA:1h22m55s]
+                                                                               
+[#c8dbd1 51MiB/1.1GiB(4%) CN:8 DL:212KiB ETA:1h27m47s]
+                                                                               
+[#c8dbd1 52MiB/1.1GiB(4%) CN:8 DL:213KiB ETA:1h27m6s]
+                                                                               
+[#c8dbd1 52MiB/1.1GiB(4%) CN:8 DL:221KiB ETA:1h23m51s]
+                                                                               
+[#c8dbd1 52MiB/1.1GiB(4%) CN:8 DL:232KiB ETA:1h19m58s]
+                                                                               
+[#c8dbd1 52MiB/1.1GiB(4%) CN:8 DL:243KiB ETA:1h16m19s]
+                                                                               
+[#c8dbd1 53MiB/1.1GiB(4%) CN:8 DL:255KiB ETA:1h12m54s]
+                                                                               
+[#c8dbd1 53MiB/1.1GiB(4%) CN:8 DL:256KiB ETA:1h12m35s]
+                                                                               
+[#c8dbd1 53MiB/1.1GiB(4%) CN:8 DL:249KiB ETA:1h14m30s]
+                                                                               
+[#c8dbd1 53MiB/1.1GiB(4%) CN:8 DL:252KiB ETA:1h13m27s]
+                                                                               
+[#c8dbd1 54MiB/1.1GiB(4%) CN:8 DL:255KiB ETA:1h12m38s]
+                                                                               
+[#c8dbd1 54MiB/1.1GiB(4%) CN:8 DL:259KiB ETA:1h11m34s]
+                                                                               
+[#c8dbd1 54MiB/1.1GiB(4%) CN:8 DL:252KiB ETA:1h13m32s]
+                                                                               
+[#c8dbd1 54MiB/1.1GiB(4%) CN:8 DL:233KiB ETA:1h19m30s]
+                                                                               
+[#c8dbd1 54MiB/1.1GiB(4%) CN:8 DL:218KiB ETA:1h25m8s]
+                                                                               
+[#c8dbd1 55MiB/1.1GiB(4%) CN:8 DL:201KiB ETA:1h32m7s]
+                                                                               
+[#c8dbd1 55MiB/1.1GiB(4%) CN:8 DL:184KiB ETA:1h40m26s]
+                                                                               
+[#c8dbd1 55MiB/1.1GiB(4%) CN:8 DL:183KiB ETA:1h41m16s]
+                                                                               
+[#c8dbd1 55MiB/1.1GiB(4%) CN:8 DL:191KiB ETA:1h36m39s]
+                                                                               
+[#c8dbd1 56MiB/1.1GiB(4%) CN:8 DL:205KiB ETA:1h30m22s]
+                                                                               
+[#c8dbd1 56MiB/1.1GiB(4%) CN:8 DL:226KiB ETA:1h22m1s]
+                                                                               
+[#c8dbd1 56MiB/1.1GiB(4%) CN:8 DL:255KiB ETA:1h12m37s]
+                                                                               
+[#c8dbd1 57MiB/1.1GiB(5%) CN:8 DL:281KiB ETA:1h5m44s]
+                                                                               
+[#c8dbd1 57MiB/1.1GiB(5%) CN:8 DL:309KiB ETA:59m51s]
+                                                                               
+[#c8dbd1 57MiB/1.1GiB(5%) CN:8 DL:322KiB ETA:57m22s]
+                                                                               
+[#c8dbd1 58MiB/1.1GiB(5%) CN:8 DL:328KiB ETA:56m15s]
+                                                                               
+[#c8dbd1 58MiB/1.1GiB(5%) CN:8 DL:327KiB ETA:56m29s]
+                                                                               
+[#c8dbd1 58MiB/1.1GiB(5%) CN:8 DL:325KiB ETA:56m51s]
+                                                                               
+[#c8dbd1 58MiB/1.1GiB(5%) CN:8 DL:308KiB ETA:59m54s]
+                                                                               
+[#c8dbd1 58MiB/1.1GiB(5%) CN:8 DL:280KiB ETA:1h6m]
+                                                                               
+[#c8dbd1 58MiB/1.1GiB(5%) CN:8 DL:242KiB ETA:1h16m9s]
+                                                                               
+[#c8dbd1 59MiB/1.1GiB(5%) CN:8 DL:194KiB ETA:1h34m57s]
+                                                                               
+[#c8dbd1 59MiB/1.1GiB(5%) CN:8 DL:164KiB ETA:1h52m5s]
+                                                                               
+[#c8dbd1 59MiB/1.1GiB(5%) CN:8 DL:175KiB ETA:1h45m6s]
+                                                                               
+[#c8dbd1 59MiB/1.1GiB(5%) CN:8 DL:159KiB ETA:1h56m9s]
+                                                                               
+[#c8dbd1 59MiB/1.1GiB(5%) CN:8 DL:166KiB ETA:1h50m50s]
+                                                                               
+[#c8dbd1 59MiB/1.1GiB(5%) CN:8 DL:163KiB ETA:1h53m10s]
+                                                                               

@@ -1,0 +1,4 @@
+﻿ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+  dir=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq
+  out=SRR24947496_1.fastq.gz
+  checksum=md5=01ef73515ed8ef671984bc0ffba922f4

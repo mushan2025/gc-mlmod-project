@@ -1,0 +1,8 @@
+2026-06-29 06:38:11.101136 [NOTICE] [Context.cc:310] Downloading 4 item(s)
+2026-06-29 06:38:11.104131 [NOTICE] [RequestGroupMan.cc:424] Download GID#78e91346d78c6ef2 not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+2026-06-29 06:41:09.114213 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947503_2.fastq.gz
+2026-06-29 06:41:09.123654 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947503_2.fastq.gz
+2026-06-29 07:06:43.855263 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947507_2.fastq.gz
+2026-06-29 07:06:43.859263 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947507_2.fastq.gz
+2026-06-29 07:38:22.203536 [NOTICE] [CheckIntegrityCommand.cc:76] Verification finished successfully. file=D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947508_1.fastq.gz
+2026-06-29 07:38:22.206531 [NOTICE] [RequestGroup.cc:1214] Download complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947508_1.fastq.gz

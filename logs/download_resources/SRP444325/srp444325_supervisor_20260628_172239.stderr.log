@@ -1,0 +1,162 @@
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260628_172240.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0628_172240.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260628_172240.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260628_195451.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0628_195451.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260628_195451.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260628_232926.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0628_232926.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260628_232926.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_063810.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_063810.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_063810.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_074023.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_074023.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_074023.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_074224.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_074224.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_074224.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_074425.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_074425.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_074425.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_074626.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_074626.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_074626.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_074827.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_074827.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_074827.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_075028.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_075028.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_075028.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_075230.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_075230.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_075230.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_075431.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_075431.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_075431.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_075632.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_075632.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_075632.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_075833.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_075833.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_075833.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_080034.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_080034.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_080034.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_080235.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_080235.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_080235.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_080436.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_080436.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_080436.log
+ 
+aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_resources\SRP444325\SRP444325_
+aria2_batch_20260629_080637.log
+所在位置 D:\服务器_胃癌线粒体亚群\scripts\download_resources\download_srp444325_fastq_aria2_batch.ps1:171 字符: 9
++         throw "aria2 batch download failed with exit code $LASTEXITCO ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (aria2 batch dow...0629_080637.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : aria2 batch download failed with exit code 1. See D:\服务器_胃癌线粒体亚群\logs\download_
+resources    \SRP444325\SRP444325_aria2_batch_20260629_080637.log
+ 

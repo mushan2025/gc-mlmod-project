@@ -1,0 +1,37 @@
+2026-06-28 09:34:58.791619 [NOTICE] [Context.cc:310] Downloading 12 item(s)
+2026-06-28 09:34:58.799696 [NOTICE] [RequestGroupMan.cc:424] Download GID#b98ed8dda529f37e not complete: D:/服务器_胃癌线粒体亚群/data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+2026-06-28 09:35:28.075208 [ERROR] [AbstractCommand.cc:377] CUID#23 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+Exception: [FtpConnection.cc:327] errorCode=1 Got EOF from the server.
+2026-06-28 09:36:08.598476 [ERROR] [AbstractCommand.cc:349] CUID#16 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:36:09.008438 [ERROR] [AbstractCommand.cc:349] CUID#22 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:36:09.460229 [ERROR] [AbstractCommand.cc:349] CUID#25 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:36:09.995677 [ERROR] [AbstractCommand.cc:349] CUID#12 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:36:10.465365 [ERROR] [AbstractCommand.cc:349] CUID#31 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:36:10.908390 [ERROR] [AbstractCommand.cc:349] CUID#29 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:36:11.666052 [ERROR] [AbstractCommand.cc:349] CUID#30 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:37:15.508399 [ERROR] [AbstractCommand.cc:349] CUID#11 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:37:16.006305 [ERROR] [AbstractCommand.cc:349] CUID#14 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/005/SRR24947505/SRR24947505_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:37:16.999069 [ERROR] [AbstractCommand.cc:349] CUID#24 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/006/SRR24947506/SRR24947506_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+2026-06-28 09:37:17.994520 [ERROR] [AbstractCommand.cc:349] CUID#26 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_2.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/002/SRR24947502/SRR24947502_2.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425

@@ -3,3 +3,20 @@
 [2026-06-27 20:05:44] PLAN GSE239676_meta.tsv.gz; existing=0 remote=5736884
 [2026-06-27 20:05:45] PLAN GSE239676_count_matrix.mtx.gz; existing=134336512 remote=984791532
 [2026-06-27 20:05:46] Wrote manifest: D:\服务器_胃癌线粒体亚群\reports\download_resources\GSE239676_download_plan.tsv
+[2026-06-28 00:14:57] SKIP complete file: GSE239676_barcodes.tsv.gz (5646427 bytes)
+[2026-06-28 00:15:00] DOWNLOAD/RESUME GSE239676_features.tsv.gz; existing=0 remote=54526
+[2026-06-28 00:15:59] SKIP complete file: GSE239676_barcodes.tsv.gz (5646427 bytes)
+[2026-06-28 00:16:04] DOWNLOAD/RESUME GSE239676_features.tsv.gz; existing=0 remote=54526
+[2026-06-28 00:16:08] DOWNLOAD/RESUME GSE239676_meta.tsv.gz; existing=0 remote=5736884
+[2026-06-28 00:17:02] DOWNLOAD/RESUME GSE239676_count_matrix.mtx.gz; existing=134336512 remote=984791532
+[2026-06-28 02:36:56] Wrote manifest: D:\服务器_胃癌线粒体亚群\reports\download_resources\GSE239676_download_manifest.tsv
+[2026-06-28 02:37:52] SKIP complete file: GSE239676_barcodes.tsv.gz (5646427 bytes)
+[2026-06-28 02:37:54] SKIP complete file: GSE239676_features.tsv.gz (54526 bytes)
+[2026-06-28 02:37:57] SKIP complete file: GSE239676_meta.tsv.gz (5736884 bytes)
+[2026-06-28 02:38:00] SKIP complete file: GSE239676_count_matrix.mtx.gz (984791532 bytes)
+[2026-06-28 02:38:30] Wrote manifest: D:\服务器_胃癌线粒体亚群\reports\download_resources\GSE239676_download_manifest.tsv
+[2026-06-28 02:39:15] SKIP complete file: GSE239676_barcodes.tsv.gz (5646427 bytes)
+[2026-06-28 02:39:17] SKIP complete file: GSE239676_features.tsv.gz (54526 bytes)
+[2026-06-28 02:39:19] SKIP complete file: GSE239676_meta.tsv.gz (5736884 bytes)
+[2026-06-28 02:39:21] SKIP complete file: GSE239676_count_matrix.mtx.gz (984791532 bytes)
+[2026-06-28 02:39:50] Wrote manifest: D:\服务器_胃癌线粒体亚群\reports\download_resources\GSE239676_download_manifest.tsv

@@ -1,0 +1,4 @@
+﻿[2026-06-29 08:10:20] Starting curl fallback for SRR24947496_1.fastq.gz
+[2026-06-29 08:10:20] URL: ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+[2026-06-29 08:10:20] Temp part: C:\srp444325_curl_tmp\SRR24947496_1.fastq.gz.part
+[2026-06-29 08:10:20] curl attempt 1/5

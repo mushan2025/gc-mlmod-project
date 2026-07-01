@@ -4,7 +4,9 @@ param(
     [switch]$Force,
     [switch]$PlanOnly,
     [int]$MaxFiles = 0,
-    [switch]$IncludeNonPairedArtifacts
+    [switch]$IncludeNonPairedArtifacts,
+    [string]$Aria2Path = "",
+    [int]$Aria2Connections = 8
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,8 +43,34 @@ function Write-Log {
 function Normalize-FtpUrl {
     param([string]$FtpPath)
     if ($FtpPath -match '^https?://') { return $FtpPath }
-    if ($FtpPath -match '^ftp://') { return $FtpPath -replace '^ftp://', 'https://' }
+    if ($FtpPath -match '^ftp://') { return $FtpPath }
+    if ($FtpPath -match '^ftp\.sra\.ebi\.ac\.uk/') { return "ftp://$FtpPath" }
     return "https://$FtpPath"
+}
+
+function Resolve-Aria2 {
+    if (-not [string]::IsNullOrWhiteSpace($Aria2Path)) {
+        if (Test-Path $Aria2Path) { return (Resolve-Path $Aria2Path).Path }
+        throw "Aria2Path was provided but not found: $Aria2Path"
+    }
+
+    $cmd = Get-Command aria2c -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
+    $wingetRoot = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
+    if (Test-Path $wingetRoot) {
+        $found = Get-ChildItem -Path $wingetRoot -Recurse -Filter aria2c.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) { return $found.FullName }
+    }
+
+    return ""
+}
+
+$aria2Exe = Resolve-Aria2
+if (-not [string]::IsNullOrWhiteSpace($aria2Exe)) {
+    Write-Log "Using aria2c for segmented resume downloads: $aria2Exe; connections=$Aria2Connections"
+} else {
+    Write-Log "aria2c not found; falling back to curl resume downloads."
 }
 
 $runs = Import-Csv -Path $EnaRunTable -Delimiter "`t"
@@ -93,10 +121,13 @@ $rows = New-Object System.Collections.Generic.List[object]
 Write-Log "Prepared $($jobs.Count) FASTQ file jobs from $($runs.Count) runs; processing $($jobsToProcess.Count)."
 
 foreach ($job in $jobsToProcess) {
-    $out = Join-Path $outDir $job.file_name
-    $fileLog = Join-Path $logDir "$($job.file_name).curl.log"
+    $fileName = [string]$job.file_name
+    $sourceUrl = [string]$job.source_url
+    $out = Join-Path $outDir $fileName
+    $aria2Control = "$out.aria2"
+    $fileLog = Join-Path $logDir "$fileName.curl.log"
     $existingSize = if (Test-Path $out) { (Get-Item $out).Length } else { 0 }
-    $completeBySize = ($job.expected_bytes -and (Test-Path $out) -and ($existingSize -eq $job.expected_bytes))
+    $completeBySize = ($job.expected_bytes -and (Test-Path $out) -and ($existingSize -eq $job.expected_bytes) -and (-not (Test-Path $aria2Control)))
     $skipByPolicy = (-not $IncludeNonPairedArtifacts) -and (-not $job.include_in_main_download)
 
     if ($skipByPolicy) {
@@ -105,11 +136,35 @@ foreach ($job in $jobsToProcess) {
         Write-Log "PLAN $($job.file_name); existing=$existingSize expected=$($job.expected_bytes)"
     } elseif ((-not $Force) -and $completeBySize) {
         Write-Log "SKIP size-complete file: $($job.file_name)"
-    } else {
+} else {
         Write-Log "DOWNLOAD/RESUME $($job.file_name); existing=$existingSize expected=$($job.expected_bytes)"
-        & curl.exe `
+        if (-not [string]::IsNullOrWhiteSpace($aria2Exe)) {
+            & $aria2Exe `
+                --continue=true `
+                --max-connection-per-server=$Aria2Connections `
+                --split=$Aria2Connections `
+                --min-split-size=1M `
+                --dir=$outDir `
+                --out=$fileName `
+                --auto-file-renaming=false `
+                --allow-overwrite=true `
+                --file-allocation=none `
+                --summary-interval=60 `
+                --download-result=hide `
+                --console-log-level=warn `
+                --retry-wait=60 `
+                --max-tries=20 `
+                --timeout=60 `
+                $sourceUrl 2>&1 | Tee-Object -FilePath $fileLog -Append
+            if ($LASTEXITCODE -ne 0) {
+                throw "aria2c failed for $($job.file_name) with exit code $LASTEXITCODE"
+            }
+        } else {
+            & curl.exe `
             --location `
             --fail `
+            --silent `
+            --show-error `
             --ssl-no-revoke `
             --retry 20 `
             --retry-delay 60 `
@@ -118,14 +173,15 @@ foreach ($job in $jobsToProcess) {
             --speed-limit 1024 `
             --continue-at - `
             --output $out `
-            $job.source_url 2>&1 | Tee-Object -FilePath $fileLog -Append
-        if ($LASTEXITCODE -ne 0) {
-            throw "curl failed for $($job.file_name) with exit code $LASTEXITCODE"
+            $sourceUrl 2>&1 | Tee-Object -FilePath $fileLog -Append
+            if ($LASTEXITCODE -ne 0) {
+                throw "curl failed for $($job.file_name) with exit code $LASTEXITCODE"
+            }
         }
     }
 
     $localSize = if (Test-Path $out) { (Get-Item $out).Length } else { 0 }
-    $sizeStatus = if ($skipByPolicy) { "excluded_from_main_download" } elseif ($job.expected_bytes -and ($localSize -eq $job.expected_bytes)) { "size_ok" } elseif ($job.expected_bytes) { "size_mismatch" } else { "expected_size_missing" }
+    $sizeStatus = if ($skipByPolicy) { "excluded_from_main_download" } elseif (Test-Path $aria2Control) { "aria2_partial_incomplete" } elseif ($job.expected_bytes -and ($localSize -eq $job.expected_bytes)) { "size_ok" } elseif ($job.expected_bytes) { "size_mismatch" } else { "expected_size_missing" }
     $md5 = if ($PlanOnly -or $skipByPolicy) { "" } elseif (Test-Path $out) { (Get-FileHash -Algorithm MD5 $out).Hash.ToLowerInvariant() } else { "" }
     $md5Status = if ($skipByPolicy) { "not_checked_excluded" } elseif ($PlanOnly) { "not_checked_plan_only" } elseif ($job.expected_md5 -and ($md5 -eq $job.expected_md5.ToLowerInvariant())) { "md5_ok" } elseif ($job.expected_md5) { "md5_mismatch" } else { "expected_md5_missing" }
     $sha256 = if ($PlanOnly -or $skipByPolicy) { "" } elseif (Test-Path $out) { (Get-FileHash -Algorithm SHA256 $out).Hash } else { "" }

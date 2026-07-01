@@ -1,0 +1,21 @@
+[2026-06-28 02:50:50] Using aria2c for segmented resume downloads: C:\Users\14799\AppData\Local\Microsoft\WinGet\Packages\aria2.aria2_Microsoft.Winget.Source_8wekyb3d8bbwe\aria2-1.37.0-win-64bit-build1\aria2c.exe; connections=8
+[2026-06-28 02:50:50] Prepared 31 FASTQ file jobs from 15 runs; processing 31.
+[2026-06-28 02:50:50] DOWNLOAD/RESUME SRR24947496_1.fastq.gz; existing=18239488 expected=1198147091
+
+                                                                               
+[#84c478 0B/0B CN:1 DL:0B]
+                                                                               
+[#84c478 0B/0B CN:1 DL:0B]
+                                                                               
+[#84c478 0B/0B CN:1 DL:0B]
+                                                                               
+[#84c478 0B/0B CN:1 DL:0B]
+                                                                               
+[#84c478 0B/0B CN:1 DL:0B]
+06/28 02:50:57 [[1;31mERROR[0m] CUID#7 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+Exception: [AbstractCommand.cc:403] errorCode=18 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+  -> [RequestGroup.cc:761] errorCode=18 Download aborted.
+  -> [util.cc:1948] errNum=22 errorCode=18 Failed to make the directory D:/服务器_胃癌线粒体亚�?data/public_downloads/SRP444325/fastq/@{run_accession=SRR24947496; sample_accession=SAMN35767470; experiment_accession=SRX20705974; file_name=SRR24947496_1.fastq.gz; source_url=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496, cause: Invalid argument
+
+aria2 will resume download if the transfer is restarted.
+If there are any errors, then see the log file. See '-l' option in help/man page for details.

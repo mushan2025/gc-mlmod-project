@@ -1,0 +1,535 @@
+[2026-06-28 02:56:38] Using aria2c for segmented resume downloads: C:\Users\14799\AppData\Local\Microsoft\WinGet\Packages\aria2.aria2_Microsoft.Winget.Source_8wekyb3d8bbwe\aria2-1.37.0-win-64bit-build1\aria2c.exe; connections=16
+[2026-06-28 02:56:38] Prepared 31 FASTQ file jobs from 15 runs; processing 31.
+[2026-06-28 02:56:38] DOWNLOAD/RESUME SRR24947496_1.fastq.gz; existing=1198147091 expected=1198147091
+
+                                                                               
+[#ecfd59 0B/0B CN:1 DL:0B]
+                                                                               
+[#ecfd59 0B/0B CN:1 DL:0B]
+                                                                               
+[#ecfd59 0B/0B CN:1 DL:0B]
+                                                                               
+[#ecfd59 0B/0B CN:1 DL:0B]
+                                                                               
+[#ecfd59 48MiB/1.1GiB(4%) CN:16 DL:0B]
+                                                                               
+[#ecfd59 48MiB/1.1GiB(4%) CN:16 DL:0B]
+                                                                               
+[#ecfd59 48MiB/1.1GiB(4%) CN:16 DL:0B]
+                                                                               
+[#ecfd59 48MiB/1.1GiB(4%) CN:16 DL:0B]
+                                                                               
+[#ecfd59 48MiB/1.1GiB(4%) CN:16 DL:0B]
+                                                                               
+[#ecfd59 48MiB/1.1GiB(4%) CN:16 DL:238KiB ETA:1h18m22s]
+                                                                               
+[#ecfd59 49MiB/1.1GiB(4%) CN:16 DL:594KiB ETA:31m22s]
+                                                                               
+[#ecfd59 49MiB/1.1GiB(4%) CN:16 DL:473KiB ETA:39m22s]
+                                                                               
+[#ecfd59 50MiB/1.1GiB(4%) CN:16 DL:502KiB ETA:37m6s]
+                                                                               
+[#ecfd59 51MiB/1.1GiB(4%) CN:16 DL:673KiB ETA:27m39s]
+                                                                               
+[#ecfd59 52MiB/1.1GiB(4%) CN:16 DL:686KiB ETA:27m6s]
+                                                                               
+[#ecfd59 53MiB/1.1GiB(4%) CN:16 DL:744KiB ETA:24m57s]
+                                                                               
+[#ecfd59 54MiB/1.1GiB(4%) CN:16 DL:779KiB ETA:23m49s]
+                                                                               
+[#ecfd59 55MiB/1.1GiB(4%) CN:16 DL:801KiB ETA:23m8s]
+                                                                               
+[#ecfd59 55MiB/1.1GiB(4%) CN:16 DL:787KiB ETA:23m33s]
+                                                                               
+[#ecfd59 56MiB/1.1GiB(4%) CN:16 DL:771KiB ETA:24m]
+                                                                               
+[#ecfd59 56MiB/1.1GiB(4%) CN:16 DL:756KiB ETA:24m30s]
+                                                                               
+[#ecfd59 56MiB/1.1GiB(4%) CN:16 DL:724KiB ETA:25m34s]
+                                                                               
+[#ecfd59 57MiB/1.1GiB(4%) CN:16 DL:620KiB ETA:29m51s]
+                                                                               
+[#ecfd59 57MiB/1.1GiB(5%) CN:16 DL:549KiB ETA:33m44s]
+                                                                               
+[#ecfd59 57MiB/1.1GiB(5%) CN:16 DL:453KiB ETA:40m50s]
+                                                                               
+[#ecfd59 57MiB/1.1GiB(5%) CN:16 DL:361KiB ETA:51m9s]
+                                                                               
+[#ecfd59 57MiB/1.1GiB(5%) CN:16 DL:277KiB ETA:1h6m36s]
+                                                                               
+[#ecfd59 57MiB/1.1GiB(5%) CN:16 DL:214KiB ETA:1h26m13s]
+                                                                               
+[#ecfd59 57MiB/1.1GiB(5%) CN:16 DL:169KiB ETA:1h49m15s]
+                                                                               
+[#ecfd59 58MiB/1.1GiB(5%) CN:16 DL:171KiB ETA:1h47m37s]
+                                                                               
+[#ecfd59 58MiB/1.1GiB(5%) CN:16 DL:174KiB ETA:1h45m52s]
+                                                                               
+[#ecfd59 58MiB/1.1GiB(5%) CN:16 DL:181KiB ETA:1h42m7s]
+                                                                               
+[#ecfd59 58MiB/1.1GiB(5%) CN:16 DL:185KiB ETA:1h39m39s]
+                                                                               
+[#ecfd59 59MiB/1.1GiB(5%) CN:16 DL:195KiB ETA:1h34m40s]
+                                                                               
+[#ecfd59 59MiB/1.1GiB(5%) CN:16 DL:207KiB ETA:1h29m5s]
+                                                                               
+[#ecfd59 59MiB/1.1GiB(5%) CN:16 DL:218KiB ETA:1h24m30s]
+                                                                               
+[#ecfd59 59MiB/1.1GiB(5%) CN:16 DL:232KiB ETA:1h19m30s]
+                                                                               
+[#ecfd59 60MiB/1.1GiB(5%) CN:16 DL:252KiB ETA:1h13m11s]
+                                                                               
+[#ecfd59 60MiB/1.1GiB(5%) CN:16 DL:254KiB ETA:1h12m29s]
+                                                                               
+[#ecfd59 60MiB/1.1GiB(5%) CN:16 DL:252KiB ETA:1h13m2s]
+                                                                               
+[#ecfd59 60MiB/1.1GiB(5%) CN:16 DL:245KiB ETA:1h15m13s]
+                                                                               
+[#ecfd59 61MiB/1.1GiB(5%) CN:16 DL:243KiB ETA:1h15m56s]
+                                                                               
+[#ecfd59 61MiB/1.1GiB(5%) CN:16 DL:237KiB ETA:1h17m43s]
+                                                                               
+[#ecfd59 61MiB/1.1GiB(5%) CN:16 DL:233KiB ETA:1h18m56s]
+                                                                               
+[#ecfd59 61MiB/1.1GiB(5%) CN:16 DL:235KiB ETA:1h18m23s]
+                                                                               
+[#ecfd59 61MiB/1.1GiB(5%) CN:16 DL:226KiB ETA:1h21m24s]
+                                                                               
+[#ecfd59 62MiB/1.1GiB(5%) CN:16 DL:236KiB ETA:1h17m51s]
+                                                                               
+[#ecfd59 62MiB/1.1GiB(5%) CN:16 DL:256KiB ETA:1h11m52s]
+                                                                               
+[#ecfd59 63MiB/1.1GiB(5%) CN:16 DL:275KiB ETA:1h6m45s]
+                                                                               
+[#ecfd59 63MiB/1.1GiB(5%) CN:16 DL:287KiB ETA:1h4m10s]
+                                                                               
+[#ecfd59 63MiB/1.1GiB(5%) CN:16 DL:288KiB ETA:1h3m46s]
+                                                                               
+[#ecfd59 63MiB/1.1GiB(5%) CN:16 DL:294KiB ETA:1h2m30s]
+                                                                               
+[#ecfd59 64MiB/1.1GiB(5%) CN:16 DL:300KiB ETA:1h1m16s]
+                                                                               
+[#ecfd59 64MiB/1.1GiB(5%) CN:16 DL:301KiB ETA:1h1m3s]
+                                                                               
+[#ecfd59 64MiB/1.1GiB(5%) CN:16 DL:307KiB ETA:59m46s]
+                                                                               
+[#ecfd59 65MiB/1.1GiB(5%) CN:16 DL:332KiB ETA:55m18s]
+                                                                               
+[#ecfd59 65MiB/1.1GiB(5%) CN:16 DL:340KiB ETA:53m54s]
+                                                                               
+ *** Download Progress Summary as of Sun Jun 28 02:57:39 2026 *** 
+===============================================================================
+[#ecfd59 66MiB/1.1GiB(5%) CN:16 DL:347KiB ETA:52m56s]
+FILE: D:/服务器_胃癌线粒体亚�?data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+-------------------------------------------------------------------------------
+
+[#ecfd59 66MiB/1.1GiB(5%) CN:16 DL:347KiB ETA:52m56s]
+                                                                               
+[#ecfd59 66MiB/1.1GiB(5%) CN:16 DL:364KiB ETA:50m19s]
+                                                                               
+[#ecfd59 67MiB/1.1GiB(5%) CN:16 DL:380KiB ETA:48m12s]
+                                                                               
+[#ecfd59 67MiB/1.1GiB(5%) CN:16 DL:390KiB ETA:46m57s]
+                                                                               
+[#ecfd59 67MiB/1.1GiB(5%) CN:16 DL:394KiB ETA:46m33s]
+                                                                               
+[#ecfd59 67MiB/1.1GiB(5%) CN:16 DL:397KiB ETA:46m11s]
+                                                                               
+[#ecfd59 68MiB/1.1GiB(5%) CN:16 DL:404KiB ETA:45m17s]
+                                                                               
+[#ecfd59 68MiB/1.1GiB(5%) CN:16 DL:385KiB ETA:47m31s]
+                                                                               
+[#ecfd59 68MiB/1.1GiB(6%) CN:16 DL:367KiB ETA:49m52s]
+                                                                               
+[#ecfd59 68MiB/1.1GiB(6%) CN:16 DL:333KiB ETA:54m53s]
+                                                                               
+[#ecfd59 69MiB/1.1GiB(6%) CN:16 DL:315KiB ETA:58m4s]
+                                                                               
+[#ecfd59 69MiB/1.1GiB(6%) CN:16 DL:291KiB ETA:1h2m48s]
+06/28 02:57:50 [[1;31mERROR[0m] CUID#11 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+
+                                                                               
+[#ecfd59 69MiB/1.1GiB(6%) CN:14 DL:280KiB ETA:1h5m21s]
+06/28 02:57:51 [[1;31mERROR[0m] CUID#20 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+
+                                                                               
+[#ecfd59 70MiB/1.1GiB(6%) CN:13 DL:276KiB ETA:1h6m12s]
+                                                                               
+[#ecfd59 70MiB/1.1GiB(6%) CN:13 DL:285KiB ETA:1h4m8s]
+                                                                               
+[#ecfd59 70MiB/1.1GiB(6%) CN:13 DL:297KiB ETA:1h1m26s]
+                                                                               
+[#ecfd59 71MiB/1.1GiB(6%) CN:13 DL:309KiB ETA:59m]
+                                                                               
+[#ecfd59 71MiB/1.1GiB(6%) CN:13 DL:320KiB ETA:57m7s]
+                                                                               
+[#ecfd59 72MiB/1.1GiB(6%) CN:13 DL:344KiB ETA:53m3s]
+                                                                               
+[#ecfd59 72MiB/1.1GiB(6%) CN:13 DL:400KiB ETA:45m35s]
+                                                                               
+[#ecfd59 73MiB/1.1GiB(6%) CN:13 DL:444KiB ETA:41m2s]
+                                                                               
+[#ecfd59 74MiB/1.1GiB(6%) CN:13 DL:502KiB ETA:36m19s]
+                                                                               
+[#ecfd59 74MiB/1.1GiB(6%) CN:13 DL:521KiB ETA:34m57s]
+                                                                               
+[#ecfd59 75MiB/1.1GiB(6%) CN:13 DL:530KiB ETA:34m19s]
+                                                                               
+[#ecfd59 75MiB/1.1GiB(6%) CN:13 DL:527KiB ETA:34m31s]
+                                                                               
+[#ecfd59 75MiB/1.1GiB(6%) CN:13 DL:531KiB ETA:34m16s]
+                                                                               
+[#ecfd59 76MiB/1.1GiB(6%) CN:13 DL:538KiB ETA:33m49s]
+                                                                               
+[#ecfd59 76MiB/1.1GiB(6%) CN:13 DL:519KiB ETA:35m]
+                                                                               
+[#ecfd59 76MiB/1.1GiB(6%) CN:13 DL:466KiB ETA:38m57s]
+                                                                               
+[#ecfd59 77MiB/1.1GiB(6%) CN:13 DL:417KiB ETA:43m31s]
+                                                                               
+[#ecfd59 77MiB/1.1GiB(6%) CN:13 DL:357KiB ETA:50m48s]
+                                                                               
+[#ecfd59 77MiB/1.1GiB(6%) CN:13 DL:315KiB ETA:57m38s]
+                                                                               
+[#ecfd59 77MiB/1.1GiB(6%) CN:13 DL:281KiB ETA:1h4m34s]
+                                                                               
+[#ecfd59 77MiB/1.1GiB(6%) CN:13 DL:259KiB ETA:1h9m59s]
+                                                                               
+[#ecfd59 77MiB/1.1GiB(6%) CN:13 DL:236KiB ETA:1h16m47s]
+                                                                               
+[#ecfd59 78MiB/1.1GiB(6%) CN:13 DL:213KiB ETA:1h25m]
+                                                                               
+[#ecfd59 78MiB/1.1GiB(6%) CN:13 DL:192KiB ETA:1h34m27s]
+                                                                               
+[#ecfd59 78MiB/1.1GiB(6%) CN:13 DL:181KiB ETA:1h40m9s]
+                                                                               
+[#ecfd59 78MiB/1.1GiB(6%) CN:13 DL:178KiB ETA:1h41m57s]
+                                                                               
+[#ecfd59 78MiB/1.1GiB(6%) CN:13 DL:181KiB ETA:1h40m1s]
+                                                                               
+[#ecfd59 79MiB/1.1GiB(6%) CN:13 DL:193KiB ETA:1h33m56s]
+                                                                               
+[#ecfd59 79MiB/1.1GiB(6%) CN:13 DL:203KiB ETA:1h29m14s]
+                                                                               
+[#ecfd59 79MiB/1.1GiB(6%) CN:13 DL:212KiB ETA:1h25m13s]
+                                                                               
+[#ecfd59 79MiB/1.1GiB(6%) CN:13 DL:221KiB ETA:1h21m49s]
+                                                                               
+[#ecfd59 80MiB/1.1GiB(7%) CN:13 DL:236KiB ETA:1h16m43s]
+                                                                               
+[#ecfd59 80MiB/1.1GiB(7%) CN:13 DL:242KiB ETA:1h14m37s]
+                                                                               
+[#ecfd59 80MiB/1.1GiB(7%) CN:13 DL:249KiB ETA:1h12m34s]
+                                                                               
+[#ecfd59 80MiB/1.1GiB(7%) CN:13 DL:253KiB ETA:1h11m34s]
+                                                                               
+[#ecfd59 81MiB/1.1GiB(7%) CN:13 DL:264KiB ETA:1h8m32s]
+                                                                               
+[#ecfd59 81MiB/1.1GiB(7%) CN:13 DL:252KiB ETA:1h11m44s]
+                                                                               
+[#ecfd59 81MiB/1.1GiB(7%) CN:13 DL:259KiB ETA:1h9m49s]
+                                                                               
+[#ecfd59 82MiB/1.1GiB(7%) CN:13 DL:265KiB ETA:1h8m17s]
+                                                                               
+[#ecfd59 82MiB/1.1GiB(7%) CN:13 DL:265KiB ETA:1h8m9s]
+                                                                               
+[#ecfd59 82MiB/1.1GiB(7%) CN:13 DL:256KiB ETA:1h10m32s]
+                                                                               
+[#ecfd59 82MiB/1.1GiB(7%) CN:13 DL:272KiB ETA:1h6m28s]
+                                                                               
+[#ecfd59 83MiB/1.1GiB(7%) CN:13 DL:276KiB ETA:1h5m24s]
+                                                                               
+[#ecfd59 83MiB/1.1GiB(7%) CN:13 DL:306KiB ETA:59m2s]
+                                                                               
+[#ecfd59 84MiB/1.1GiB(7%) CN:13 DL:319KiB ETA:56m36s]
+                                                                               
+[#ecfd59 84MiB/1.1GiB(7%) CN:13 DL:343KiB ETA:52m32s]
+                                                                               
+[#ecfd59 84MiB/1.1GiB(7%) CN:13 DL:349KiB ETA:51m35s]
+                                                                               
+ *** Download Progress Summary as of Sun Jun 28 02:58:39 2026 *** 
+===============================================================================
+[#ecfd59 85MiB/1.1GiB(7%) CN:13 DL:346KiB ETA:52m6s]
+FILE: D:/服务器_胃癌线粒体亚�?data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+-------------------------------------------------------------------------------
+
+[#ecfd59 85MiB/1.1GiB(7%) CN:13 DL:346KiB ETA:52m6s]
+                                                                               
+[#ecfd59 85MiB/1.1GiB(7%) CN:13 DL:350KiB ETA:51m32s]
+                                                                               
+[#ecfd59 85MiB/1.1GiB(7%) CN:13 DL:346KiB ETA:51m59s]
+                                                                               
+[#ecfd59 86MiB/1.1GiB(7%) CN:13 DL:352KiB ETA:51m5s]
+                                                                               
+[#ecfd59 86MiB/1.1GiB(7%) CN:13 DL:350KiB ETA:51m28s]
+                                                                               
+[#ecfd59 86MiB/1.1GiB(7%) CN:13 DL:349KiB ETA:51m35s]
+                                                                               
+[#ecfd59 86MiB/1.1GiB(7%) CN:13 DL:315KiB ETA:57m5s]
+                                                                               
+[#ecfd59 87MiB/1.1GiB(7%) CN:13 DL:315KiB ETA:57m9s]
+                                                                               
+[#ecfd59 87MiB/1.1GiB(7%) CN:13 DL:306KiB ETA:58m44s]
+                                                                               
+[#ecfd59 87MiB/1.1GiB(7%) CN:13 DL:318KiB ETA:56m31s]
+                                                                               
+[#ecfd59 88MiB/1.1GiB(7%) CN:13 DL:335KiB ETA:53m42s]
+                                                                               
+[#ecfd59 88MiB/1.1GiB(7%) CN:13 DL:352KiB ETA:51m1s]
+                                                                               
+[#ecfd59 89MiB/1.1GiB(7%) CN:13 DL:359KiB ETA:49m57s]
+                                                                               
+[#ecfd59 89MiB/1.1GiB(7%) CN:13 DL:362KiB ETA:49m34s]
+                                                                               
+[#ecfd59 90MiB/1.1GiB(7%) CN:13 DL:371KiB ETA:48m20s]
+                                                                               
+[#ecfd59 90MiB/1.1GiB(7%) CN:13 DL:385KiB ETA:46m37s]
+                                                                               
+[#ecfd59 90MiB/1.1GiB(7%) CN:13 DL:383KiB ETA:46m52s]
+                                                                               
+[#ecfd59 90MiB/1.1GiB(7%) CN:13 DL:388KiB ETA:46m14s]
+06/28 02:58:57 [[1;31mERROR[0m] CUID#14 - Download aborted. URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+Exception: [AbstractCommand.cc:351] errorCode=21 URI=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR249/096/SRR24947496/SRR24947496_1.fastq.gz
+  -> [FtpNegotiationCommand.cc:888] errorCode=21 The response status is not successful. status=425
+
+                                                                               
+[#ecfd59 91MiB/1.1GiB(7%) CN:12 DL:381KiB ETA:46m58s]
+                                                                               
+[#ecfd59 91MiB/1.1GiB(8%) CN:12 DL:364KiB ETA:49m10s]
+                                                                               
+[#ecfd59 91MiB/1.1GiB(8%) CN:12 DL:340KiB ETA:52m36s]
+                                                                               
+[#ecfd59 91MiB/1.1GiB(8%) CN:12 DL:306KiB ETA:58m33s]
+                                                                               
+[#ecfd59 92MiB/1.1GiB(8%) CN:12 DL:287KiB ETA:1h2m21s]
+                                                                               
+[#ecfd59 92MiB/1.1GiB(8%) CN:12 DL:262KiB ETA:1h8m21s]
+                                                                               
+[#ecfd59 92MiB/1.1GiB(8%) CN:12 DL:244KiB ETA:1h13m15s]
+                                                                               
+[#ecfd59 92MiB/1.1GiB(8%) CN:12 DL:234KiB ETA:1h16m25s]
+                                                                               
+[#ecfd59 93MiB/1.1GiB(8%) CN:12 DL:233KiB ETA:1h16m45s]
+                                                                               
+[#ecfd59 93MiB/1.1GiB(8%) CN:12 DL:218KiB ETA:1h22m]
+                                                                               
+[#ecfd59 93MiB/1.1GiB(8%) CN:12 DL:219KiB ETA:1h21m25s]
+                                                                               
+[#ecfd59 93MiB/1.1GiB(8%) CN:12 DL:219KiB ETA:1h21m23s]
+                                                                               
+[#ecfd59 93MiB/1.1GiB(8%) CN:12 DL:217KiB ETA:1h22m25s]
+                                                                               
+[#ecfd59 94MiB/1.1GiB(8%) CN:12 DL:233KiB ETA:1h16m45s]
+                                                                               
+[#ecfd59 94MiB/1.1GiB(8%) CN:12 DL:243KiB ETA:1h13m34s]
+                                                                               
+[#ecfd59 94MiB/1.1GiB(8%) CN:12 DL:251KiB ETA:1h11m13s]
+                                                                               
+[#ecfd59 95MiB/1.1GiB(8%) CN:12 DL:262KiB ETA:1h8m3s]
+                                                                               
+[#ecfd59 95MiB/1.1GiB(8%) CN:12 DL:281KiB ETA:1h3m33s]
+                                                                               
+[#ecfd59 95MiB/1.1GiB(8%) CN:12 DL:292KiB ETA:1h1m3s]
+                                                                               
+[#ecfd59 96MiB/1.1GiB(8%) CN:12 DL:319KiB ETA:55m55s]
+                                                                               
+[#ecfd59 96MiB/1.1GiB(8%) CN:12 DL:348KiB ETA:51m12s]
+                                                                               
+[#ecfd59 97MiB/1.1GiB(8%) CN:12 DL:367KiB ETA:48m35s]
+                                                                               
+[#ecfd59 97MiB/1.1GiB(8%) CN:12 DL:360KiB ETA:49m26s]
+                                                                               
+[#ecfd59 97MiB/1.1GiB(8%) CN:12 DL:348KiB ETA:51m11s]
+                                                                               
+[#ecfd59 97MiB/1.1GiB(8%) CN:12 DL:336KiB ETA:52m57s]
+                                                                               
+[#ecfd59 97MiB/1.1GiB(8%) CN:12 DL:310KiB ETA:57m30s]
+                                                                               
+[#ecfd59 98MiB/1.1GiB(8%) CN:12 DL:285KiB ETA:1h2m24s]
+                                                                               
+[#ecfd59 98MiB/1.1GiB(8%) CN:12 DL:261KiB ETA:1h8m15s]
+                                                                               
+[#ecfd59 98MiB/1.1GiB(8%) CN:12 DL:230KiB ETA:1h17m28s]
+                                                                               
+[#ecfd59 98MiB/1.1GiB(8%) CN:12 DL:188KiB ETA:1h34m20s]
+                                                                               
+[#ecfd59 98MiB/1.1GiB(8%) CN:12 DL:169KiB ETA:1h45m26s]
+                                                                               
+[#ecfd59 98MiB/1.1GiB(8%) CN:12 DL:152KiB ETA:1h56m50s]
+                                                                               
+[#ecfd59 98MiB/1.1GiB(8%) CN:12 DL:149KiB ETA:1h58m46s]
+                                                                               
+[#ecfd59 99MiB/1.1GiB(8%) CN:12 DL:150KiB ETA:1h58m41s]
+                                                                               
+[#ecfd59 99MiB/1.1GiB(8%) CN:12 DL:148KiB ETA:1h59m57s]
+                                                                               
+[#ecfd59 99MiB/1.1GiB(8%) CN:12 DL:144KiB ETA:2h3m32s]
+                                                                               
+[#ecfd59 99MiB/1.1GiB(8%) CN:12 DL:145KiB ETA:2h2m37s]
+                                                                               
+[#ecfd59 99MiB/1.1GiB(8%) CN:12 DL:146KiB ETA:2h1m6s]
+                                                                               
+[#ecfd59 99MiB/1.1GiB(8%) CN:12 DL:162KiB ETA:1h49m47s]
+                                                                               
+[#ecfd59 100MiB/1.1GiB(8%) CN:12 DL:173KiB ETA:1h42m22s]
+                                                                               
+[#ecfd59 100MiB/1.1GiB(8%) CN:12 DL:185KiB ETA:1h35m39s]
+                                                                               
+[#ecfd59 100MiB/1.1GiB(8%) CN:12 DL:195KiB ETA:1h31m2s]
+                                                                               
+ *** Download Progress Summary as of Sun Jun 28 02:59:40 2026 *** 
+===============================================================================
+[#ecfd59 100MiB/1.1GiB(8%) CN:12 DL:217KiB ETA:1h21m51s]
+FILE: D:/服务器_胃癌线粒体亚�?data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+-------------------------------------------------------------------------------
+
+[#ecfd59 100MiB/1.1GiB(8%) CN:12 DL:217KiB ETA:1h21m51s]
+                                                                               
+[#ecfd59 101MiB/1.1GiB(8%) CN:12 DL:233KiB ETA:1h16m4s]
+                                                                               
+[#ecfd59 101MiB/1.1GiB(8%) CN:12 DL:252KiB ETA:1h10m27s]
+                                                                               
+[#ecfd59 101MiB/1.1GiB(8%) CN:12 DL:260KiB ETA:1h8m6s]
+                                                                               
+[#ecfd59 101MiB/1.1GiB(8%) CN:12 DL:267KiB ETA:1h6m17s]
+                                                                               
+[#ecfd59 102MiB/1.1GiB(8%) CN:12 DL:255KiB ETA:1h9m34s]
+                                                                               
+[#ecfd59 102MiB/1.1GiB(8%) CN:12 DL:246KiB ETA:1h12m]
+                                                                               
+[#ecfd59 102MiB/1.1GiB(8%) CN:12 DL:236KiB ETA:1h14m55s]
+                                                                               
+[#ecfd59 102MiB/1.1GiB(8%) CN:12 DL:236KiB ETA:1h15m7s]
+                                                                               
+[#ecfd59 102MiB/1.1GiB(9%) CN:12 DL:220KiB ETA:1h20m33s]
+                                                                               
+[#ecfd59 103MiB/1.1GiB(9%) CN:12 DL:206KiB ETA:1h25m57s]
+                                                                               
+[#ecfd59 103MiB/1.1GiB(9%) CN:12 DL:187KiB ETA:1h34m48s]
+                                                                               
+[#ecfd59 103MiB/1.1GiB(9%) CN:12 DL:176KiB ETA:1h40m31s]
+                                                                               
+[#ecfd59 103MiB/1.1GiB(9%) CN:12 DL:167KiB ETA:1h45m41s]
+                                                                               
+[#ecfd59 103MiB/1.1GiB(9%) CN:12 DL:173KiB ETA:1h42m1s]
+                                                                               
+[#ecfd59 104MiB/1.1GiB(9%) CN:12 DL:195KiB ETA:1h30m44s]
+                                                                               
+[#ecfd59 104MiB/1.1GiB(9%) CN:12 DL:186KiB ETA:1h34m49s]
+                                                                               
+[#ecfd59 104MiB/1.1GiB(9%) CN:12 DL:181KiB ETA:1h37m24s]
+                                                                               
+[#ecfd59 104MiB/1.1GiB(9%) CN:12 DL:176KiB ETA:1h40m37s]
+                                                                               
+[#ecfd59 104MiB/1.1GiB(9%) CN:12 DL:167KiB ETA:1h45m46s]
+                                                                               
+[#ecfd59 104MiB/1.1GiB(9%) CN:12 DL:171KiB ETA:1h43m28s]
+                                                                               
+[#ecfd59 104MiB/1.1GiB(9%) CN:12 DL:177KiB ETA:1h39m50s]
+                                                                               
+[#ecfd59 105MiB/1.1GiB(9%) CN:12 DL:179KiB ETA:1h38m42s]
+                                                                               
+[#ecfd59 105MiB/1.1GiB(9%) CN:12 DL:177KiB ETA:1h39m39s]
+                                                                               
+[#ecfd59 105MiB/1.1GiB(9%) CN:12 DL:151KiB ETA:1h56m50s]
+                                                                               
+[#ecfd59 105MiB/1.1GiB(9%) CN:12 DL:151KiB ETA:1h57m7s]
+                                                                               
+[#ecfd59 105MiB/1.1GiB(9%) CN:12 DL:143KiB ETA:2h3m20s]
+                                                                               
+[#ecfd59 105MiB/1.1GiB(9%) CN:12 DL:139KiB ETA:2h7m14s]
+                                                                               
+[#ecfd59 105MiB/1.1GiB(9%) CN:12 DL:139KiB ETA:2h7m2s]
+                                                                               
+[#ecfd59 106MiB/1.1GiB(9%) CN:12 DL:143KiB ETA:2h3m15s]
+                                                                               
+[#ecfd59 106MiB/1.1GiB(9%) CN:12 DL:143KiB ETA:2h2m55s]
+                                                                               
+[#ecfd59 106MiB/1.1GiB(9%) CN:12 DL:147KiB ETA:2h3s]
+                                                                               
+[#ecfd59 106MiB/1.1GiB(9%) CN:12 DL:141KiB ETA:2h5m15s]
+                                                                               
+[#ecfd59 106MiB/1.1GiB(9%) CN:12 DL:138KiB ETA:2h7m28s]
+                                                                               
+[#ecfd59 106MiB/1.1GiB(9%) CN:12 DL:144KiB ETA:2h1m57s]
+                                                                               
+[#ecfd59 106MiB/1.1GiB(9%) CN:12 DL:143KiB ETA:2h2m59s]
+                                                                               
+[#ecfd59 107MiB/1.1GiB(9%) CN:12 DL:151KiB ETA:1h56m27s]
+                                                                               
+[#ecfd59 107MiB/1.1GiB(9%) CN:12 DL:162KiB ETA:1h48m35s]
+                                                                               
+[#ecfd59 107MiB/1.1GiB(9%) CN:12 DL:167KiB ETA:1h45m32s]
+                                                                               
+[#ecfd59 107MiB/1.1GiB(9%) CN:12 DL:168KiB ETA:1h45m2s]
+                                                                               
+[#ecfd59 107MiB/1.1GiB(9%) CN:12 DL:174KiB ETA:1h41m22s]
+                                                                               
+[#ecfd59 108MiB/1.1GiB(9%) CN:12 DL:176KiB ETA:1h39m50s]
+                                                                               
+[#ecfd59 108MiB/1.1GiB(9%) CN:12 DL:188KiB ETA:1h33m53s]
+                                                                               
+[#ecfd59 108MiB/1.1GiB(9%) CN:12 DL:205KiB ETA:1h25m42s]
+                                                                               
+[#ecfd59 109MiB/1.1GiB(9%) CN:12 DL:220KiB ETA:1h19m57s]
+                                                                               
+[#ecfd59 109MiB/1.1GiB(9%) CN:12 DL:222KiB ETA:1h19m13s]
+                                                                               
+[#ecfd59 109MiB/1.1GiB(9%) CN:12 DL:223KiB ETA:1h18m54s]
+                                                                               
+[#ecfd59 109MiB/1.1GiB(9%) CN:12 DL:212KiB ETA:1h22m59s]
+                                                                               
+[#ecfd59 109MiB/1.1GiB(9%) CN:12 DL:206KiB ETA:1h25m28s]
+                                                                               
+[#ecfd59 109MiB/1.1GiB(9%) CN:12 DL:195KiB ETA:1h30m11s]
+                                                                               
+[#ecfd59 109MiB/1.1GiB(9%) CN:12 DL:182KiB ETA:1h36m36s]
+                                                                               
+[#ecfd59 109MiB/1.1GiB(9%) CN:12 DL:170KiB ETA:1h43m40s]
+                                                                               
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:154KiB ETA:1h54m5s]
+                                                                               
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:139KiB ETA:2h6m8s]
+                                                                               
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:121KiB ETA:2h25m13s]
+                                                                               
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:113KiB ETA:2h35m31s]
+                                                                               
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:111KiB ETA:2h38m]
+                                                                               
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:110KiB ETA:2h39m1s]
+                                                                               
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:110KiB ETA:2h39m52s]
+                                                                               
+ *** Download Progress Summary as of Sun Jun 28 03:00:40 2026 *** 
+===============================================================================
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:109KiB ETA:2h41m22s]
+FILE: D:/服务器_胃癌线粒体亚�?data/public_downloads/SRP444325/fastq/SRR24947496_1.fastq.gz
+-------------------------------------------------------------------------------
+
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:109KiB ETA:2h41m22s]
+                                                                               
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:107KiB ETA:2h43m41s]
+                                                                               
+[#ecfd59 110MiB/1.1GiB(9%) CN:12 DL:103KiB ETA:2h50m6s]
+                                                                               
+[#ecfd59 111MiB/1.1GiB(9%) CN:12 DL:95KiB ETA:3h4m45s]
+                                                                               
+[#ecfd59 111MiB/1.1GiB(9%) CN:12 DL:100KiB ETA:2h55m16s]
+                                                                               
+[#ecfd59 111MiB/1.1GiB(9%) CN:12 DL:100KiB ETA:2h55m25s]
+                                                                               
+[#ecfd59 111MiB/1.1GiB(9%) CN:12 DL:103KiB ETA:2h49m44s]
+                                                                               
+[#ecfd59 111MiB/1.1GiB(9%) CN:12 DL:119KiB ETA:2h27m]
+                                                                               
+[#ecfd59 111MiB/1.1GiB(9%) CN:12 DL:128KiB ETA:2h16m32s]
+                                                                               
+[#ecfd59 111MiB/1.1GiB(9%) CN:12 DL:130KiB ETA:2h15m3s]
+                                                                               
+[#ecfd59 112MiB/1.1GiB(9%) CN:12 DL:132KiB ETA:2h13m4s]
+                                                                               
