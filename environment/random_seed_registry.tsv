@@ -1,0 +1,2 @@
+F_section	gate_id	analysis_module	software_or_function	seed	seed_scope	deterministic_expected	threads_or_parallel_backend	registered_at	note
+GLOBAL	1b_round1	environment_inventory	not_applicable	not_applicable	no_random_process	TRUE	not_applicable	2026-07-06T16:11:54+08:00	Initial registry row; F0/F1 scripts must append actual random seeds before execution.

@@ -1,0 +1,31 @@
+software_or_package	category	version_or_status	source_or_path	checked_at	required_for	stage_blocking_status	note
+Windows	system	Microsoft Windows 11 Pro 10.0.26200	Win32_OperatingSystem	2026-07-06T16:11:54+08:00	F0-F8	recorded	Native Windows baseline.
+git	tool	2.54.0.windows.1	C:\Program Files\Git\cmd\git.exe	2026-07-06T16:11:54+08:00	F0-F8	ok	Repository version control available.
+gh	tool	2.92.0	C:\Program Files\GitHub CLI\gh.exe	2026-07-06T16:11:54+08:00	GitHub publish	ok	GitHub CLI available and authenticated earlier in this session.
+Python	runtime	3.10.11	C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe	2026-07-06T16:11:54+08:00	F0 helper/optional	ok	Scientific Python stack incomplete; use only approved scripts.
+numpy	python_package	2.2.6	Python import	2026-07-06T16:11:54+08:00	optional	warning	Installed.
+pandas	python_package	NOT_AVAILABLE	Python import	2026-07-06T16:11:54+08:00	optional	warning	Missing.
+scipy	python_package	NOT_AVAILABLE	Python import	2026-07-06T16:11:54+08:00	optional	warning	Missing.
+scanpy	python_package	NOT_AVAILABLE	Python import	2026-07-06T16:11:54+08:00	optional	warning	Missing.
+R	runtime	4.4.3	D:\software\R\R443\R-4.4.3\bin\x64\R.exe	2026-07-06T16:33:45+08:00	F1-F8	warning	Installed under D:\software\R and usable by explicit path; bare PowerShell R is still alias r=Invoke-History, so scripts must not rely on PATH.
+Rscript	runtime	4.4.3	D:\software\R\R443\R-4.4.3\bin\x64\Rscript.exe	2026-07-06T16:33:45+08:00	F1-F8	warning	Primary local Rscript candidate for reproducible Windows-native execution.
+Rtools44	tool	4.4 toolchain detected	Sys.which(make,gcc,g++); D:\software\R\rtool44 exists	2026-07-06T16:33:45+08:00	R package compilation	ok	R detected make/gcc/g++; keep exact compiler logs when installing missing packages.
+Seurat	R_package	5.5.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1	ok	Core Seurat v5 package is already installed.
+SeuratObject	R_package	5.4.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1	ok	Core Seurat object dependency is already installed.
+DESeq2	R_package	1.46.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F2/F3	baseline_present	Present, but use only where input type satisfies project DESeq2 rules.
+SingleCellExperiment	R_package	1.28.1	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1	ok	Bioconductor single-cell object support present.
+sctransform	R_package	0.4.3	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1	ok	Available if selected by approved F1 normalization path.
+harmony	R_package	1.2.4	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1	ok	Available for approved integration workflow.
+infercnv	R_package	1.22.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate5	baseline_present	Present; full Gate5 feasibility still depends on input size and reference setup.
+SingleR	R_package	2.8.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate3	baseline_present	Present; celldex reference package is currently missing.
+ComplexHeatmap	R_package	2.22.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	visualization	baseline_present	Available for heatmap outputs if approved scripts use it.
+scDblFinder	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate1	blocking_if_selected	Missing; install or select an approved alternative before formal doublet execution.
+SoupX	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate1	blocking_if_selected	Missing; install or document fallback if ambient RNA correction requires it.
+celda	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate1	blocking_if_selected	Missing; needed only if DecontX/celda path is approved.
+DoubletFinder	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate1	blocking_if_selected	Missing; do not assume availability.
+CopyKAT	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate5	blocking_if_selected	Missing; required before CopyKAT execution or replace with approved fallback.
+UCell	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F2	blocking_before_F2	Missing; F2 primary MLMOD scoring requires UCell after signature freeze.
+AUCell	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F2	blocking_before_F2	Missing; F2 rank-based sensitivity scoring requires AUCell.
+renv	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1-F8	blocking_before_formal_F1	Missing; either install renv and create lockfile or approve equivalent explicit package manifest.
+WSL2	runtime	not_available	wsl --status; wsl -l -v	2026-07-06T16:11:54+08:00	Linux-only modules	warning	No usable WSL distribution currently registered.
+nvidia-smi	tool	Driver 582.05; RTX 5060 Laptop GPU 8151 MiB total	nvidia-smi	2026-07-06T16:11:54+08:00	GPU inventory	ok	GPU presence recorded; not assumed useful for standard scRNA tools.

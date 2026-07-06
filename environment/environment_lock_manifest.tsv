@@ -1,0 +1,18 @@
+lock_item	category	required_for_stage	observed_version_or_status	source_or_path	lock_status	blocking_level_for_F0	blocking_level_for_F1	note
+Windows_OS	system	F0-F8	Microsoft Windows 11 Pro 10.0.26200	Win32_OperatingSystem	recorded	warning	warning	Windows native may be used for modules whose dependencies are stable and auditable.
+git	tool	F0-F8	git version 2.54.0.windows.1	C:\Program Files\Git\cmd\git.exe	recorded	none	none	Repository operations available.
+gh	tool	GitHub publish/review	gh version 2.92.0	C:\Program Files\GitHub CLI\gh.exe	recorded	none	none	Authenticated earlier as mushan2025; not required for analysis execution itself.
+Python	runtime	F0 helper scripts; optional Python modules	3.10.11	C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe	recorded	none	warning	Usable for lightweight audit scripts; scientific Python stack incomplete.
+numpy	python_package	optional Python checks	2.2.6	Python import check	recorded	none	warning	Installed in current Python environment.
+pandas	python_package	optional table scripts	NOT_AVAILABLE	Python import check	missing	warning	warning	Install or use PowerShell/R for TSV handling if needed.
+scipy	python_package	optional scientific Python	NOT_AVAILABLE	Python import check	missing	none	warning	Not required for F0 if using streaming Python/PowerShell; may matter for later Python workflows.
+scanpy	python_package	optional h5ad/single-cell Python	NOT_AVAILABLE	Python import check	missing	none	warning	Not required for Seurat-first F1, but record as missing.
+R	runtime	F1-F8	4.4.3	D:\software\R\R443\R-4.4.3\bin\x64\R.exe	recorded_explicit_path	warning	warning	Installed outside PATH is acceptable; bare PowerShell command R resolves to Invoke-History, so formal scripts must call the explicit R/Rscript path or set a project-local wrapper.
+Rscript	runtime	F1-F8	4.4.3	D:\software\R\R443\R-4.4.3\bin\x64\Rscript.exe	recorded_explicit_path	warning	warning	Primary local Rscript candidate for F1 because Seurat 5.5.0, DESeq2 1.46.0, SingleCellExperiment 1.28.1, harmony 1.2.4, infercnv 1.22.0 and Rtools 4.4 toolchain are present.
+Rtools44	tool	R package compilation	4.4 toolchain detected	Sys.which(make,gcc,g++); D:\software\R\rtool44 exists	recorded	warning	warning	Compilation tools are available through R's detected short paths; keep version/path in environment logs before installing additional packages.
+WSL2	runtime	Linux-only dependencies	not_available	wsl --status; wsl -l -v	missing	none	warning	No usable WSL distribution in this inventory; Linux-only modules need WSL setup or approved server.
+nvidia_smi	GPU_tool	GPU inventory only	Driver 582.05; RTX 5060 Laptop GPU 8151 MiB total, 7810 MiB free	nvidia-smi	recorded	none	none	GPU is recorded but not assumed to accelerate Seurat/Harmony/inferCNV/CopyKAT/CellChat/WGCNA/pySCENIC.
+renv.lock	R_lockfile	F1-F8	NOT_FOUND	Test-Path renv.lock	missing	warning	blocking_before_formal_F1	R itself does not need reinstall, but a project dependency lock or equivalent package manifest is still required before formal F1 execution.
+python_lockfile	Python_lockfile	optional Python modules	NOT_FOUND	Test-Path requirements*.txt/pyproject/conda env not performed in this round	missing	none	warning	Create only if Python modules become part of formal execution path.
+pipeline_parameters.yaml	parameter_registry	F0-F8	initialized_in_1b	data/metadata/pipeline_parameters.yaml	recorded	warning	warning	Initial registry created; must be updated by each gate.
+software_versions.tsv	software_registry	F0-F8	initialized_in_1b	data/metadata/software_versions.tsv	recorded	warning	warning	Initial registry created; must be updated after package installation and each gate.

@@ -1,0 +1,39 @@
+project: gc_mlmod_project
+stage: 1b_round1_execution_preparation
+created_at: "2026-07-06T16:11:54+08:00"
+execution_policy:
+  priority_order:
+    - laptop_thinkbook16p
+    - desktop_i5_14600kf
+    - temporary_linux_server
+  local_ram_safety_fraction: 0.70
+  local_disk_safety_fraction: 0.70
+  formal_execution_requires_user_approval: true
+  formal_gate_advancement_requires_user_approval: true
+environment_baseline:
+  default_machine_id: laptop_thinkbook16p
+  os_or_runtime: Windows_native
+  observed_free_ram_gb: 14.70
+  observed_workspace_free_disk_gb: 295.09
+  R_status: explicit_path_available_not_in_path
+  R_version: "4.4.3"
+  Rscript_path: "D:/software/R/R443/R-4.4.3/bin/x64/Rscript.exe"
+  WSL_status: not_available
+F0:
+  execution_unit: whole_F0
+  default_runtime: Windows_native_or_approved_Rless_streaming_scripts
+  formal_execution_status: not_started
+  resource_assessment_file: reports/environment_setup/F0_execution_resource_assessment.tsv
+F1:
+  execution_unit: gated_F1
+  gates:
+    - F1_Gate1_import_qc
+    - F1_Gate2_integration_cluster_qc
+    - F1_Gate3_annotation
+    - F1_Gate4_epithelial_recluster
+    - F1_Gate5_malignancy_inference
+  formal_execution_status: not_started
+  resource_assessment_file: reports/environment_setup/F1_execution_resource_assessment.tsv
+notes:
+  - "This file is an initial 1b registry, not a final locked analysis parameter file."
+  - "Each formal gate must update this registry with actual scripts, package versions, parameters, seeds and approvals."
