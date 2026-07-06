@@ -1,0 +1,22 @@
+input_id	relative_path	required_for	presence_required_before_execution	expected_status	review_note
+F0_IN_001	data/public_downloads/GSE183904_RAW.tar	GSE183904 archive audit	yes	project_local_available	Primary archive; must contain 40 GSM csv.gz matrices and match manifest SHA256.
+F0_IN_002	data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz	sample_info and author processing audit	yes	project_local_available	Used for sample titles, GSM mapping, tissue groups, patient title mapping and GEO processing evidence.
+F0_IN_003	data/metadata/download_manifest.tsv	file manifest and archive checksum	yes	project_local_available	Existing researcher-confirmed manifest; F0 reads and may append only in future approved downloads.
+F0_IN_004	data/metadata/preupload_resources_manifest.tsv	project resource inventory	yes	project_local_available	Existing local/preuploaded resources; F0 inventory only does not approve analysis use.
+F0_IN_005	data/metadata/preupload_pending_resources.tsv	pending resource map	yes	project_local_available	Pending items must not be treated as available.
+F0_IN_006	data/metadata/cell_type_marker_panel.tsv	marker panel readiness	yes	project_local_available	Read-only marker panel; F0 must not modify it.
+F0_IN_007	data/metadata/pipeline_parameters.yaml	parameter baseline	yes	project_local_available	Records seed and environment baseline; F0 may read but should not silently change approved settings.
+F0_IN_008	data/metadata/software_versions.tsv	software baseline	yes	project_local_available	Records current local tool/package state.
+F0_IN_009	environment/execution_environment_inventory.tsv	environment baseline	yes	project_local_available	Default laptop inventory.
+F0_IN_010	environment/environment_lock_manifest.tsv	environment baseline	yes	project_local_available	Records explicit R path and missing lock/package state.
+F0_IN_011	environment/random_seed_registry.tsv	seed baseline	yes	project_local_available	May be header-only before randomized analyses.
+F0_IN_012	results/F0_audit/gse183904_csv_structure_precheck.tsv	GSE183904 formal audit comparison	yes	project_local_available	Formal data_audit must compare key fields to this precheck.
+F0_IN_013	results/F0_audit/non_GSE183904_data_structure_precheck.tsv	global data inventory	yes	project_local_available	Used to populate non-GSE183904 data map.
+F0_IN_014	results/F0_audit/predownloaded_resource_structure_audit.tsv	global resource inventory	yes	project_local_available	Used to distinguish downloaded resources from approved analysis inputs.
+F0_IN_015	results/F0_audit/bulk_GEO_series_matrix_deep_precheck.tsv	bulk candidate map	yes	project_local_available	Used for bulk expression scale and clinical field limitations.
+F0_IN_016	results/F0_audit/bulk_GEO_sample_overlap_precheck.tsv	bulk overlap map	yes	project_local_available	Used for SuperSeries/overlap risk inventory.
+F0_IN_017	results/F0_audit/bulk_GEO_processing_metadata_precheck.tsv	bulk processing map	yes	project_local_available	Used for later F2.4/F5 audit boundaries.
+F0_IN_018	results/F0_audit/TCGA_STAD_survival_table_precheck.tsv	TCGA readiness map	yes	project_local_available	Used for clinical limitation inventory.
+F0_IN_019	results/F0_audit/TCGA_STAD_star_counts_inverse_validation.tsv	TCGA method-prior decision	yes	project_local_available	Records reversible integer reconstruction evidence and limitations.
+F0_IN_020	results/F0_audit/GSE206785_dataset_structure_precheck.tsv	external scRNA candidate map	yes	project_local_available	Processed external scRNA candidate, not raw QC input.
+F0_IN_021	results/F0_audit/GSE206785_metadata_precheck.tsv	external scRNA metadata map	yes	project_local_available	Used for external scRNA metadata inventory.

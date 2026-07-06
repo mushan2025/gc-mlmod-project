@@ -1,0 +1,99 @@
+# F0 Execution Plan For Review
+
+Status: prepared for Claude Code review and user approval; not executed.
+
+## Objective
+
+F0 will produce the project-level data reconnaissance and reproducibility baseline required before F1. It does not generate biological conclusions and does not start F1.
+
+## Execution Command
+
+Dry-run review command:
+
+```powershell
+python scripts/F0_setup/run_F0_full_audit.py --project-root .
+```
+
+Formal execution command after Claude Code review and user approval:
+
+```powershell
+python scripts/F0_setup/run_F0_full_audit.py --project-root . --execute
+```
+
+## Selected Environment
+
+Default environment: `laptop_thinkbook16p`, Windows native.
+
+Rationale:
+- F0 uses streaming archive, gzip, metadata and manifest checks.
+- No GPU is useful for F0.
+- No WSL or temporary Linux server is required for the planned F0 script.
+- The existing F0 resource assessment estimates peak RAM below 1.5 GB and temporary disk below 3 GB, well within the current local free disk/RAM baseline.
+
+## Inputs
+
+The formal input checklist is in `reports/environment_setup/F0_input_file_checklist.tsv`.
+
+Key inputs:
+- `data/public_downloads/GSE183904_RAW.tar`
+- `data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz`
+- existing manifests under `data/metadata/`
+- existing precheck tables under `results/F0_audit/`
+- environment baseline files under `environment/`
+
+## Script Behavior
+
+The script will:
+- create/confirm the planned project directories;
+- verify required inputs are present before writing outputs;
+- compute SHA256 for `GSE183904_RAW.tar`;
+- read the tar member list and extract exactly the 40 `*.csv.gz` sample matrices into `data/processed_input/GSE183904/`;
+- keep `csv.gz` files compressed and not create permanent plain CSV files;
+- parse GSE183904 GEO sample metadata and title-to-patient mapping;
+- generate `sample_info.tsv`;
+- stream-audit each extracted matrix for orientation, row/column consistency, integer-like values, missing values, MT/HB gene detection and gene-order SHA256;
+- compare the formal audit to `gse183904_csv_structure_precheck.tsv`;
+- create project inventory, file manifest, metadata inventory, author processing audit, readiness-by-F table, external resource inventory, method-prior table, decision evidence log, excluded samples table, F0 gate checklist and F0 reports.
+
+## Pause Conditions
+
+F0 must pause and not advance to F1 if any of the following occur:
+- `GSE183904_RAW.tar` is missing, unreadable, SHA256-mismatched, or does not contain 40 `csv.gz` sample matrices;
+- GSE183904 GEO metadata cannot be matched to GSM/sample files;
+- any sample has `group_analysis = Unclear`;
+- formal stream audit conflicts with the precheck table for key fields without an accepted explanation;
+- any include-in-F1 sample is not nonnegative integer count-like or has `normalization_artifact_flag = true`;
+- required gate outputs are missing.
+
+## Expected Outputs
+
+The formal output list is in `reports/environment_setup/F0_expected_output_manifest.tsv`.
+
+F0 completion requires at minimum:
+- `data/metadata/sample_info.tsv`
+- `data/metadata/data_audit.tsv`
+- `data/metadata/processed_input_manifest.tsv`
+- `data/metadata/F0_dataset_inventory.tsv`
+- `data/metadata/F0_file_manifest.tsv`
+- `data/metadata/F0_metadata_field_inventory.tsv`
+- `data/metadata/F0_author_processing_audit.tsv`
+- `data/metadata/F0_data_readiness_by_F_section.tsv`
+- `data/metadata/F0_external_resource_inventory.tsv`
+- `data/metadata/F0_method_prior_decision.tsv`
+- `data/metadata/decision_evidence_log.tsv`
+- `data/metadata/excluded_samples.tsv`
+- `results/F0_audit/F0_gate_checklist.tsv`
+- `results/F0_audit/F0_global_data_reconnaissance_report.md`
+- `results/F0_audit/F0_execution_report.md`
+- `logs/F0_setup/analysis_log.md`
+
+## Review Requests For Claude Code
+
+Please review whether:
+- the script faithfully implements the F0 plan without starting F1;
+- outputs and fields match the plan and gate requirements;
+- the script avoids overwriting researcher-confirmed input files;
+- resource estimates remain reasonable for the default laptop;
+- sample grouping, Normal_Peritoneum handling and PM n=3 limitations are recorded correctly;
+- `data_audit.tsv` logic is strong enough to support F1 intake decisions;
+- missing R packages are not treated as F0 blockers but remain F1 blockers where relevant.
