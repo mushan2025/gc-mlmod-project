@@ -11,14 +11,27 @@ F0 will produce the project-level data reconnaissance and reproducibility baseli
 Dry-run review command:
 
 ```powershell
-python scripts/F0_setup/run_F0_full_audit.py --project-root .
+& 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/run_F0_full_audit.py --project-root .
 ```
 
 Formal execution command after Claude Code review and user approval:
 
 ```powershell
-python scripts/F0_setup/run_F0_full_audit.py --project-root . --execute
+& 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/run_F0_full_audit.py --project-root . --execute
 ```
+
+The wrapper runs four independently reviewable stages in order:
+
+```powershell
+& 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/F0_step1_structure_and_extract.py --project-root . --execute
+& 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/F0_step2_sample_info_and_audit.py --project-root . --execute
+& 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/F0_step3_inventory_and_markers.py --project-root . --execute
+& 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/F0_step4_decisions_and_gate.py --project-root . --execute
+```
+
+Each stage defaults to dry-run without `--execute`, checks its predecessor
+outputs, and stops the wrapper on a blocking or pause condition. The four
+stages remain one F0 approval unit; they do not create intermediate user gates.
 
 ## Selected Environment
 
@@ -40,10 +53,12 @@ Key inputs:
 - existing manifests under `data/metadata/`
 - existing precheck tables under `results/F0_audit/`
 - environment baseline files under `environment/`
+- completed structure-only GSE239676 preaudit rows in
+  `results/F0_audit/predownloaded_resource_structure_audit.tsv`
 
 ## Script Behavior
 
-The script will:
+The staged scripts will:
 - create/confirm the planned project directories;
 - verify required inputs are present before writing outputs;
 - compute SHA256 for `GSE183904_RAW.tar`;
@@ -51,8 +66,17 @@ The script will:
 - keep `csv.gz` files compressed and not create permanent plain CSV files;
 - parse GSE183904 GEO sample metadata and title-to-patient mapping;
 - generate `sample_info.tsv`;
-- stream-audit each extracted matrix for orientation, row/column consistency, integer-like values, missing values, MT/HB gene detection and gene-order SHA256;
+- stream-audit each extracted matrix for orientation, row/column consistency,
+  exact missing/noninteger/invalid/negative-value classes, MT/HB gene detection
+  and gene-order SHA256;
 - compare the formal audit to `gse183904_csv_structure_precheck.tsv`;
+- normalize SHA256 comparisons case-insensitively and write every generated
+  SHA256 field in uppercase;
+- include the GSE239676 structure preaudit without opening biological
+  expression results for tuning (8,630 features, 222,240 cells, 20 patients,
+  and peritoneal/liver-metastasis labels represented);
+- audit marker-panel required fields, duplicate cell types, positive-marker
+  format and evidence-ID integrity without modifying the read-only panel;
 - create project inventory, file manifest, metadata inventory, author processing audit, readiness-by-F table, external resource inventory, method-prior table, decision evidence log, excluded samples table, F0 gate checklist and F0 reports.
 
 ## Pause Conditions
@@ -64,6 +88,18 @@ F0 must pause and not advance to F1 if any of the following occur:
 - formal stream audit conflicts with the precheck table for key fields without an accepted explanation;
 - any include-in-F1 sample is not nonnegative integer count-like or has `normalization_artifact_flag = true`;
 - required gate outputs are missing.
+
+Marker-panel content issues are nonblocking and yield
+`PASS_WITH_NOTED_ISSUES`; they are written only to the conditional
+`results/F0_audit/marker_panel_issue_report.tsv`.
+
+`data_audit.tsv` replaces the former row-level numeric approximations with
+`integer_check_method`, `total_values_checked`, `missing_value_count`,
+`noninteger_float_count`, `invalid_nonnumeric_count`,
+`negative_integer_count`, and `numeric_anomaly_count`. Legacy precheck fields
+`missing_value_rows` and `invalid_numeric_value_rows` are mapped explicitly to
+zero/nonzero compatibility checks and recorded in
+`legacy_numeric_precheck_status`.
 
 ## Expected Outputs
 
