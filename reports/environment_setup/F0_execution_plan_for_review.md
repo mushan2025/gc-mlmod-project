@@ -2,6 +2,12 @@
 
 Status: prepared for Claude Code review and user approval; not executed.
 
+Round-2 correction record: commit `59bc74b` implemented exact anomaly
+classification but silently omitted the broader all-cell nCount, distribution
+and duplicate metrics that had been promised during review. This revision
+restores that omitted scope explicitly; the prior narrow summary must not be
+treated as evidence that the complete plan had already been implemented.
+
 ## Objective
 
 F0 will produce the project-level data reconnaissance and reproducibility baseline required before F1. It does not generate biological conclusions and does not start F1.
@@ -41,7 +47,10 @@ Rationale:
 - F0 uses streaming archive, gzip, metadata and manifest checks.
 - No GPU is useful for F0.
 - No WSL or temporary Linux server is required for the planned F0 script.
-- The existing F0 resource assessment estimates peak RAM below 1.5 GB and temporary disk below 3 GB, well within the current local free disk/RAM baseline.
+- Step 2 uses the locked project Python 3.10.11 and NumPy 2.2.6 for
+  row-wise integer parsing and per-cell accumulation; R is not required.
+- The resource assessment has been updated from the strict single-sample
+  pilot described below; the expanded audit remains locally feasible.
 
 ## Inputs
 
@@ -65,16 +74,27 @@ The staged scripts will:
 - read the tar member list and extract exactly the 40 `*.csv.gz` sample matrices into `data/processed_input/GSE183904/`;
 - keep `csv.gz` files compressed and not create permanent plain CSV files;
 - parse GSE183904 GEO sample metadata and title-to-patient mapping;
+- cross-check, for every GSM accession, the `sample_id` parsed from the step-1
+  archive filename against the independent `sampleN` token in the GEO title;
+  no positional fallback is allowed, and a missing or unequal value pauses F0;
 - generate `sample_info.tsv`;
 - stream-audit each extracted matrix for orientation, row/column consistency,
-  exact missing/noninteger/invalid/negative-value classes, MT/HB gene detection
-  and gene-order SHA256;
+  exact missing/noninteger/invalid/negative-value classes, global min/max,
+  integer and zero rates, duplicate genes/barcodes, MT/HB gene detection and
+  gene-order SHA256;
+- accumulate `nCount` for every cell over all 26,571 gene rows and report its
+  min/Q1/median/Q3/max, distinct count and preregistered concentration metrics;
+- calculate every per-gene mean and record a numerical sparsity/right-tail
+  summary rather than a qualitative assertion;
 - compare the formal audit to `gse183904_csv_structure_precheck.tsv`;
 - normalize SHA256 comparisons case-insensitively and write every generated
   SHA256 field in uppercase;
 - include the GSE239676 structure preaudit without opening biological
   expression results for tuning (8,630 features, 222,240 cells, 20 patients,
-  and peritoneal/liver-metastasis labels represented);
+  and peritoneal/liver-metastasis labels represented); explicitly carry forward
+  that its restricted feature space requires F2.4 signature-coverage and
+  fixed-UCell-maxRank assessment and does not support direct cross-cohort
+  absolute-score comparison;
 - audit marker-panel required fields, duplicate cell types, positive-marker
   format and evidence-ID integrity without modifying the read-only panel;
 - create project inventory, file manifest, metadata inventory, author processing audit, readiness-by-F table, external resource inventory, method-prior table, decision evidence log, excluded samples table, F0 gate checklist and F0 reports.
@@ -86,7 +106,11 @@ F0 must pause and not advance to F1 if any of the following occur:
 - GSE183904 GEO metadata cannot be matched to GSM/sample files;
 - any sample has `group_analysis = Unclear`;
 - formal stream audit conflicts with the precheck table for key fields without an accepted explanation;
-- any include-in-F1 sample is not nonnegative integer count-like or has `normalization_artifact_flag = true`;
+- a filename-derived sample ID is missing from or differs from its GEO title-derived sample ID;
+- any matrix is not nonnegative integer count-like, contains duplicate gene
+  names or within-file cell barcodes, has a non-evaluable distribution, or has
+  `normalization_artifact_flag = true`;
+- the sparse/right-skew distribution sentinel requires review;
 - required gate outputs are missing.
 
 Marker-panel content issues are nonblocking and yield
@@ -100,6 +124,88 @@ Marker-panel content issues are nonblocking and yield
 `missing_value_rows` and `invalid_numeric_value_rows` are mapped explicitly to
 zero/nonzero compatibility checks and recorded in
 `legacy_numeric_precheck_status`.
+
+The strict implementation additionally records `integer_value_rate`,
+`min_value`, `max_value`, `has_negative_value`, duplicate counts, all-cell
+`per_cell_nCount_*` fields, a numerical `per_gene_mean_distribution_note`, and
+the evidence underlying `normalization_artifact_flag`.
+
+## Preregistered Matrix-Type Semantics
+
+Two evidence layers are kept separate:
+
+- `observed_numeric_type = nonnegative_integer_count_like` is the format-level
+  observation and is compared with the legacy precheck column named
+  `suspected_matrix_type`.
+- `suspected_matrix_type = author_filtered_raw_gene_count_matrix` is written
+  only after the format/distribution checks, manifest/GEO mapping, legacy
+  precheck and preregistered GEO processing boundary all pass.
+- `format_decision_scope = file_format_only`; the final
+  `decision_scope = file_format_and_public_processing_boundary`.
+
+This resolves the previous plan contradiction without forcing one field to
+carry both storage-format and public-processing semantics.
+
+## Preregistered Normalization-Artifact Rules
+
+These rules were fixed before inspecting the newly computed nCount results.
+Any trigger sets `normalization_artifact_flag = true` and pauses Step 2:
+
+1. All cells have exactly the same nCount (`n_distinct = 1`).
+2. For a file with at least 200 cells, at least 80% of cells fall within the
+   ten most frequent nCount values that are exact multiples of 100.
+3. For a file with at least 200 cells, at least 90% of cells are within +/-1%
+   of 1,000, 10,000, 100,000 or 1,000,000 and relative IQR is at most 0.02.
+4. For a file with at least 200 cells, relative IQR is at most 0.01 and the
+   full relative range is at most 0.05, covering a near-constant non-round
+   library-size target.
+
+The fixed target rationale is traceable to the official
+[Seurat `NormalizeData` reference](https://satijalab.org/seurat/reference/normalizedata),
+which documents a default LogNormalize scale factor of 10,000 and an RC/CPM
+scale factor of 1,000,000, and the official
+[Scanpy `normalize_total` reference](https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.normalize_total.html),
+which documents fixed per-cell total-count normalization. The concentration
+percentages and dispersion cutoffs are conservative project sentinels, not
+universal biological laws; a trigger requires review and does not identify a
+specific normalization package.
+
+`ncount_range_status` separately flags min < 500, median > 100,000 or max >
+1,000,000 for review. A range warning alone does not prove normalization and
+does not delete cells. If numeric or column anomalies make all-cell nCount
+incomplete, the artifact status is `not_evaluable` and Step 2 pauses.
+
+For the descriptive per-gene distribution check, the script reports matrix
+zero rate, fractions of gene means <=0.01 and <=0.1, quartiles, mean, maximum
+and max/median. `consistent_with_sparse_right_skew` requires zero rate >=0.50,
+gene-mean max > Q3 and gene-mean mean > median; otherwise the status is
+`review_required` and Step 2 pauses. This sentinel is not by itself proof that
+the matrix contains raw counts.
+
+## Post-Preregistration Strict Pilot
+
+After the preceding thresholds were fixed in the plan and code, project Python
+3.10.11 plus NumPy 2.2.6 strictly audited
+`GSM5573466_sample1.csv.gz` without sampling:
+
+- `total_values_checked = 71,343,135`; elapsed scan time was 4.39 seconds.
+- OS polling observed a 34,803,712-byte peak working set.
+- Matrix min/max were 0/22,810; all four anomaly counts and both duplicate
+  counts were zero; integer rate was 1.
+- Per-cell nCount min/Q1/median/Q3/max were
+  636/2,585/4,093/6,849/56,631.
+- `ncount_distinct_count = 2,323`, relative IQR = 1.04178, relative range =
+  13.6807, dominant-round fraction = 0, and no artifact rule triggered.
+- Zero-value rate was 0.934476 and the numerical per-gene distribution status
+  was `consistent_with_sparse_right_skew`.
+- MT/HB counts were 13/10, uppercase gene-order SHA256 matched the legacy
+  precheck, and both matrix-type evidence layers reached their preregistered
+  expected values.
+
+The 40 matrices contain 4,215,250,011 values, giving a value-count linear
+extrapolation of about 4.3 minutes. The registered 5-10 minute estimate adds
+file and orchestration overhead. No threshold was changed after this pilot and
+the sampled fallback is not requested.
 
 ## Expected Outputs
 

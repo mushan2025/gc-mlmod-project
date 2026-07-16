@@ -235,12 +235,20 @@ def build_rows(root: Path) -> List[Dict[str, object]]:
     )
     decision = "downloaded_structure_preaudit_pass" if structure_ok else "pause_structure_mismatch"
     limitation = (
+        f"The matrix contains only {feature_count} feature rows, substantially fewer than the 26571 rows in the "
+        "GSE183904 main dataset, which indicates a restricted or prefiltered feature space; the exact author "
+        "filtering rule remains to be confirmed in the F2.4 cohort audit. MLMOD human_scoring_signature coverage "
+        "must be audited before scoring, and fixed UCell maxRank=1500 represents a different fraction of the "
+        "available feature space across cohorts, so absolute UCell scores must not be treated as directly "
+        "comparable. "
         "External validation cohort only; do not use expression values, labels or outcomes to tune the F2 signature, "
         "UCell parameters, thresholds or candidate ranking. Full F2.4 cohort audit remains required."
     )
     implication = (
         "Matrix dimensions and metadata composition are eligible for later F2.4 external-cohort audit after signature "
-        "and scoring rules are frozen; this preaudit does not authorize biological analysis."
+        "and scoring rules are frozen. F2.4 must report signature-gene coverage and evaluate fixed-maxRank "
+        "within-cohort score behavior; validation should use prespecified within-cohort contrasts rather than "
+        "cross-cohort absolute-score equality. This preaudit does not authorize biological analysis."
     )
     urls = source_urls(root)
 

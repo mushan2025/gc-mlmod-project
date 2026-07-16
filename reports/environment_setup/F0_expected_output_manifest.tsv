@@ -2,7 +2,7 @@ output_id	relative_path	generated_by	formal_execution_required	artifact_class	pu
 F0_OUT_001	data/metadata/project_structure_ready.txt	run_F0_full_audit.py	yes	audit_trail	not_planned	standard	overwrite_generated	Blocking gate item: project structure ready.
 F0_OUT_002	logs/F0_setup/analysis_log.md	run_F0_full_audit.py	yes	audit_trail	not_planned	standard	append_only	Blocking gate item: execution notes and exceptions.
 F0_OUT_003	data/metadata/sample_info.tsv	run_F0_full_audit.py	yes	core	undecided	full	overwrite_generated	Locks 40 GSE183904 sample labels and group handling.
-F0_OUT_004	data/metadata/data_audit.tsv	run_F0_full_audit.py	yes	core	undecided	full	overwrite_generated	Primary GSE183904 matrix-type and F1 intake audit.
+F0_OUT_004	data/metadata/data_audit.tsv	run_F0_full_audit.py	yes	core	undecided	full	overwrite_generated	Primary GSE183904 full-stream numeric distribution, manifest/GEO mapping, matrix-type and F1 intake audit.
 F0_OUT_005	data/metadata/processed_input_manifest.tsv	run_F0_full_audit.py	yes	core	not_planned	full	overwrite_generated	Locks extracted csv.gz files for F1.
 F0_OUT_006	data/metadata/F0_dataset_inventory.tsv	run_F0_full_audit.py	yes	audit_trail	undecided	standard	overwrite_generated	Global dataset map for F1-F8.
 F0_OUT_007	data/metadata/F0_file_manifest.tsv	run_F0_full_audit.py	yes	audit_trail	not_planned	standard	overwrite_generated	File manifest and SHA/availability registry.

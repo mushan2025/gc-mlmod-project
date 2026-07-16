@@ -388,23 +388,37 @@ def build_gate_checklist(
         "blocking",
         "data/metadata/processed_input_manifest.tsv",
     )
-    sample_ok = len(sample_info) == 40 and all(row.get("group_analysis") != "Unclear" for row in sample_info)
+    sample_ok = len(sample_info) == 40 and all(
+        row.get("group_analysis") != "Unclear"
+        and row.get("sample_id_match_status") == "match"
+        and row.get("source_of_group")
+        and row.get("metadata_confidence")
+        for row in sample_info
+    )
     add(
         "sample_info",
-        "40 rows; no Unclear group",
-        f"{len(sample_info)} rows; unclear={sum(1 for row in sample_info if row.get('group_analysis') == 'Unclear')}",
+        "40 rows; no Unclear group; manifest/GEO-title sample IDs match",
+        f"{len(sample_info)} rows; unclear={sum(1 for row in sample_info if row.get('group_analysis') == 'Unclear')}; "
+        f"sample_id_mismatch={sum(1 for row in sample_info if row.get('sample_id_match_status') != 'match')}",
         pass_fail(sample_ok),
         "blocking",
         "data/metadata/sample_info.tsv",
     )
     audit_ok = len(data_audit) == 40 and all(
-        row.get("audit_decision") == "enter_full_F1" and row.get("normalization_artifact_flag") == "false"
+        row.get("audit_decision") == "enter_full_F1"
+        and row.get("normalization_artifact_flag") == "false"
+        and row.get("observed_numeric_type") == "nonnegative_integer_count_like"
+        and row.get("suspected_matrix_type") == "author_filtered_raw_gene_count_matrix"
+        and row.get("processed_input_manifest_match") == "true"
+        and row.get("per_gene_mean_distribution_status") == "consistent_with_sparse_right_skew"
+        and row.get("format_decision_scope") == "file_format_only"
+        and row.get("decision_scope") == "file_format_and_public_processing_boundary"
         for row in data_audit
         if row.get("include_in_f1") == "true"
     )
     add(
         "data_audit",
-        "40 rows; included samples enter_full_F1 without numeric/normalization artifact",
+        "40 rows; included samples pass numeric/distribution/mapping checks and both decision layers",
         f"{len(data_audit)} rows; pause={sum(1 for row in data_audit if row.get('audit_decision') != 'enter_full_F1')}",
         pass_fail(audit_ok),
         "blocking",

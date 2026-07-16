@@ -2,8 +2,8 @@ lock_item	category	required_for_stage	observed_version_or_status	source_or_path	
 Windows_OS	system	F0-F8	Microsoft Windows 11 Pro 10.0.26200	Win32_OperatingSystem	recorded	warning	warning	Windows native may be used for modules whose dependencies are stable and auditable.
 git	tool	F0-F8	git version 2.54.0.windows.1	C:\Program Files\Git\cmd\git.exe	recorded	none	none	Repository operations available.
 gh	tool	GitHub publish/review	gh version 2.92.0	C:\Program Files\GitHub CLI\gh.exe	recorded	none	none	Authenticated earlier as mushan2025; not required for analysis execution itself.
-Python	runtime	F0 helper scripts; optional Python modules	3.10.11	C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe	recorded	none	warning	Usable for lightweight audit scripts; scientific Python stack incomplete.
-numpy	python_package	optional Python checks	2.2.6	Python import check	recorded	none	warning	Installed in current Python environment.
+Python	runtime	F0 formal audit scripts; optional later Python modules	3.10.11	C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe	recorded	warning	warning	Required explicit runtime for F0; scientific Python packages not used by F0 may remain incomplete.
+numpy	python_package	F0 Step 2 strict full-stream audit	2.2.6	Python import check	recorded	warning	warning	Required for row-wise integer parsing, per-cell nCount accumulation and exact distribution summaries.
 pandas	python_package	optional table scripts	NOT_AVAILABLE	Python import check	missing	warning	warning	Install or use PowerShell/R for TSV handling if needed.
 scipy	python_package	optional scientific Python	NOT_AVAILABLE	Python import check	missing	none	warning	Not required for F0 if using streaming Python/PowerShell; may matter for later Python workflows.
 scanpy	python_package	optional h5ad/single-cell Python	NOT_AVAILABLE	Python import check	missing	none	warning	Not required for Seurat-first F1, but record as missing.

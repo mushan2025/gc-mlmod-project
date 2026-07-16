@@ -2,8 +2,8 @@ software_or_package	category	version_or_status	source_or_path	checked_at	require
 Windows	system	Microsoft Windows 11 Pro 10.0.26200	Win32_OperatingSystem	2026-07-06T16:11:54+08:00	F0-F8	recorded	Native Windows baseline.
 git	tool	2.54.0.windows.1	C:\Program Files\Git\cmd\git.exe	2026-07-06T16:11:54+08:00	F0-F8	ok	Repository version control available.
 gh	tool	2.92.0	C:\Program Files\GitHub CLI\gh.exe	2026-07-06T16:11:54+08:00	GitHub publish	ok	GitHub CLI available and authenticated earlier in this session.
-Python	runtime	3.10.11	C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe	2026-07-06T16:11:54+08:00	F0 helper/optional	ok	Scientific Python stack incomplete; use only approved scripts.
-numpy	python_package	2.2.6	Python import	2026-07-06T16:11:54+08:00	optional	warning	Installed.
+Python	runtime	3.10.11	C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe	2026-07-16T10:56:17+08:00	F0 formal audit	ok	Explicit runtime required by the approved F0 scripts; unrelated scientific Python packages may remain unavailable.
+numpy	python_package	2.2.6	Python import	2026-07-16T10:56:17+08:00	F0 Step 2 strict full-stream audit	ok	Required for row-wise integer parsing, per-cell nCount accumulation and distribution summaries.
 pandas	python_package	NOT_AVAILABLE	Python import	2026-07-06T16:11:54+08:00	optional	warning	Missing.
 scipy	python_package	NOT_AVAILABLE	Python import	2026-07-06T16:11:54+08:00	optional	warning	Missing.
 scanpy	python_package	NOT_AVAILABLE	Python import	2026-07-06T16:11:54+08:00	optional	warning	Missing.
