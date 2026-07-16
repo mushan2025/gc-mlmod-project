@@ -70,6 +70,10 @@ LOW_NCOUNT_REVIEW_BOUNDARY = 500
 HIGH_NCOUNT_MEDIAN_REVIEW_BOUNDARY = 100_000
 HIGH_NCOUNT_MAX_REVIEW_BOUNDARY = 1_000_000
 SPARSE_MATRIX_MIN_ZERO_RATE = 0.50
+AUTHOR_MIN_NFEATURE = 500
+AUTHOR_MAX_NFEATURE_EXCLUSIVE = 6000
+AUTHOR_MAX_PERCENT_MT = 20.0
+AUTHOR_MIN_CELLS_PER_FEATURE = 3
 
 
 def parse_geo_line(line: str) -> Tuple[str, List[str]]:
@@ -436,6 +440,143 @@ def assess_ncount_distribution(ncount: np.ndarray, complete: bool) -> Dict[str, 
     }
 
 
+def assess_cell_qc_space(
+    ncount: np.ndarray,
+    nfeature: np.ndarray,
+    mt_ncount: np.ndarray,
+    complete: bool,
+    metric_prefix: str,
+    threshold_suffix: str,
+) -> Dict[str, object]:
+    metric_fields = {
+        f"{metric_prefix}_nCount_min": "",
+        f"{metric_prefix}_nCount_Q1": "",
+        f"{metric_prefix}_nCount_median": "",
+        f"{metric_prefix}_nCount_Q3": "",
+        f"{metric_prefix}_nCount_max": "",
+        f"{metric_prefix}_nFeature_min": "",
+        f"{metric_prefix}_nFeature_Q1": "",
+        f"{metric_prefix}_nFeature_median": "",
+        f"{metric_prefix}_nFeature_Q3": "",
+        f"{metric_prefix}_nFeature_max": "",
+        f"{metric_prefix}_percent_mt_min": "",
+        f"{metric_prefix}_percent_mt_Q1": "",
+        f"{metric_prefix}_percent_mt_median": "",
+        f"{metric_prefix}_percent_mt_Q3": "",
+        f"{metric_prefix}_percent_mt_max": "",
+    }
+    threshold_fields = {
+        f"author_nFeature_lt_500_count_{threshold_suffix}": "",
+        f"author_nFeature_ge_6000_count_{threshold_suffix}": "",
+        f"author_percent_mt_gt_20_count_{threshold_suffix}": "",
+        f"author_cell_threshold_mismatch_count_{threshold_suffix}": "",
+        f"author_cell_qc_reproduction_status_{threshold_suffix}": "not_evaluable",
+        f"author_cell_qc_reproduction_note_{threshold_suffix}": (
+            "cell_QC_not_evaluable_due_to_column_numeric_or_denominator_anomaly"
+        ),
+    }
+    if (
+        not complete
+        or ncount.size == 0
+        or nfeature.size != ncount.size
+        or mt_ncount.size != ncount.size
+        or np.any(ncount <= 0)
+    ):
+        return {**metric_fields, **threshold_fields}
+
+    percent_mt = np.divide(
+        mt_ncount.astype(np.float64) * 100.0,
+        ncount.astype(np.float64),
+    )
+    feature_low = nfeature < AUTHOR_MIN_NFEATURE
+    feature_high = nfeature >= AUTHOR_MAX_NFEATURE_EXCLUSIVE
+    mt_high = percent_mt > AUTHOR_MAX_PERCENT_MT
+    any_mismatch = feature_low | feature_high | mt_high
+    ncount_q1, ncount_median, ncount_q3 = np.quantile(
+        ncount, [0.25, 0.5, 0.75], method="linear"
+    )
+    nfeature_q1, nfeature_median, nfeature_q3 = np.quantile(
+        nfeature, [0.25, 0.5, 0.75], method="linear"
+    )
+    mt_q1, mt_median, mt_q3 = np.quantile(
+        percent_mt, [0.25, 0.5, 0.75], method="linear"
+    )
+    low_count = int(np.count_nonzero(feature_low))
+    high_count = int(np.count_nonzero(feature_high))
+    mt_high_count = int(np.count_nonzero(mt_high))
+    mismatch_count = int(np.count_nonzero(any_mismatch))
+    status = "pass" if mismatch_count == 0 else "measured_mismatch"
+    note = (
+        f"reported_baseline=500<=nFeature<6000_and_percent.mt<=20; "
+        f"nFeature_lt_500={low_count}; nFeature_ge_6000={high_count}; "
+        f"percent.mt_gt_20={mt_high_count}; unique_mismatching_cells={mismatch_count}"
+    )
+    return {
+        f"{metric_prefix}_nCount_min": format_number(int(np.min(ncount))),
+        f"{metric_prefix}_nCount_Q1": format_number(ncount_q1),
+        f"{metric_prefix}_nCount_median": format_number(ncount_median),
+        f"{metric_prefix}_nCount_Q3": format_number(ncount_q3),
+        f"{metric_prefix}_nCount_max": format_number(int(np.max(ncount))),
+        f"{metric_prefix}_nFeature_min": format_number(int(np.min(nfeature))),
+        f"{metric_prefix}_nFeature_Q1": format_number(nfeature_q1),
+        f"{metric_prefix}_nFeature_median": format_number(nfeature_median),
+        f"{metric_prefix}_nFeature_Q3": format_number(nfeature_q3),
+        f"{metric_prefix}_nFeature_max": format_number(int(np.max(nfeature))),
+        f"{metric_prefix}_percent_mt_min": format_number(float(np.min(percent_mt))),
+        f"{metric_prefix}_percent_mt_Q1": format_number(mt_q1),
+        f"{metric_prefix}_percent_mt_median": format_number(mt_median),
+        f"{metric_prefix}_percent_mt_Q3": format_number(mt_q3),
+        f"{metric_prefix}_percent_mt_max": format_number(float(np.max(percent_mt))),
+        f"author_nFeature_lt_500_count_{threshold_suffix}": low_count,
+        f"author_nFeature_ge_6000_count_{threshold_suffix}": high_count,
+        f"author_percent_mt_gt_20_count_{threshold_suffix}": mt_high_count,
+        f"author_cell_threshold_mismatch_count_{threshold_suffix}": mismatch_count,
+        f"author_cell_qc_reproduction_status_{threshold_suffix}": status,
+        f"author_cell_qc_reproduction_note_{threshold_suffix}": note,
+    }
+
+
+def assess_author_feature_filter_boundary(
+    detected_in_0_cells: int,
+    detected_in_1_cell: int,
+    detected_in_2_cells: int,
+    examples: Sequence[str],
+    total_features: int,
+    complete: bool,
+) -> Dict[str, object]:
+    below_threshold = detected_in_0_cells + detected_in_1_cell + detected_in_2_cells
+    if not complete:
+        return {
+            "author_min_cells_per_feature_reported": AUTHOR_MIN_CELLS_PER_FEATURE,
+            "feature_rows_detected_in_0_cells": "",
+            "feature_rows_detected_in_1_cell": "",
+            "feature_rows_detected_in_2_cells": "",
+            "feature_rows_detected_lt_3_count": "",
+            "feature_rows_detected_lt_3_examples": "",
+            "author_like_retained_feature_count": "",
+            "author_feature_filter_reproduction_status": "not_evaluable",
+            "author_feature_filter_reproduction_note": (
+                "per_sample_feature_detection_not_evaluable_due_to_column_or_numeric_anomaly"
+            ),
+        }
+    status = "pass" if below_threshold == 0 else "measured_mismatch"
+    return {
+        "author_min_cells_per_feature_reported": AUTHOR_MIN_CELLS_PER_FEATURE,
+        "feature_rows_detected_in_0_cells": detected_in_0_cells,
+        "feature_rows_detected_in_1_cell": detected_in_1_cell,
+        "feature_rows_detected_in_2_cells": detected_in_2_cells,
+        "feature_rows_detected_lt_3_count": below_threshold,
+        "feature_rows_detected_lt_3_examples": "|".join(examples),
+        "author_like_retained_feature_count": total_features - below_threshold,
+        "author_feature_filter_reproduction_status": status,
+        "author_feature_filter_reproduction_note": (
+            f"reported_per_sample_baseline=feature_detected_in_at_least_3_cells; "
+            f"detected_in_0={detected_in_0_cells}; detected_in_1={detected_in_1_cell}; "
+            f"detected_in_2={detected_in_2_cells}; below_3={below_threshold}"
+        ),
+    }
+
+
 def summarize_gene_means(
     gene_means: Sequence[float],
     matrix_rows: int,
@@ -500,6 +641,10 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
     gene_duplicate_count = 0
     gene_name_issue_count = 0
     gene_means: List[float] = []
+    gene_detected_in_0_cells = 0
+    gene_detected_in_1_cell = 0
+    gene_detected_in_2_cells = 0
+    gene_detected_lt_3_examples: List[str] = []
     gene_hash = hashlib.sha256()
     global_min: float | None = None
     global_max: float | None = None
@@ -522,6 +667,11 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
             else "mixed_or_unrecognized_cell_barcode"
         )
         ncount = np.zeros(expected_cells, dtype=np.int64)
+        nfeature = np.zeros(expected_cells, dtype=np.int32)
+        mt_ncount = np.zeros(expected_cells, dtype=np.int64)
+        author_like_ncount = np.zeros(expected_cells, dtype=np.int64)
+        author_like_nfeature = np.zeros(expected_cells, dtype=np.int32)
+        author_like_mt_ncount = np.zeros(expected_cells, dtype=np.int64)
         first_header_fields = "|".join(header_fields[:6])
         barcode_suffixes = [
             barcode.rsplit("_", 1)[-1] if "_" in barcode else "" for barcode in header_fields[1:6]
@@ -539,6 +689,8 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
                 gene = clean_csv_token(stripped[:first_comma])
                 values = stripped[first_comma + 1 :]
                 observed_cells = values.count(",") + 1
+            upper_gene = gene.upper()
+            is_mt_gene = upper_gene.startswith("MT-")
             if observed_cells != expected_cells:
                 bad_column_count_rows += 1
                 ncount_complete = False
@@ -580,6 +732,23 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
                 global_max = float(row_max) if global_max is None else max(global_max, float(row_max))
             if row_array is not None and row_array.size == expected_cells:
                 ncount += row_array
+                nfeature += row_array > 0
+                if is_mt_gene:
+                    mt_ncount += row_array
+                detected_cells = int(np.count_nonzero(row_array > 0))
+                if detected_cells >= AUTHOR_MIN_CELLS_PER_FEATURE:
+                    author_like_ncount += row_array
+                    author_like_nfeature += row_array > 0
+                    if is_mt_gene:
+                        author_like_mt_ncount += row_array
+                if detected_cells == 0:
+                    gene_detected_in_0_cells += 1
+                elif detected_cells == 1:
+                    gene_detected_in_1_cell += 1
+                elif detected_cells == 2:
+                    gene_detected_in_2_cells += 1
+                if detected_cells < AUTHOR_MIN_CELLS_PER_FEATURE and len(gene_detected_lt_3_examples) < 10:
+                    gene_detected_lt_3_examples.append(f"{gene}:{detected_cells}")
                 gene_means.append(float(np.sum(row_array, dtype=np.int64)) / expected_cells)
             else:
                 ncount_complete = False
@@ -594,8 +763,7 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
                 gene_name_issue_count += 1
             gene_hash.update(gene.encode("utf-8"))
             gene_hash.update(b"\n")
-            upper_gene = gene.upper()
-            if upper_gene.startswith("MT-"):
+            if is_mt_gene:
                 mt_gene_count += 1
                 if len(mt_genes) < 8:
                     mt_genes.append(gene)
@@ -617,6 +785,80 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
     )
     integer_value_rate = integer_count / total_values_checked if total_values_checked else math.nan
     ncount_summary = assess_ncount_distribution(ncount, ncount_complete)
+    public_space_qc_summary = assess_cell_qc_space(
+        ncount,
+        nfeature,
+        mt_ncount,
+        ncount_complete,
+        "public_full_feature",
+        "public_space",
+    )
+    author_like_qc_summary = assess_cell_qc_space(
+        author_like_ncount,
+        author_like_nfeature,
+        author_like_mt_ncount,
+        ncount_complete,
+        "author_like",
+        "author_like_space",
+    )
+    author_feature_filter_summary = assess_author_feature_filter_boundary(
+        gene_detected_in_0_cells,
+        gene_detected_in_1_cell,
+        gene_detected_in_2_cells,
+        gene_detected_lt_3_examples,
+        rows,
+        ncount_complete,
+    )
+    public_space_status = str(
+        public_space_qc_summary["author_cell_qc_reproduction_status_public_space"]
+    )
+    author_like_status = str(
+        author_like_qc_summary["author_cell_qc_reproduction_status_author_like_space"]
+    )
+    if "not_evaluable" in {public_space_status, author_like_status}:
+        author_cell_qc_reproduction_status = "not_evaluable"
+    elif public_space_status == "pass" and author_like_status == "pass":
+        author_cell_qc_reproduction_status = "pass"
+    else:
+        author_cell_qc_reproduction_status = "measured_mismatch"
+    author_cell_qc_reproduction_note = (
+        f"public_full_feature_space={public_space_status}; "
+        f"author_like_min_cells3_feature_space={author_like_status}; "
+        "the two spaces are reported separately and are not interchangeable"
+    )
+    if ncount_complete and np.all(ncount > 0) and np.all(author_like_ncount > 0):
+        nfeature_decrease = nfeature.astype(np.int64) - author_like_nfeature.astype(np.int64)
+        ncount_decrease = ncount - author_like_ncount
+        public_percent_mt = mt_ncount.astype(np.float64) * 100.0 / ncount.astype(np.float64)
+        author_like_percent_mt = (
+            author_like_mt_ncount.astype(np.float64)
+            * 100.0
+            / author_like_ncount.astype(np.float64)
+        )
+        percent_mt_change = np.abs(public_percent_mt - author_like_percent_mt)
+        feature_space_difference_summary: Dict[str, object] = {
+            "feature_space_nFeature_changed_cell_count": int(
+                np.count_nonzero(nfeature_decrease != 0)
+            ),
+            "feature_space_nFeature_max_decrease": int(np.max(nfeature_decrease)),
+            "feature_space_nCount_changed_cell_count": int(np.count_nonzero(ncount_decrease != 0)),
+            "feature_space_nCount_max_decrease": int(np.max(ncount_decrease)),
+            "feature_space_percent_mt_changed_cell_count": int(
+                np.count_nonzero(percent_mt_change > 1e-12)
+            ),
+            "feature_space_percent_mt_max_absolute_change": format_number(
+                float(np.max(percent_mt_change))
+            ),
+        }
+    else:
+        feature_space_difference_summary = {
+            "feature_space_nFeature_changed_cell_count": "",
+            "feature_space_nFeature_max_decrease": "",
+            "feature_space_nCount_changed_cell_count": "",
+            "feature_space_nCount_max_decrease": "",
+            "feature_space_percent_mt_changed_cell_count": "",
+            "feature_space_percent_mt_max_absolute_change": "",
+        }
     gene_mean_summary = summarize_gene_means(
         gene_means,
         rows,
@@ -656,6 +898,12 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
         "max_value": format_number(global_max),
         "has_negative_value": "true" if global_min is not None and global_min < 0 else "false",
         **ncount_summary,
+        **public_space_qc_summary,
+        **author_like_qc_summary,
+        "author_cell_qc_reproduction_status": author_cell_qc_reproduction_status,
+        "author_cell_qc_reproduction_note": author_cell_qc_reproduction_note,
+        **feature_space_difference_summary,
+        **author_feature_filter_summary,
         **gene_mean_summary,
         "mt_gene_count": mt_gene_count,
         "mt_gene_examples": "|".join(mt_genes),
@@ -759,6 +1007,12 @@ def build_data_audit(
             structural_failures.append("per_gene_mean_distribution_not_confirmed")
         if stats["normalization_artifact_flag"] != "false":
             structural_failures.append("normalization_artifact_or_not_evaluable")
+        author_cell_qc_status = str(stats["author_cell_qc_reproduction_status"])
+        if author_cell_qc_status == "not_evaluable":
+            structural_failures.append("reported_author_cell_QC_thresholds_not_evaluable")
+        feature_filter_status = str(stats["author_feature_filter_reproduction_status"])
+        if feature_filter_status not in {"pass", "measured_mismatch"}:
+            structural_failures.append("reported_author_feature_filter_not_evaluable")
         structural_ok = not structural_failures
         processing_boundary_ok = (
             structural_ok
@@ -767,7 +1021,7 @@ def build_data_audit(
             and pre_decision == "enter_full_F1_candidate"
         )
         suspected_matrix_type = (
-            "author_filtered_raw_gene_count_matrix"
+            "public_called_cell_raw_gene_count_matrix"
             if processing_boundary_ok
             else "processing_boundary_not_confirmed"
         )
@@ -777,16 +1031,41 @@ def build_data_audit(
         failure_details = [*structural_failures, *row_mismatches]
         if pre_decision != "enter_full_F1_candidate":
             failure_details.append(f"unexpected_precheck_decision={pre_decision or 'missing'}")
-        decision_reason = (
-            "full-stream numeric/structure audit passed; per-cell nCount showed no preregistered "
-            "normalization artifact; sparse right-skew evidence was present; processed manifest and "
-            "GEO sample mapping matched; preregistered GEO public-processing evidence supports the "
-            "author-filtered raw gene-count boundary"
-            if ok
-            else "pause because one or more format, distribution, duplicate, mapping or precheck conditions failed: "
-            + "; ".join(failure_details)
-            + f"; artifact_evidence={stats['normalization_artifact_reason']}"
-        )
+        if ok:
+            if feature_filter_status == "pass":
+                feature_boundary_reason = (
+                    "public feature rows satisfy the reported per-sample min.cells=3 boundary"
+                )
+            else:
+                feature_boundary_reason = (
+                    f"public feature rows include {stats['feature_rows_detected_lt_3_count']} genes detected "
+                    "in fewer than three cells, so the author's per-sample feature filtering is not "
+                    "embedded in this public file"
+                )
+            decision_reason = (
+                "full-stream numeric/structure audit passed; per-cell nCount showed no preregistered "
+                "normalization artifact; nFeature and percent.mt were recomputed in both the public full "
+                "feature space and an author-like per-sample min.cells=3 feature space; sparse right-skew "
+                "evidence was present; processed manifest and GEO sample mapping matched; "
+                f"author_cell_qc_status={author_cell_qc_status}; {feature_boundary_reason}"
+            )
+        else:
+            decision_reason = (
+                "pause because one or more format, distribution, duplicate, mapping or precheck conditions failed: "
+                + "; ".join(failure_details)
+                + f"; artifact_evidence={stats['normalization_artifact_reason']}"
+            )
+        boundary_notes: List[str] = []
+        if author_cell_qc_status == "measured_mismatch":
+            boundary_notes.append(
+                "nonblocking processing-boundary limitation: at least one retained public cell differs "
+                "from an author-reported cell threshold in one or both explicitly measured feature spaces"
+            )
+        if feature_filter_status == "measured_mismatch":
+            boundary_notes.append(
+                "nonblocking processing-boundary limitation: public feature rows do not reflect the "
+                "author-reported per-sample min.cells=3 filter"
+            )
         output.append(
             {
                 "dataset_id": "GSE183904",
@@ -803,10 +1082,10 @@ def build_data_audit(
                 "legacy_numeric_precheck_status": legacy_status,
                 "precheck_audit_decision": pre_decision,
                 "public_processing_evidence_status": (
-                    "GEO_processing_and_supplementary_description_preregistered"
+                    "public_input_shape_verified_author_processing_boundaries_measured"
                 ),
                 "suspected_matrix_type": suspected_matrix_type,
-                "audit_decision": "enter_full_F1" if ok else "pause_for_review",
+                "audit_decision": "enter_full_F1_independent_reQC" if ok else "pause_for_review",
                 "format_decision_scope": "file_format_only",
                 "decision_scope": "file_format_and_public_processing_boundary",
                 "decision_reason": decision_reason,
@@ -814,7 +1093,7 @@ def build_data_audit(
                 "raw_droplet_available": "false",
                 "empty_droplet_background_available": "false",
                 "precheck_comparison_status": "match" if precheck_match else "mismatch",
-                "note": "; ".join(row_mismatches),
+                "note": "; ".join([*row_mismatches, *boundary_notes]),
             }
         )
     return output, mismatch_notes
@@ -882,6 +1161,13 @@ def execute(root: Path) -> int:
 
     precheck = read_tsv(root / "results/F0_audit/gse183904_csv_structure_precheck.tsv")
     data_audit, mismatches = build_data_audit(root, manifest, sample_info, precheck)
+    append_log(
+        root,
+        "SCHEMA_MIGRATION precheck.suspected_matrix_type -> observed_numeric_type; "
+        "precheck.audit_decision_precheck=enter_full_F1_candidate -> "
+        "audit_decision=enter_full_F1_independent_reQC only after formal audit; "
+        "suspected_matrix_type now records public input shape only",
+    )
     data_fields = [
         "dataset_id",
         "file_name",
@@ -927,6 +1213,65 @@ def execute(root: Path) -> int:
         "per_cell_nCount_median",
         "per_cell_nCount_Q3",
         "per_cell_nCount_max",
+        "public_full_feature_nCount_min",
+        "public_full_feature_nCount_Q1",
+        "public_full_feature_nCount_median",
+        "public_full_feature_nCount_Q3",
+        "public_full_feature_nCount_max",
+        "public_full_feature_nFeature_min",
+        "public_full_feature_nFeature_Q1",
+        "public_full_feature_nFeature_median",
+        "public_full_feature_nFeature_Q3",
+        "public_full_feature_nFeature_max",
+        "public_full_feature_percent_mt_min",
+        "public_full_feature_percent_mt_Q1",
+        "public_full_feature_percent_mt_median",
+        "public_full_feature_percent_mt_Q3",
+        "public_full_feature_percent_mt_max",
+        "author_nFeature_lt_500_count_public_space",
+        "author_nFeature_ge_6000_count_public_space",
+        "author_percent_mt_gt_20_count_public_space",
+        "author_cell_threshold_mismatch_count_public_space",
+        "author_cell_qc_reproduction_status_public_space",
+        "author_cell_qc_reproduction_note_public_space",
+        "author_like_nCount_min",
+        "author_like_nCount_Q1",
+        "author_like_nCount_median",
+        "author_like_nCount_Q3",
+        "author_like_nCount_max",
+        "author_like_nFeature_min",
+        "author_like_nFeature_Q1",
+        "author_like_nFeature_median",
+        "author_like_nFeature_Q3",
+        "author_like_nFeature_max",
+        "author_like_percent_mt_min",
+        "author_like_percent_mt_Q1",
+        "author_like_percent_mt_median",
+        "author_like_percent_mt_Q3",
+        "author_like_percent_mt_max",
+        "author_nFeature_lt_500_count_author_like_space",
+        "author_nFeature_ge_6000_count_author_like_space",
+        "author_percent_mt_gt_20_count_author_like_space",
+        "author_cell_threshold_mismatch_count_author_like_space",
+        "author_cell_qc_reproduction_status_author_like_space",
+        "author_cell_qc_reproduction_note_author_like_space",
+        "author_cell_qc_reproduction_status",
+        "author_cell_qc_reproduction_note",
+        "feature_space_nFeature_changed_cell_count",
+        "feature_space_nFeature_max_decrease",
+        "feature_space_nCount_changed_cell_count",
+        "feature_space_nCount_max_decrease",
+        "feature_space_percent_mt_changed_cell_count",
+        "feature_space_percent_mt_max_absolute_change",
+        "author_min_cells_per_feature_reported",
+        "feature_rows_detected_in_0_cells",
+        "feature_rows_detected_in_1_cell",
+        "feature_rows_detected_in_2_cells",
+        "feature_rows_detected_lt_3_count",
+        "feature_rows_detected_lt_3_examples",
+        "author_like_retained_feature_count",
+        "author_feature_filter_reproduction_status",
+        "author_feature_filter_reproduction_note",
         "ncount_distinct_count",
         "ncount_relative_iqr",
         "ncount_relative_range",
@@ -967,12 +1312,29 @@ def execute(root: Path) -> int:
 
     unclear = [row for row in sample_info if row.get("group_analysis") == "Unclear"]
     artifacts = [row for row in data_audit if row.get("normalization_artifact_flag") != "false"]
-    paused = [row for row in data_audit if row.get("audit_decision") != "enter_full_F1"]
+    feature_filter_boundary_mismatches = [
+        row
+        for row in data_audit
+        if row.get("author_feature_filter_reproduction_status") == "measured_mismatch"
+    ]
+    cell_qc_boundary_mismatches = [
+        row
+        for row in data_audit
+        if row.get("author_cell_qc_reproduction_status") == "measured_mismatch"
+    ]
+    paused = [
+        row
+        for row in data_audit
+        if row.get("audit_decision") != "enter_full_F1_independent_reQC"
+    ]
     append_log(
         root,
         f"F0 step2 completed; sample_rows={len(sample_info)}; audit_rows={len(data_audit)}; "
         f"precheck_mismatches={len(mismatches)}; sample_id_mismatches={len(sample_id_mismatches)}; "
-        f"unclear_groups={len(unclear)}; artifacts_or_not_evaluable={len(artifacts)}; paused={len(paused)}",
+        f"unclear_groups={len(unclear)}; artifacts_or_not_evaluable={len(artifacts)}; "
+        f"cell_qc_boundary_mismatches={len(cell_qc_boundary_mismatches)}; "
+        f"feature_filter_boundary_mismatches={len(feature_filter_boundary_mismatches)}; "
+        f"paused={len(paused)}",
     )
     if len(sample_info) != 40 or unclear or sample_id_mismatches or mismatches or artifacts or paused:
         raise RuntimeError(

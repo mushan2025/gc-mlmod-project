@@ -85,6 +85,7 @@ REQUIRED_DIRS = [
 REQUIRED_INPUTS = [
     "data/public_downloads/GSE183904_RAW.tar",
     "data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz",
+    "docs/source_verification/GSE183904_processing_history_source_audit.tsv",
     "data/metadata/download_manifest.tsv",
     "data/metadata/preupload_resources_manifest.tsv",
     "data/metadata/preupload_pending_resources.tsv",

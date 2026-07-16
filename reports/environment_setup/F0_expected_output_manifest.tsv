@@ -7,7 +7,7 @@ F0_OUT_005	data/metadata/processed_input_manifest.tsv	run_F0_full_audit.py	yes	c
 F0_OUT_006	data/metadata/F0_dataset_inventory.tsv	run_F0_full_audit.py	yes	audit_trail	undecided	standard	overwrite_generated	Global dataset map for F1-F8.
 F0_OUT_007	data/metadata/F0_file_manifest.tsv	run_F0_full_audit.py	yes	audit_trail	not_planned	standard	overwrite_generated	File manifest and SHA/availability registry.
 F0_OUT_008	data/metadata/F0_metadata_field_inventory.tsv	run_F0_full_audit.py	yes	audit_trail	undecided	standard	overwrite_generated	Metadata/clinical field inventory.
-F0_OUT_009	data/metadata/F0_author_processing_audit.tsv	run_F0_full_audit.py	yes	audit_trail	undecided	standard	overwrite_generated	Records author QC/filtering/doublet/ambient evidence.
+F0_OUT_009	data/metadata/F0_author_processing_audit.tsv	run_F0_full_audit.py	yes	gate_decision	undecided	full	overwrite_generated	Records end-to-end author processing provenance, public-matrix verification, export-boundary uncertainty and F1 method constraints.
 F0_OUT_010	data/metadata/F0_data_readiness_by_F_section.tsv	run_F0_full_audit.py	yes	gate_decision	undecided	standard	overwrite_generated	Defines which later F sections are ready or pending.
 F0_OUT_011	data/metadata/F0_external_resource_inventory.tsv	run_F0_full_audit.py	yes	audit_trail	not_planned	spot_check	overwrite_generated	External database/resource map.
 F0_OUT_012	data/metadata/F0_method_prior_decision.tsv	run_F0_full_audit.py	yes	gate_decision	undecided	standard	overwrite_generated	Prevents later method choices from assuming wrong data type.

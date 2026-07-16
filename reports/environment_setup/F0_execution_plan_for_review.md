@@ -61,6 +61,8 @@ Key inputs:
 - `data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz`
 - existing manifests under `data/metadata/`
 - existing precheck tables under `results/F0_audit/`
+- the preregistered source-evidence table
+  `docs/source_verification/GSE183904_processing_history_source_audit.tsv`
 - environment baseline files under `environment/`
 - completed structure-only GSE239676 preaudit rows in
   `results/F0_audit/predownloaded_resource_structure_audit.tsv`
@@ -84,6 +86,14 @@ The staged scripts will:
   gene-order SHA256;
 - accumulate `nCount` for every cell over all 26,571 gene rows and report its
   min/Q1/median/Q3/max, distinct count and preregistered concentration metrics;
+- recompute per-cell `nCount`, `nFeature` and mitochondrial-transcript
+  percentage in two explicit spaces: `public_full_feature_space`, which
+  describes the archived matrix and feeds independent F1 QC, and
+  `author_like_min_cells3_feature_space`, which first retains only features
+  detected in at least three cells and is used solely to test the reported
+  `500 <= nFeature < 6000` and `percent.mt <= 20` provenance boundary;
+- count positive cells for every feature in every sample and compare public
+  rows directly with the paper's per-sample `min.cells = 3` analysis rule;
 - calculate every per-gene mean and record a numerical sparsity/right-tail
   summary rather than a qualitative assertion;
 - compare the formal audit to `gse183904_csv_structure_precheck.tsv`;
@@ -97,6 +107,21 @@ The staged scripts will:
   absolute-score comparison;
 - audit marker-panel required fields, duplicate cell types, positive-marker
   format and evidence-ID integrity without modifying the read-only panel;
+- build an end-to-end GSE183904 processing lineage from tissue acquisition
+  through public-matrix export and the author's later analysis, keeping four
+  evidence classes separate: author report, F0 observation, cross-source
+  inference and unresolved history;
+- reconcile the 158,641 public cells with the paper's 152,423-cell final
+  40-tissue-sample object without attributing the 6,218-cell difference to a
+  specific step when barcode-level evidence is unavailable;
+- treat author SCTransform, anchor integration, clustering and annotation as
+  post-export analysis context rather than transformations embedded in the
+  public raw-count CSV values;
+- convert each unresolved matrix-relevant history item into an explicit F1
+  constraint, including the six-layer per-sample QC framework, independent
+  per-capture doublet assessment, retained-cell DecontX diagnostics, and
+  `not_evaluable_input_limited` status for true knee/cell calling, emptyDrops,
+  SoupX and CellBender;
 - create project inventory, file manifest, metadata inventory, author processing audit, readiness-by-F table, external resource inventory, method-prior table, decision evidence log, excluded samples table, F0 gate checklist and F0 reports.
 
 ## Pause Conditions
@@ -106,6 +131,13 @@ F0 must pause and not advance to F1 if any of the following occur:
 - GSE183904 GEO metadata cannot be matched to GSM/sample files;
 - any sample has `group_analysis = Unclear`;
 - formal stream audit conflicts with the precheck table for key fields without an accepted explanation;
+- either cell-QC feature space is non-evaluable, or a measured threshold
+  mismatch cannot be localized and reported; an evaluable mismatch is a
+  nonblocking provenance limitation and does not authorize silent deletion;
+- the per-sample detected-cell count cannot be evaluated for every feature row;
+- required processing-history stages are missing, core provenance fields are
+  empty, or an unresolved matrix-relevant item lacks a conservative downstream
+  action;
 - a filename-derived sample ID is missing from or differs from its GEO title-derived sample ID;
 - any matrix is not nonnegative integer count-like, contains duplicate gene
   names or within-file cell barcodes, has a non-evaluable distribution, or has
@@ -117,6 +149,25 @@ Marker-panel content issues are nonblocking and yield
 `PASS_WITH_NOTED_ISSUES`; they are written only to the conditional
 `results/F0_audit/marker_panel_issue_report.tsv`.
 
+Genuine residual provenance unknowns are also nonblocking only when they are
+explicitly evidenced and mapped to an F1 constraint. Their presence makes the
+overall result `PASS_WITH_NOTED_LIMITATIONS`, not a clean `PASS`. An unknown
+must never be converted into an assertion that the author did or did not apply
+the step.
+
+Public feature rows below the author's per-sample three-cell rule are a
+measured export-boundary mismatch, not a structural count failure. When fully
+evaluable, this yields `PASS_WITH_NOTED_ISSUES` and requires F1 to preserve all
+archived rows, use the author-like space only for provenance, and define each
+downstream feature-eligibility rule separately. It does not authorize deleting
+cells, permanently deleting genes, or modifying archived counts.
+
+A cell-threshold mismatch that appears only after the author-like min.cells=3
+feature restriction is likewise a measured, space-dependent processing-boundary
+result. It is reported in both spaces and yields `PASS_WITH_NOTED_ISSUES` when
+fully evaluable; it does not invalidate the integer counts or force exact
+reproduction of the author's object.
+
 `data_audit.tsv` replaces the former row-level numeric approximations with
 `integer_check_method`, `total_values_checked`, `missing_value_count`,
 `noninteger_float_count`, `invalid_nonnumeric_count`,
@@ -127,8 +178,14 @@ zero/nonzero compatibility checks and recorded in
 
 The strict implementation additionally records `integer_value_rate`,
 `min_value`, `max_value`, `has_negative_value`, duplicate counts, all-cell
-`per_cell_nCount_*` fields, a numerical `per_gene_mean_distribution_note`, and
-the evidence underlying `normalization_artifact_flag`.
+`per_cell_nCount_*`, `public_full_feature_*` and `author_like_*` fields, the
+space-specific counts mismatching each author-reported cell-QC threshold,
+the number of cells whose nFeature/nCount/percent.mt changes between spaces and
+the maximum observed change,
+per-sample counts of features detected in 0, 1 or 2 cells, the resulting
+comparison with the author-reported `min.cells = 3` feature rule, a numerical
+`per_gene_mean_distribution_note`, and the evidence underlying
+`normalization_artifact_flag`.
 
 ## Preregistered Matrix-Type Semantics
 
@@ -137,14 +194,26 @@ Two evidence layers are kept separate:
 - `observed_numeric_type = nonnegative_integer_count_like` is the format-level
   observation and is compared with the legacy precheck column named
   `suspected_matrix_type`.
-- `suspected_matrix_type = author_filtered_raw_gene_count_matrix` is written
-  only after the format/distribution checks, manifest/GEO mapping, legacy
-  precheck and preregistered GEO processing boundary all pass.
+- `author_cell_qc_reproduction_status_public_space` and
+  `author_cell_qc_reproduction_status_author_like_space` separately report
+  whether retained public cells satisfy `500 <= nFeature < 6000` and
+  `percent.mt <= 20`; the overall status is `pass`, `measured_mismatch` or
+  `not_evaluable`.
+- `author_feature_filter_reproduction_status` independently reports whether
+  every public sample-by-feature row satisfies the paper's per-sample
+  three-cell feature rule. A measured mismatch is a provenance limitation,
+  not a count-format failure.
+- `suspected_matrix_type = public_called_cell_raw_gene_count_matrix` records
+  only the public input shape. Cell-threshold and feature-filter boundaries are
+  never compressed into this field.
+- `audit_decision = enter_full_F1_independent_reQC` means that the matrix can
+  enter full downstream analysis after an independent project QC; it does not
+  assert exact author-object reproduction.
 - `format_decision_scope = file_format_only`; the final
   `decision_scope = file_format_and_public_processing_boundary`.
 
 This resolves the previous plan contradiction without forcing one field to
-carry both storage-format and public-processing semantics.
+carry storage format, cell filtering and feature filtering simultaneously.
 
 ## Preregistered Normalization-Artifact Rules
 
@@ -188,24 +257,41 @@ After the preceding thresholds were fixed in the plan and code, project Python
 3.10.11 plus NumPy 2.2.6 strictly audited
 `GSM5573466_sample1.csv.gz` without sampling:
 
-- `total_values_checked = 71,343,135`; elapsed scan time was 4.39 seconds.
-- OS polling observed a 34,803,712-byte peak working set.
+- `total_values_checked = 71,343,135`; the expanded repeat scan took 4.73 seconds.
+- OS polling observed a 35,151,872-byte peak working set.
 - Matrix min/max were 0/22,810; all four anomaly counts and both duplicate
   counts were zero; integer rate was 1.
 - Per-cell nCount min/Q1/median/Q3/max were
   636/2,585/4,093/6,849/56,631.
+- Per-cell nFeature min/Q1/median/Q3/max were
+  500/1,070/1,481/2,033/5,972; no cell was below 500 or at least 6,000.
+- Per-cell percent.mt min/Q1/median/Q3/max were
+  0/5.6228/8.2662/11.8887/19.9971; no cell exceeded 20%, so all 2,685
+  cells passed the recomputed author-reported cell-QC baseline in
+  `public_full_feature_space`.
+- The public file contained 5,770 genes detected in 0 cells, 685 in 1 cell and
+  822 in 2 cells: 7,277 feature rows below the paper's per-sample three-cell
+  rule. After restricting to the resulting 19,294 author-like features,
+  nFeature min/Q1/median/Q3/max became 500/1,070/1,480/2,033/5,969; 1,197 cells
+  changed nFeature (maximum decrease 41), and percent.mt max became 20.008763,
+  producing one near-boundary mismatch. Thus the archived public space broadly
+  supports the reported cell thresholds for this sample, but the exact result
+  depends on feature-space/order and cannot be represented by one compliance
+  field.
 - `ncount_distinct_count = 2,323`, relative IQR = 1.04178, relative range =
   13.6807, dominant-round fraction = 0, and no artifact rule triggered.
 - Zero-value rate was 0.934476 and the numerical per-gene distribution status
   was `consistent_with_sparse_right_skew`.
-- MT/HB counts were 13/10, uppercase gene-order SHA256 matched the legacy
-  precheck, and both matrix-type evidence layers reached their preregistered
-  expected values.
+- MT/HB counts were 13/10 and uppercase gene-order SHA256 matched the legacy
+  precheck. The raw-count format layer passed; the feature-filter comparison
+  exposed why the former broad `author_filtered_raw_gene_count_matrix` label
+  must be replaced by a format state plus two processing-boundary states.
 
 The 40 matrices contain 4,215,250,011 values, giving a value-count linear
-extrapolation of about 4.3 minutes. The registered 5-10 minute estimate adds
-file and orchestration overhead. No threshold was changed after this pilot and
-the sampled fallback is not requested.
+extrapolation of about 4.7 minutes. The registered 5-10 minute estimate adds
+file and orchestration overhead. No biological or anomaly threshold was tuned
+to the pilot; the added three-cell comparison directly implements the author's
+reported rule. The sampled fallback is not requested.
 
 ## Expected Outputs
 
@@ -238,4 +324,11 @@ Please review whether:
 - resource estimates remain reasonable for the default laptop;
 - sample grouping, Normal_Peritoneum handling and PM n=3 limitations are recorded correctly;
 - `data_audit.tsv` logic is strong enough to support F1 intake decisions;
+- both cell-QC feature spaces are measured independently and an evaluable
+  mismatch remains nonblocking but visible;
 - missing R packages are not treated as F0 blockers but remain F1 blockers where relevant.
+- processing-history claims are correctly attributed to primary sources, F0
+  observations or bounded cross-source inference;
+- every remaining Cell Ranger, doublet, ambient-RNA and public-export unknown
+  has an adequate F1 constraint without claiming exact reproduction of the
+  author's final object.

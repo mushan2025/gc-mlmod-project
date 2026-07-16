@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""F0 step 3: build inventories and audit the read-only marker panel.
+"""F0 step 3: build inventories, processing provenance and marker audit.
 
 Dependencies: successful step 1/2 outputs plus existing project manifests and
 precheck tables. Outputs: dataset/file/metadata/author/resource inventories and
@@ -42,6 +42,7 @@ STAGE_REQUIRED = [
     "data/metadata/preupload_pending_resources.tsv",
     "data/metadata/cell_type_marker_panel.tsv",
     "data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz",
+    "docs/source_verification/GSE183904_processing_history_source_audit.tsv",
     "results/F0_audit/non_GSE183904_data_structure_precheck.tsv",
     "results/F0_audit/predownloaded_resource_structure_audit.tsv",
     "results/F0_audit/bulk_GEO_series_matrix_deep_precheck.tsv",
@@ -63,6 +64,37 @@ MARKER_REQUIRED_FIELDS = [
     "minimum_rule",
     "confidence",
     "evidence_ids",
+]
+
+PROCESSING_HISTORY_FIELDS = [
+    "history_record_id",
+    "stage_order",
+    "dataset_id",
+    "processing_step",
+    "processing_scope",
+    "relation_to_public_matrix",
+    "author_reported_status",
+    "method_or_threshold_if_reported",
+    "source_reference_or_file",
+    "evidence_location",
+    "evidence_basis",
+    "source_accessed_date",
+    "confidence_level",
+    "matrix_content_effect",
+    "unresolved_detail",
+    "implication_for_downstream_plan",
+    "requires_special_handling",
+    "observed_public_cell_count",
+    "paper_reported_final_tissue_cell_count",
+    "count_difference",
+    "count_difference_fraction",
+    "observed_author_qc_mismatch_cell_count_public_space",
+    "observed_author_qc_mismatch_cell_count_author_like_space",
+    "observed_samples_with_author_cell_qc_mismatch",
+    "observed_samples_author_cell_qc_not_evaluable",
+    "observed_samples_with_feature_filter_mismatch",
+    "observed_sample_gene_rows_below_3",
+    "observed_samples_feature_filter_not_evaluable",
 ]
 
 
@@ -172,75 +204,260 @@ def build_metadata_inventory(
     return rows
 
 
-def build_author_processing_audit() -> List[Dict[str, object]]:
-    return [
+def build_author_processing_audit(
+    source_rows: Sequence[Dict[str, str]],
+    data_audit: Sequence[Dict[str, str]],
+) -> List[Dict[str, object]]:
+    if not source_rows:
+        raise RuntimeError("GSE183904 processing-history source audit is empty")
+    missing_fields = [field for field in PROCESSING_HISTORY_FIELDS[:17] if field not in source_rows[0]]
+    if missing_fields:
+        raise RuntimeError(
+            "GSE183904 processing-history source audit missing fields: "
+            + ", ".join(missing_fields)
+        )
+    record_ids = [row.get("history_record_id", "") for row in source_rows]
+    if len(record_ids) != len(set(record_ids)) or any(not value for value in record_ids):
+        raise RuntimeError("GSE183904 processing-history source audit has blank or duplicate record IDs")
+    required_steps = {
+        "tissue_dissociation",
+        "library_preparation",
+        "sequencing",
+        "count_generation",
+        "cell_calling",
+        "QC_filtering",
+        "public_matrix_export",
+        "doublet_detection",
+        "ambient_RNA_correction",
+        "normalization",
+        "batch_correction",
+        "clustering_and_annotation",
+        "raw_FASTQ_or_empty_droplet_availability",
+    }
+    observed_steps = {
+        row.get("processing_step", "")
+        for row in source_rows
+        if row.get("dataset_id") == "GSE183904"
+    }
+    missing_steps = sorted(required_steps - observed_steps)
+    if missing_steps:
+        raise RuntimeError(
+            "GSE183904 processing-history source audit missing stages: "
+            + ", ".join(missing_steps)
+        )
+
+    rows: List[Dict[str, object]] = [dict(row) for row in source_rows]
+    public_cells = sum(int(row.get("matrix_cols_cells", "0") or 0) for row in data_audit)
+    public_space_qc_mismatches = sum(
+        int(row.get("author_cell_threshold_mismatch_count_public_space", "0") or 0)
+        for row in data_audit
+    )
+    author_like_qc_mismatches = sum(
+        int(row.get("author_cell_threshold_mismatch_count_author_like_space", "0") or 0)
+        for row in data_audit
+    )
+    cell_qc_mismatch_rows = [
+        row
+        for row in data_audit
+        if row.get("author_cell_qc_reproduction_status") == "measured_mismatch"
+    ]
+    cell_qc_not_evaluable_rows = [
+        row
+        for row in data_audit
+        if row.get("author_cell_qc_reproduction_status") not in {"pass", "measured_mismatch"}
+    ]
+    cell_qc_evaluable = bool(data_audit) and not cell_qc_not_evaluable_rows
+    feature_filter_mismatch_rows = [
+        row
+        for row in data_audit
+        if row.get("author_feature_filter_reproduction_status") == "measured_mismatch"
+    ]
+    feature_filter_not_evaluable_rows = [
+        row
+        for row in data_audit
+        if row.get("author_feature_filter_reproduction_status") not in {"pass", "measured_mismatch"}
+    ]
+    sample_gene_rows_below_3 = sum(
+        int(row.get("feature_rows_detected_lt_3_count", "0") or 0)
+        for row in data_audit
+    )
+    feature_filter_evaluable = bool(data_audit) and not feature_filter_not_evaluable_rows
+    if not cell_qc_evaluable:
+        cell_qc_status = "not_evaluable"
+    elif cell_qc_mismatch_rows:
+        cell_qc_status = "measured_mismatch_in_one_or_both_feature_spaces"
+    else:
+        cell_qc_status = "verified_in_both_feature_spaces"
+    rows.append(
         {
+            "history_record_id": "H018",
+            "stage_order": "92",
             "dataset_id": "GSE183904",
-            "source_reference_or_file": "GSE183904_series_matrix.txt.gz !Sample_data_processing",
-            "processing_step": "QC_filtering",
-            "author_reported_status": "reported",
-            "method_or_threshold_if_reported": "Seurat v3; genes/features shared by >=3 cells; 500<=nFeature<6000; percent.mt<=20",
-            "evidence_location": "GEO sample data processing lines",
-            "confidence_level": "high",
-            "implication_for_downstream_plan": "F1 should verify author-filtered raw counts and perform conservative residual QC.",
-            "requires_special_handling": "record baseline thresholds in F1 qc_thresholds_by_sample.tsv",
-        },
+            "processing_step": "cell_QC_filtering_verification",
+            "processing_scope": "public_matrix_verification",
+            "relation_to_public_matrix": "public_matrix_observed",
+            "author_reported_status": cell_qc_status,
+            "method_or_threshold_if_reported": (
+                f"F0 recomputed nFeature and percent.mt for {public_cells} public cells in both "
+                "public_full_feature_space and author_like_min_cells3_feature_space; "
+                f"public-space mismatches={public_space_qc_mismatches}; "
+                f"author-like-space mismatches={author_like_qc_mismatches}."
+            ),
+            "source_reference_or_file": "data/metadata/data_audit.tsv",
+            "evidence_location": "F0 full-stream two-space per-cell nFeature and percent.mt fields",
+            "evidence_basis": "F0_full_stream_recomputation",
+            "source_accessed_date": now_iso()[:10],
+            "confidence_level": "high" if cell_qc_evaluable else "not_evaluable",
+            "matrix_content_effect": (
+                "Tests whether public cells satisfy the author's reported cell thresholds under both "
+                "the archived public feature space and an explicit author-like min.cells=3 feature space."
+            ),
+            "unresolved_detail": (
+                "The initial Cell Ranger-called cell set and per-step excluded-barcode lists are unavailable, "
+                "so this verifies retained public cells rather than reconstructing all removed cells."
+            ),
+            "implication_for_downstream_plan": (
+                "F1 must use public_full_feature_space for independent project QC and retain the author-like "
+                "space only for provenance; a measured mismatch is reported rather than silently normalized away."
+            ),
+            "requires_special_handling": (
+                "Do not treat author reporting alone as proof of threshold compliance and do not merge the two spaces."
+            ),
+            "observed_public_cell_count": public_cells,
+            "observed_author_qc_mismatch_cell_count_public_space": public_space_qc_mismatches,
+            "observed_author_qc_mismatch_cell_count_author_like_space": author_like_qc_mismatches,
+            "observed_samples_with_author_cell_qc_mismatch": len(cell_qc_mismatch_rows),
+            "observed_samples_author_cell_qc_not_evaluable": len(cell_qc_not_evaluable_rows),
+        }
+    )
+    if not feature_filter_evaluable:
+        feature_filter_status = "not_evaluable"
+    elif feature_filter_mismatch_rows:
+        feature_filter_status = (
+            "public_feature_rows_include_genes_below_reported_per_sample_threshold"
+        )
+    else:
+        feature_filter_status = "verified_against_all_public_sample_feature_rows"
+    rows.append(
         {
+            "history_record_id": "H020",
+            "stage_order": "94",
             "dataset_id": "GSE183904",
-            "source_reference_or_file": "GSE183904_series_matrix.txt.gz !Series_overall_design",
-            "processing_step": "raw_FASTQ_or_empty_droplet_availability",
-            "author_reported_status": "raw_files_not_submitted",
-            "method_or_threshold_if_reported": "Raw files were not submitted due to patient privacy concerns.",
-            "evidence_location": "GEO series overall design",
-            "confidence_level": "high",
-            "implication_for_downstream_plan": "Do not claim FASTQ/BCL/Cell Ranger raw-output reprocessing; SoupX is not default without background droplets.",
-            "requires_special_handling": "raw_droplet_available=false; empty_droplet_background_available=false",
-        },
+            "processing_step": "feature_filtering_verification",
+            "processing_scope": "public_matrix_verification",
+            "relation_to_public_matrix": "public_matrix_observed",
+            "author_reported_status": feature_filter_status,
+            "method_or_threshold_if_reported": (
+                "The original paper reports considering each sample for features shared by at least "
+                f"3 cells; F0 found {sample_gene_rows_below_3} sample-by-gene rows below that threshold "
+                f"across {len(feature_filter_mismatch_rows)} of {len(data_audit)} public sample matrices."
+            ),
+            "source_reference_or_file": (
+                "data/metadata/data_audit.tsv; "
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/"
+            ),
+            "evidence_location": (
+                "F0 full-stream per-gene detected-cell counts and original-paper Bioinformatic QC methods"
+            ),
+            "evidence_basis": "F0_full_stream_recomputation_plus_original_paper",
+            "source_accessed_date": now_iso()[:10],
+            "confidence_level": "high" if feature_filter_evaluable else "not_evaluable",
+            "matrix_content_effect": (
+                "Determines whether public feature rows reproduce the author's reported per-sample "
+                "Seurat min.cells=3 analysis feature space."
+            ),
+            "unresolved_detail": (
+                "When low-detection feature rows are present, the available sources cannot determine "
+                "whether Cell Ranger feature rows were retained through export or reintroduced after "
+                "the author's Seurat feature filtering."
+            ),
+            "implication_for_downstream_plan": (
+                "Preserve every archived CSV feature row unchanged; F1 must compute the author-like space "
+                "only for provenance and define project/downstream feature eligibility separately."
+            ),
+            "requires_special_handling": (
+                "A feature-row boundary mismatch limits provenance claims but does not invalidate "
+                "nonnegative integer counts or require deletion of public cells."
+            ),
+            "observed_public_cell_count": public_cells,
+            "observed_author_qc_mismatch_cell_count_public_space": public_space_qc_mismatches,
+            "observed_author_qc_mismatch_cell_count_author_like_space": author_like_qc_mismatches,
+            "observed_samples_with_author_cell_qc_mismatch": len(cell_qc_mismatch_rows),
+            "observed_samples_author_cell_qc_not_evaluable": len(cell_qc_not_evaluable_rows),
+            "observed_samples_with_feature_filter_mismatch": len(feature_filter_mismatch_rows),
+            "observed_sample_gene_rows_below_3": sample_gene_rows_below_3,
+            "observed_samples_feature_filter_not_evaluable": len(feature_filter_not_evaluable_rows),
+        }
+    )
+
+    paper_final_cells = 152_423
+    count_difference = public_cells - paper_final_cells
+    difference_fraction = count_difference / public_cells if public_cells else 0.0
+    rows.append(
         {
+            "history_record_id": "H019",
+            "stage_order": "125",
             "dataset_id": "GSE183904",
-            "source_reference_or_file": "GSE183904_series_matrix.txt.gz !Sample_data_processing",
-            "processing_step": "count_generation",
-            "author_reported_status": "reported",
-            "method_or_threshold_if_reported": "Cell Ranger v3.0 aligned FASTQ to hg38 and generated single-cell feature counts.",
-            "evidence_location": "GEO sample data processing lines",
-            "confidence_level": "high",
-            "implication_for_downstream_plan": "Public CSV.gz files are author-filtered raw gene-count matrices, not normalized expression.",
-            "requires_special_handling": "F0 data_audit.tsv must verify nonnegative integer matrix structure.",
-        },
+            "processing_step": "export_boundary_reconciliation",
+            "processing_scope": "cross_source_reconciliation",
+            "relation_to_public_matrix": "export_boundary_unresolved",
+            "author_reported_status": "cross_source_count_difference_observed",
+            "method_or_threshold_if_reported": (
+                f"Public matrices contain {public_cells} cells; the original-paper 40-tissue-sample "
+                f"analysis reports {paper_final_cells}; difference={count_difference} "
+                f"({difference_fraction:.4%} of public cells)."
+            ),
+            "source_reference_or_file": (
+                "data/metadata/data_audit.tsv; "
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC9394383/"
+            ),
+            "evidence_location": "F0 matrix column counts and original-paper Figure 1/results",
+            "evidence_basis": "F0_local_matrix_plus_original_paper",
+            "source_accessed_date": now_iso()[:10],
+            "confidence_level": "high_for_counts_medium_for_cause",
+            "matrix_content_effect": "Shows that the public matrices are not numerically identical to the author's final 40-tissue-sample analysis object.",
+            "unresolved_detail": (
+                "The difference is consistent with later doublet or other post-export filtering but "
+                "cannot identify the cause or affected barcodes without author code and exclusion lists."
+            ),
+            "implication_for_downstream_plan": (
+                "Treat public-matrix doublet status as unresolved and reconstruct F1 exclusions de novo."
+            ),
+            "requires_special_handling": (
+                "Do not force F1 to reproduce 152423 cells and do not attribute all 6218 cells to DoubletFinder."
+            ),
+            "observed_public_cell_count": public_cells,
+            "paper_reported_final_tissue_cell_count": paper_final_cells,
+            "count_difference": count_difference,
+            "count_difference_fraction": format(difference_fraction, ".12g"),
+            "observed_author_qc_mismatch_cell_count_public_space": public_space_qc_mismatches,
+            "observed_author_qc_mismatch_cell_count_author_like_space": author_like_qc_mismatches,
+            "observed_samples_with_author_cell_qc_mismatch": len(cell_qc_mismatch_rows),
+            "observed_samples_author_cell_qc_not_evaluable": len(cell_qc_not_evaluable_rows),
+        }
+    )
+    rows.append(
         {
-            "dataset_id": "GSE183904",
-            "source_reference_or_file": "GSE183904_series_matrix.txt.gz and available public files",
-            "processing_step": "doublet_detection",
-            "author_reported_status": "not_reported_in_public_metadata",
-            "method_or_threshold_if_reported": "not_available",
-            "evidence_location": "No public doublet field found in current F0 inputs.",
-            "confidence_level": "medium",
-            "implication_for_downstream_plan": "F1 Gate1 must independently assess doublet risk.",
-            "requires_special_handling": "Do not treat absent reporting as evidence that no doublets exist.",
-        },
-        {
-            "dataset_id": "GSE183904",
-            "source_reference_or_file": "GSE183904_series_matrix.txt.gz and available public files",
-            "processing_step": "ambient_RNA_correction",
-            "author_reported_status": "not_reported_in_public_metadata",
-            "method_or_threshold_if_reported": "not_available",
-            "evidence_location": "No public ambient-correction field found in current F0 inputs.",
-            "confidence_level": "medium",
-            "implication_for_downstream_plan": "F1 Gate1 should evaluate cross-expression and DecontX/celda feasibility.",
-            "requires_special_handling": "Report contamination estimates separately from corrected-count usage.",
-        },
-        {
+            "history_record_id": "H900",
+            "stage_order": "900",
             "dataset_id": "GSE206785",
-            "source_reference_or_file": "GSE206785_dataset_structure_precheck.tsv",
             "processing_step": "external_scRNA_processing",
+            "processing_scope": "external_validation_candidate",
+            "relation_to_public_matrix": "separate_dataset",
             "author_reported_status": "processed_matrix_local_candidate",
             "method_or_threshold_if_reported": "log1p(count)-like cell-by-gene matrix",
+            "source_reference_or_file": "results/F0_audit/GSE206785_dataset_structure_precheck.tsv",
             "evidence_location": "results/F0_audit/GSE206785_dataset_structure_precheck.tsv",
+            "evidence_basis": "project_local_structure_precheck",
+            "source_accessed_date": now_iso()[:10],
             "confidence_level": "medium",
-            "implication_for_downstream_plan": "Processed-expression external scoring only after approval; not raw QC reprocessing.",
+            "matrix_content_effect": "Processed expression only; no raw-QC reconstruction.",
+            "unresolved_detail": "Full external-cohort audit remains pending.",
+            "implication_for_downstream_plan": "Processed-expression external scoring only after approval.",
             "requires_special_handling": "F2 external-validation audit required before use.",
-        },
-    ]
+        }
+    )
+    return sorted(rows, key=lambda row: (row.get("dataset_id", ""), int(row.get("stage_order", 0))))
 
 
 def gse239_inventory_row(predownloaded: Sequence[Dict[str, str]]) -> Dict[str, object] | None:
@@ -293,7 +510,7 @@ def build_dataset_inventory(
             "event_count_if_known": "not_applicable",
             "platform_or_assay": "10x Genomics scRNA-seq; GPL24676; hg38",
             "gene_id_type_if_known": "gene_symbol_or_feature_name_from_author_CSV",
-            "raw_or_processed_status_if_known": "author-filtered raw gene count CSV.gz; not FASTQ/raw droplets",
+            "raw_or_processed_status_if_known": "Cell Ranger-derived public raw gene count CSV.gz; F0 separately audits retained-cell and feature-filter boundaries; not FASTQ/raw droplets",
             "metadata_available": "GEO sample metadata; no public cell-level metadata in current inputs",
             "clinical_endpoint_available": "not_for_survival",
             "major_limitations": "PM n=3; Normal_Peritoneum n=1; raw/empty droplets unavailable",
@@ -440,12 +657,42 @@ def build_file_manifest(
                 "note": row.get("note", ""),
             }
         )
+    processing_source = root / "docs/source_verification/GSE183904_processing_history_source_audit.tsv"
+    rows.append(
+        {
+            "file_name": processing_source.name,
+            "relative_path_if_available": rel(processing_source, root),
+            "dataset_id": "GSE183904",
+            "file_role": "processing_history_primary_source_audit",
+            "data_domain": "scientific_provenance",
+            "source_type": "project_documented_primary_source_audit",
+            "source_url_or_local_manifest": rel(processing_source, root),
+            "file_size_bytes": processing_source.stat().st_size if processing_source.exists() else "",
+            "sha256": sha256_file(processing_source) if processing_source.exists() else "",
+            "compression_format": "tsv",
+            "read_status": "read_by_F0_step3" if processing_source.exists() else "missing",
+            "availability_status": "project_local_available" if processing_source.exists() else "not_found_at_expected_path",
+            "used_in_F0": "true",
+            "planned_F_section_use": "F0,F1",
+            "audit_status": "primary_sources_reviewed_and_structured",
+            "artifact_class": "audit_trail",
+            "publication_destination": "not_planned",
+            "review_priority": "full",
+            "note": "Separates author report, F0 verification, cross-source inference and unresolved history.",
+        }
+    )
     for output in generated_paths:
         path = root / output
-        is_self = Path(output).name == "F0_file_manifest.tsv"
+        output_name = Path(output).name
+        is_self = output_name == "F0_file_manifest.tsv"
+        gate_decision_names = {
+            "F0_author_processing_audit.tsv",
+            "F0_gate_checklist.tsv",
+            "F0_execution_report.md",
+        }
         rows.append(
             {
-                "file_name": Path(output).name,
+                "file_name": output_name,
                 "relative_path_if_available": output,
                 "dataset_id": "F0",
                 "file_role": "F0_generated_output",
@@ -460,9 +707,9 @@ def build_file_manifest(
                 "used_in_F0": "true",
                 "planned_F_section_use": "F0,F1-F8_as_relevant",
                 "audit_status": "generated_by_current_staged_scripts" if path.exists() else "planned",
-                "artifact_class": "gate_decision" if Path(output).name in {"F0_gate_checklist.tsv", "F0_execution_report.md"} else "audit_trail",
-                "publication_destination": "undecided" if Path(output).name in {"F0_global_data_reconnaissance_report.md", "F0_execution_report.md"} else "not_planned",
-                "review_priority": "standard",
+                "artifact_class": "gate_decision" if output_name in gate_decision_names else "audit_trail",
+                "publication_destination": "undecided" if output_name in {"F0_global_data_reconnaissance_report.md", "F0_execution_report.md"} else "not_planned",
+                "review_priority": "full" if output_name == "F0_author_processing_audit.tsv" else "standard",
                 "note": "Self-manifest SHA256 intentionally blank" if is_self else "",
             }
         )
@@ -583,7 +830,10 @@ def execute(root: Path) -> int:
         raise RuntimeError(
             "F0 step3 requires 40 processed-manifest, sample-info and data-audit rows"
         )
-    if any(row.get("audit_decision") != "enter_full_F1" for row in data_audit):
+    if any(
+        row.get("audit_decision") != "enter_full_F1_independent_reQC"
+        for row in data_audit
+    ):
         raise RuntimeError("F0 step3 cannot continue while data_audit.tsv contains paused samples")
     sample_fields, _ = parse_gse183904_series(
         root / "data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz"
@@ -617,15 +867,14 @@ def execute(root: Path) -> int:
             "usable_for_F_section", "interpretation_risk", "note",
         ],
     )
-    author_rows = build_author_processing_audit()
+    processing_source_rows = read_tsv(
+        root / "docs/source_verification/GSE183904_processing_history_source_audit.tsv"
+    )
+    author_rows = build_author_processing_audit(processing_source_rows, data_audit)
     write_tsv(
         root / "data/metadata/F0_author_processing_audit.tsv",
         author_rows,
-        [
-            "dataset_id", "source_reference_or_file", "processing_step", "author_reported_status",
-            "method_or_threshold_if_reported", "evidence_location", "confidence_level",
-            "implication_for_downstream_plan", "requires_special_handling",
-        ],
+        PROCESSING_HISTORY_FIELDS,
     )
     resource_rows = build_external_resource_inventory(root)
     write_tsv(
@@ -669,7 +918,9 @@ def execute(root: Path) -> int:
     append_log(
         root,
         f"F0 step3 completed; dataset_rows={len(dataset_rows)}; metadata_rows={len(metadata_rows)}; "
-        f"resource_rows={len(resource_rows)}; marker_panel={marker_status}; F1 reminder: add marker-panel and evidence-reference method priors.",
+        f"author_processing_rows={len(author_rows)}; resource_rows={len(resource_rows)}; "
+        f"marker_panel={marker_status}; F1 reminder: use processing-history constraints and "
+        "add marker-panel/evidence-reference method priors.",
     )
     return 0
 

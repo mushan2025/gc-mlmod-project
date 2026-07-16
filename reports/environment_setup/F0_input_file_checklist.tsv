@@ -20,3 +20,4 @@ F0_IN_018	results/F0_audit/TCGA_STAD_survival_table_precheck.tsv	TCGA readiness 
 F0_IN_019	results/F0_audit/TCGA_STAD_star_counts_inverse_validation.tsv	TCGA method-prior decision	yes	project_local_available	Records reversible integer reconstruction evidence and limitations.
 F0_IN_020	results/F0_audit/GSE206785_dataset_structure_precheck.tsv	external scRNA candidate map	yes	project_local_available	Processed external scRNA candidate, not raw QC input.
 F0_IN_021	results/F0_audit/GSE206785_metadata_precheck.tsv	external scRNA metadata map	yes	project_local_available	Used for external scRNA metadata inventory.
+F0_IN_022	docs/source_verification/GSE183904_processing_history_source_audit.tsv	GSE183904 end-to-end processing provenance	yes	project_local_available	Primary-source audit separating pre-export processing, public-matrix observations, post-export author analysis and unresolved history; drives F1 method constraints.

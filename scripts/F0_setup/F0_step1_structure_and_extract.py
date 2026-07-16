@@ -115,7 +115,7 @@ def build_processed_manifest(root: Path, members: Sequence[tarfile.TarInfo]) -> 
                 "file_size": path.stat().st_size,
                 "sha256": sha256_file(path),
                 "extraction_date": now_iso(),
-                "file_role": "author_filtered_raw_gene_count_csv_gz_for_F1",
+                "file_role": "cell_ranger_derived_public_called_cell_raw_gene_count_gene_by_cell_matrix",
                 "note": "Compressed csv.gz retained; no permanent plain CSV extraction.",
             }
         )
