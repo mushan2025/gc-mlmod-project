@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Run the four approved F0 audit stages in order.
 
-Without ``--execute`` this wrapper performs the original read-only review of
-the 21 preregistered inputs and unchanged 17-output contract. Formal execution
-requires ``--execute`` and stops immediately if any stage reaches a pause or
-blocking condition. It never starts F1.
+Without ``--execute`` this wrapper checks the current preregistered inputs and
+planned output contract without writing files. Formal execution requires
+``--execute`` and stops immediately if any stage reaches a pause or blocking
+condition. It never starts F1.
 """
 
 from __future__ import annotations

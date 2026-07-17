@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """F0 step 1: verify structure/archive, extract 40 matrices, and manifest them.
 
-Dependencies: the 21 preregistered F0 inputs, especially GSE183904_RAW.tar and
+Dependencies: the preregistered F0 inputs, especially GSE183904_RAW.tar and
 download_manifest.tsv. Outputs: project_structure_ready.txt,
 processed_input_manifest.tsv, and the initialized analysis_log.md.
 """

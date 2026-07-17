@@ -14,6 +14,7 @@ import gzip
 import hashlib
 import math
 import re
+import sys
 import time
 from collections import Counter
 from pathlib import Path
@@ -70,10 +71,40 @@ LOW_NCOUNT_REVIEW_BOUNDARY = 500
 HIGH_NCOUNT_MEDIAN_REVIEW_BOUNDARY = 100_000
 HIGH_NCOUNT_MAX_REVIEW_BOUNDARY = 1_000_000
 SPARSE_MATRIX_MIN_ZERO_RATE = 0.50
-AUTHOR_MIN_NFEATURE = 500
-AUTHOR_MAX_NFEATURE_EXCLUSIVE = 6000
-AUTHOR_MAX_PERCENT_MT = 20.0
-AUTHOR_MIN_CELLS_PER_FEATURE = 3
+SOURCE_MIN_NFEATURE = 500
+SOURCE_MAX_NFEATURE_EXCLUSIVE = 6000
+SOURCE_MAX_PERCENT_MT = 20.0
+PROJECT_MIN_NCOUNT_EXCLUSIVE = 1000
+PROJECT_MAX_PERCENT_HB_EXCLUSIVE = 5.0
+QC_MIN_CELLS_PER_FEATURE = 3
+
+# Human globin transcript panel frozen in the approved F0/F1 plan. Matching is
+# exact after uppercasing; broad ``^HB`` matching would incorrectly include
+# genes such as HBEGF, HBS1L and HBP1.
+GLOBIN_PANEL = (
+    "HBA1",
+    "HBA2",
+    "HBB",
+    "HBD",
+    "HBE1",
+    "HBG1",
+    "HBG2",
+    "HBM",
+    "HBQ1",
+    "HBZ",
+)
+GLOBIN_PANEL_SET = frozenset(GLOBIN_PANEL)
+
+PILOT_FILE_NAME = "GSM5573466_sample1.csv.gz"
+PILOT_EXPECTED = {
+    "matrix_cols_cells": 2685,
+    "qc_retained_feature_count": 19294,
+    "source_reported_qc_pass_count": 2684,
+    "additional_fail_nCount_after_source_count": 53,
+    "additional_fail_percent_hb_after_source_nCount_count": 0,
+    "final_fixed_qc_pass_count": 2631,
+}
+PILOT_EXPECTED_GLOBIN_GENES_USED = frozenset({"HBA1", "HBA2", "HBB", "HBD"})
 
 
 def parse_geo_line(line: str) -> Tuple[str, List[str]]:
@@ -338,11 +369,11 @@ def classify_anomalous_values(values: str, expected_cells: int) -> Dict[str, obj
 
 def assess_ncount_distribution(ncount: np.ndarray, complete: bool) -> Dict[str, object]:
     blank = {
-        "per_cell_nCount_min": "",
-        "per_cell_nCount_Q1": "",
-        "per_cell_nCount_median": "",
-        "per_cell_nCount_Q3": "",
-        "per_cell_nCount_max": "",
+        "raw_full_nCount_min": "",
+        "raw_full_nCount_Q1": "",
+        "raw_full_nCount_median": "",
+        "raw_full_nCount_Q3": "",
+        "raw_full_nCount_max": "",
         "ncount_distinct_count": "",
         "ncount_relative_iqr": "",
         "ncount_relative_range": "",
@@ -419,11 +450,11 @@ def assess_ncount_distribution(ncount: np.ndarray, complete: bool) -> Dict[str, 
         f"best_fixed_target={best_target}; best_fixed_target_fraction={best_target_fraction:.6g}"
     )
     return {
-        "per_cell_nCount_min": format_number(minimum),
-        "per_cell_nCount_Q1": format_number(q1),
-        "per_cell_nCount_median": format_number(median),
-        "per_cell_nCount_Q3": format_number(q3),
-        "per_cell_nCount_max": format_number(maximum),
+        "raw_full_nCount_min": format_number(minimum),
+        "raw_full_nCount_Q1": format_number(q1),
+        "raw_full_nCount_median": format_number(median),
+        "raw_full_nCount_Q3": format_number(q3),
+        "raw_full_nCount_max": format_number(maximum),
         "ncount_distinct_count": distinct_count,
         "ncount_relative_iqr": format_number(relative_iqr),
         "ncount_relative_range": format_number(relative_range),
@@ -440,39 +471,48 @@ def assess_ncount_distribution(ncount: np.ndarray, complete: bool) -> Dict[str, 
     }
 
 
-def assess_cell_qc_space(
+def assess_fixed_qc(
     ncount: np.ndarray,
     nfeature: np.ndarray,
     mt_ncount: np.ndarray,
+    hb_ncount: np.ndarray,
     complete: bool,
-    metric_prefix: str,
-    threshold_suffix: str,
 ) -> Dict[str, object]:
     metric_fields = {
-        f"{metric_prefix}_nCount_min": "",
-        f"{metric_prefix}_nCount_Q1": "",
-        f"{metric_prefix}_nCount_median": "",
-        f"{metric_prefix}_nCount_Q3": "",
-        f"{metric_prefix}_nCount_max": "",
-        f"{metric_prefix}_nFeature_min": "",
-        f"{metric_prefix}_nFeature_Q1": "",
-        f"{metric_prefix}_nFeature_median": "",
-        f"{metric_prefix}_nFeature_Q3": "",
-        f"{metric_prefix}_nFeature_max": "",
-        f"{metric_prefix}_percent_mt_min": "",
-        f"{metric_prefix}_percent_mt_Q1": "",
-        f"{metric_prefix}_percent_mt_median": "",
-        f"{metric_prefix}_percent_mt_Q3": "",
-        f"{metric_prefix}_percent_mt_max": "",
-    }
-    threshold_fields = {
-        f"author_nFeature_lt_500_count_{threshold_suffix}": "",
-        f"author_nFeature_ge_6000_count_{threshold_suffix}": "",
-        f"author_percent_mt_gt_20_count_{threshold_suffix}": "",
-        f"author_cell_threshold_mismatch_count_{threshold_suffix}": "",
-        f"author_cell_qc_reproduction_status_{threshold_suffix}": "not_evaluable",
-        f"author_cell_qc_reproduction_note_{threshold_suffix}": (
-            "cell_QC_not_evaluable_due_to_column_numeric_or_denominator_anomaly"
+        "qc_nCount_min": "",
+        "qc_nCount_Q1": "",
+        "qc_nCount_median": "",
+        "qc_nCount_Q3": "",
+        "qc_nCount_max": "",
+        "qc_nFeature_min": "",
+        "qc_nFeature_Q1": "",
+        "qc_nFeature_median": "",
+        "qc_nFeature_Q3": "",
+        "qc_nFeature_max": "",
+        "qc_percent_mt_min": "",
+        "qc_percent_mt_Q1": "",
+        "qc_percent_mt_median": "",
+        "qc_percent_mt_Q3": "",
+        "qc_percent_mt_max": "",
+        "qc_percent_hb_min": "",
+        "qc_percent_hb_Q1": "",
+        "qc_percent_hb_median": "",
+        "qc_percent_hb_Q3": "",
+        "qc_percent_hb_max": "",
+        "fail_nFeature_low_count": "",
+        "fail_nFeature_high_count": "",
+        "fail_nCount_count": "",
+        "fail_percent_mt_count": "",
+        "fail_percent_hb_count": "",
+        "source_reported_qc_fail_count": "",
+        "source_reported_qc_pass_count": "",
+        "additional_fail_nCount_after_source_count": "",
+        "additional_fail_percent_hb_after_source_nCount_count": "",
+        "final_fixed_qc_fail_count": "",
+        "final_fixed_qc_pass_count": "",
+        "fixed_qc_rule_recalculation_status": "not_evaluable",
+        "fixed_qc_rule_recalculation_note": (
+            "fixed_QC_not_evaluable_due_to_column_numeric_or_denominator_anomaly"
         ),
     }
     if (
@@ -480,18 +520,28 @@ def assess_cell_qc_space(
         or ncount.size == 0
         or nfeature.size != ncount.size
         or mt_ncount.size != ncount.size
+        or hb_ncount.size != ncount.size
         or np.any(ncount <= 0)
     ):
-        return {**metric_fields, **threshold_fields}
+        return metric_fields
 
     percent_mt = np.divide(
         mt_ncount.astype(np.float64) * 100.0,
         ncount.astype(np.float64),
     )
-    feature_low = nfeature < AUTHOR_MIN_NFEATURE
-    feature_high = nfeature >= AUTHOR_MAX_NFEATURE_EXCLUSIVE
-    mt_high = percent_mt > AUTHOR_MAX_PERCENT_MT
-    any_mismatch = feature_low | feature_high | mt_high
+    percent_hb = np.divide(
+        hb_ncount.astype(np.float64) * 100.0,
+        ncount.astype(np.float64),
+    )
+    feature_low = nfeature < SOURCE_MIN_NFEATURE
+    feature_high = nfeature >= SOURCE_MAX_NFEATURE_EXCLUSIVE
+    count_low = ncount <= PROJECT_MIN_NCOUNT_EXCLUSIVE
+    mt_high = percent_mt > SOURCE_MAX_PERCENT_MT
+    hb_high = percent_hb >= PROJECT_MAX_PERCENT_HB_EXCLUSIVE
+    source_fail = feature_low | feature_high | mt_high
+    source_pass = ~source_fail
+    after_source_and_ncount = source_pass & ~count_low
+    final_fail = source_fail | count_low | hb_high
     ncount_q1, ncount_median, ncount_q3 = np.quantile(
         ncount, [0.25, 0.5, 0.75], method="linear"
     )
@@ -501,42 +551,64 @@ def assess_cell_qc_space(
     mt_q1, mt_median, mt_q3 = np.quantile(
         percent_mt, [0.25, 0.5, 0.75], method="linear"
     )
+    hb_q1, hb_median, hb_q3 = np.quantile(
+        percent_hb, [0.25, 0.5, 0.75], method="linear"
+    )
     low_count = int(np.count_nonzero(feature_low))
     high_count = int(np.count_nonzero(feature_high))
+    ncount_low_count = int(np.count_nonzero(count_low))
     mt_high_count = int(np.count_nonzero(mt_high))
-    mismatch_count = int(np.count_nonzero(any_mismatch))
-    status = "pass" if mismatch_count == 0 else "measured_mismatch"
+    hb_high_count = int(np.count_nonzero(hb_high))
+    source_fail_count = int(np.count_nonzero(source_fail))
+    source_pass_count = int(ncount.size) - source_fail_count
+    additional_ncount = int(np.count_nonzero(source_pass & count_low))
+    additional_hb = int(np.count_nonzero(after_source_and_ncount & hb_high))
+    final_fail_count = int(np.count_nonzero(final_fail))
+    final_pass_count = int(ncount.size) - final_fail_count
     note = (
-        f"reported_baseline=500<=nFeature<6000_and_percent.mt<=20; "
-        f"nFeature_lt_500={low_count}; nFeature_ge_6000={high_count}; "
-        f"percent.mt_gt_20={mt_high_count}; unique_mismatching_cells={mismatch_count}"
+        "fixed_rule=500<=nFeature<6000,nCount>1000,percent.mt<=20,percent.HB<5; "
+        "source_rules=nFeature_and_percent.mt; project_rules=nCount_and_percent.HB; "
+        f"source_pass={source_pass_count}; additional_nCount_fail={additional_ncount}; "
+        f"additional_percent.HB_fail={additional_hb}; final_pass={final_pass_count}"
     )
     return {
-        f"{metric_prefix}_nCount_min": format_number(int(np.min(ncount))),
-        f"{metric_prefix}_nCount_Q1": format_number(ncount_q1),
-        f"{metric_prefix}_nCount_median": format_number(ncount_median),
-        f"{metric_prefix}_nCount_Q3": format_number(ncount_q3),
-        f"{metric_prefix}_nCount_max": format_number(int(np.max(ncount))),
-        f"{metric_prefix}_nFeature_min": format_number(int(np.min(nfeature))),
-        f"{metric_prefix}_nFeature_Q1": format_number(nfeature_q1),
-        f"{metric_prefix}_nFeature_median": format_number(nfeature_median),
-        f"{metric_prefix}_nFeature_Q3": format_number(nfeature_q3),
-        f"{metric_prefix}_nFeature_max": format_number(int(np.max(nfeature))),
-        f"{metric_prefix}_percent_mt_min": format_number(float(np.min(percent_mt))),
-        f"{metric_prefix}_percent_mt_Q1": format_number(mt_q1),
-        f"{metric_prefix}_percent_mt_median": format_number(mt_median),
-        f"{metric_prefix}_percent_mt_Q3": format_number(mt_q3),
-        f"{metric_prefix}_percent_mt_max": format_number(float(np.max(percent_mt))),
-        f"author_nFeature_lt_500_count_{threshold_suffix}": low_count,
-        f"author_nFeature_ge_6000_count_{threshold_suffix}": high_count,
-        f"author_percent_mt_gt_20_count_{threshold_suffix}": mt_high_count,
-        f"author_cell_threshold_mismatch_count_{threshold_suffix}": mismatch_count,
-        f"author_cell_qc_reproduction_status_{threshold_suffix}": status,
-        f"author_cell_qc_reproduction_note_{threshold_suffix}": note,
+        "qc_nCount_min": format_number(int(np.min(ncount))),
+        "qc_nCount_Q1": format_number(ncount_q1),
+        "qc_nCount_median": format_number(ncount_median),
+        "qc_nCount_Q3": format_number(ncount_q3),
+        "qc_nCount_max": format_number(int(np.max(ncount))),
+        "qc_nFeature_min": format_number(int(np.min(nfeature))),
+        "qc_nFeature_Q1": format_number(nfeature_q1),
+        "qc_nFeature_median": format_number(nfeature_median),
+        "qc_nFeature_Q3": format_number(nfeature_q3),
+        "qc_nFeature_max": format_number(int(np.max(nfeature))),
+        "qc_percent_mt_min": format_number(float(np.min(percent_mt))),
+        "qc_percent_mt_Q1": format_number(mt_q1),
+        "qc_percent_mt_median": format_number(mt_median),
+        "qc_percent_mt_Q3": format_number(mt_q3),
+        "qc_percent_mt_max": format_number(float(np.max(percent_mt))),
+        "qc_percent_hb_min": format_number(float(np.min(percent_hb))),
+        "qc_percent_hb_Q1": format_number(hb_q1),
+        "qc_percent_hb_median": format_number(hb_median),
+        "qc_percent_hb_Q3": format_number(hb_q3),
+        "qc_percent_hb_max": format_number(float(np.max(percent_hb))),
+        "fail_nFeature_low_count": low_count,
+        "fail_nFeature_high_count": high_count,
+        "fail_nCount_count": ncount_low_count,
+        "fail_percent_mt_count": mt_high_count,
+        "fail_percent_hb_count": hb_high_count,
+        "source_reported_qc_fail_count": source_fail_count,
+        "source_reported_qc_pass_count": source_pass_count,
+        "additional_fail_nCount_after_source_count": additional_ncount,
+        "additional_fail_percent_hb_after_source_nCount_count": additional_hb,
+        "final_fixed_qc_fail_count": final_fail_count,
+        "final_fixed_qc_pass_count": final_pass_count,
+        "fixed_qc_rule_recalculation_status": "pass",
+        "fixed_qc_rule_recalculation_note": note,
     }
 
 
-def assess_author_feature_filter_boundary(
+def assess_working_feature_space(
     detected_in_0_cells: int,
     detected_in_1_cell: int,
     detected_in_2_cells: int,
@@ -547,30 +619,29 @@ def assess_author_feature_filter_boundary(
     below_threshold = detected_in_0_cells + detected_in_1_cell + detected_in_2_cells
     if not complete:
         return {
-            "author_min_cells_per_feature_reported": AUTHOR_MIN_CELLS_PER_FEATURE,
+            "qc_min_cells_per_feature": QC_MIN_CELLS_PER_FEATURE,
             "feature_rows_detected_in_0_cells": "",
             "feature_rows_detected_in_1_cell": "",
             "feature_rows_detected_in_2_cells": "",
             "feature_rows_detected_lt_3_count": "",
             "feature_rows_detected_lt_3_examples": "",
-            "author_like_retained_feature_count": "",
-            "author_feature_filter_reproduction_status": "not_evaluable",
-            "author_feature_filter_reproduction_note": (
+            "qc_retained_feature_count": "",
+            "working_feature_space_recalculation_status": "not_evaluable",
+            "working_feature_space_recalculation_note": (
                 "per_sample_feature_detection_not_evaluable_due_to_column_or_numeric_anomaly"
             ),
         }
-    status = "pass" if below_threshold == 0 else "measured_mismatch"
     return {
-        "author_min_cells_per_feature_reported": AUTHOR_MIN_CELLS_PER_FEATURE,
+        "qc_min_cells_per_feature": QC_MIN_CELLS_PER_FEATURE,
         "feature_rows_detected_in_0_cells": detected_in_0_cells,
         "feature_rows_detected_in_1_cell": detected_in_1_cell,
         "feature_rows_detected_in_2_cells": detected_in_2_cells,
         "feature_rows_detected_lt_3_count": below_threshold,
         "feature_rows_detected_lt_3_examples": "|".join(examples),
-        "author_like_retained_feature_count": total_features - below_threshold,
-        "author_feature_filter_reproduction_status": status,
-        "author_feature_filter_reproduction_note": (
-            f"reported_per_sample_baseline=feature_detected_in_at_least_3_cells; "
+        "qc_retained_feature_count": total_features - below_threshold,
+        "working_feature_space_recalculation_status": "pass",
+        "working_feature_space_recalculation_note": (
+            "working_rule=feature_detected_in_at_least_3_cells; "
             f"detected_in_0={detected_in_0_cells}; detected_in_1={detected_in_1_cell}; "
             f"detected_in_2={detected_in_2_cells}; below_3={below_threshold}"
         ),
@@ -621,6 +692,49 @@ def summarize_gene_means(
     }
 
 
+def validate_frozen_pilot(
+    file_name: str,
+    observed: Dict[str, object],
+    globin_genes_used: Sequence[str],
+) -> Dict[str, object]:
+    if file_name != PILOT_FILE_NAME:
+        return {
+            "pilot_validation_applicable": "false",
+            "pilot_validation_status": "not_applicable",
+            "pilot_validation_note": "Frozen regression target applies only to GSM5573466_sample1.csv.gz.",
+        }
+
+    checks: List[str] = []
+    passed = True
+    for field, expected in PILOT_EXPECTED.items():
+        raw_observed = observed.get(field, "")
+        try:
+            numeric_observed = int(raw_observed)
+        except (TypeError, ValueError):
+            numeric_observed = None
+        field_passed = numeric_observed == expected
+        passed = passed and field_passed
+        checks.append(
+            f"{field}={raw_observed}(expected={expected},status={'pass' if field_passed else 'fail'})"
+        )
+
+    observed_globin = frozenset(gene.upper() for gene in globin_genes_used)
+    globin_passed = observed_globin == PILOT_EXPECTED_GLOBIN_GENES_USED
+    passed = passed and globin_passed
+    checks.append(
+        "globin_panel_used_for_qc="
+        + "|".join(sorted(observed_globin))
+        + "(expected="
+        + "|".join(sorted(PILOT_EXPECTED_GLOBIN_GENES_USED))
+        + f",status={'pass' if globin_passed else 'fail'})"
+    )
+    return {
+        "pilot_validation_applicable": "true",
+        "pilot_validation_status": "pass" if passed else "fail",
+        "pilot_validation_note": "; ".join(checks),
+    }
+
+
 def audit_csv_gz(path: Path) -> Dict[str, object]:
     start = time.perf_counter()
     rows = 0
@@ -633,9 +747,11 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
     zero_value_count = 0
     total_values_checked = 0
     mt_gene_count = 0
-    hb_gene_count = 0
     mt_genes: List[str] = []
-    hb_genes: List[str] = []
+    qc_mt_genes: List[str] = []
+    globin_panel_present: set[str] = set()
+    globin_panel_used_for_qc: set[str] = set()
+    false_hb_prefix_genes_excluded: set[str] = set()
     first_genes: List[str] = []
     gene_names: set[str] = set()
     gene_duplicate_count = 0
@@ -666,12 +782,11 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
             if cell_barcodes and all(CELL_BARCODE.fullmatch(value) for value in cell_barcodes)
             else "mixed_or_unrecognized_cell_barcode"
         )
-        ncount = np.zeros(expected_cells, dtype=np.int64)
-        nfeature = np.zeros(expected_cells, dtype=np.int32)
-        mt_ncount = np.zeros(expected_cells, dtype=np.int64)
-        author_like_ncount = np.zeros(expected_cells, dtype=np.int64)
-        author_like_nfeature = np.zeros(expected_cells, dtype=np.int32)
-        author_like_mt_ncount = np.zeros(expected_cells, dtype=np.int64)
+        raw_full_ncount = np.zeros(expected_cells, dtype=np.int64)
+        qc_ncount = np.zeros(expected_cells, dtype=np.int64)
+        qc_nfeature = np.zeros(expected_cells, dtype=np.int32)
+        qc_mt_ncount = np.zeros(expected_cells, dtype=np.int64)
+        qc_hb_ncount = np.zeros(expected_cells, dtype=np.int64)
         first_header_fields = "|".join(header_fields[:6])
         barcode_suffixes = [
             barcode.rsplit("_", 1)[-1] if "_" in barcode else "" for barcode in header_fields[1:6]
@@ -691,6 +806,7 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
                 observed_cells = values.count(",") + 1
             upper_gene = gene.upper()
             is_mt_gene = upper_gene.startswith("MT-")
+            is_globin_panel_gene = upper_gene in GLOBIN_PANEL_SET
             if observed_cells != expected_cells:
                 bad_column_count_rows += 1
                 ncount_complete = False
@@ -720,6 +836,16 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
                 zero_value_count += int(anomalies["zero_value_count"])
                 row_min = anomalies["numeric_min"]
                 row_max = anomalies["numeric_max"]
+                if any(
+                    int(anomalies[field]) > 0
+                    for field in (
+                        "missing_value_count",
+                        "noninteger_float_count",
+                        "invalid_nonnumeric_count",
+                        "negative_integer_count",
+                    )
+                ):
+                    ncount_complete = False
                 integer_values = anomalies["integer_values"]
                 if integer_values is not None:
                     row_array = np.asarray(integer_values, dtype=np.int64)
@@ -731,23 +857,24 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
             if row_max is not None:
                 global_max = float(row_max) if global_max is None else max(global_max, float(row_max))
             if row_array is not None and row_array.size == expected_cells:
-                ncount += row_array
-                nfeature += row_array > 0
-                if is_mt_gene:
-                    mt_ncount += row_array
+                raw_full_ncount += row_array
                 detected_cells = int(np.count_nonzero(row_array > 0))
-                if detected_cells >= AUTHOR_MIN_CELLS_PER_FEATURE:
-                    author_like_ncount += row_array
-                    author_like_nfeature += row_array > 0
+                if detected_cells >= QC_MIN_CELLS_PER_FEATURE:
+                    qc_ncount += row_array
+                    qc_nfeature += row_array > 0
                     if is_mt_gene:
-                        author_like_mt_ncount += row_array
+                        qc_mt_ncount += row_array
+                        qc_mt_genes.append(gene)
+                    if is_globin_panel_gene:
+                        qc_hb_ncount += row_array
+                        globin_panel_used_for_qc.add(upper_gene)
                 if detected_cells == 0:
                     gene_detected_in_0_cells += 1
                 elif detected_cells == 1:
                     gene_detected_in_1_cell += 1
                 elif detected_cells == 2:
                     gene_detected_in_2_cells += 1
-                if detected_cells < AUTHOR_MIN_CELLS_PER_FEATURE and len(gene_detected_lt_3_examples) < 10:
+                if detected_cells < QC_MIN_CELLS_PER_FEATURE and len(gene_detected_lt_3_examples) < 10:
                     gene_detected_lt_3_examples.append(f"{gene}:{detected_cells}")
                 gene_means.append(float(np.sum(row_array, dtype=np.int64)) / expected_cells)
             else:
@@ -767,10 +894,10 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
                 mt_gene_count += 1
                 if len(mt_genes) < 8:
                     mt_genes.append(gene)
-            if re.match(r"^HB[A-Z0-9]", upper_gene) and not upper_gene.startswith(("HBS", "HBP")):
-                hb_gene_count += 1
-                if len(hb_genes) < 8:
-                    hb_genes.append(gene)
+            if is_globin_panel_gene:
+                globin_panel_present.add(upper_gene)
+            elif upper_gene.startswith("HB"):
+                false_hb_prefix_genes_excluded.add(upper_gene)
 
     numeric_anomaly_count = (
         missing_value_count
@@ -784,24 +911,15 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
         else "format_or_numeric_issue_detected"
     )
     integer_value_rate = integer_count / total_values_checked if total_values_checked else math.nan
-    ncount_summary = assess_ncount_distribution(ncount, ncount_complete)
-    public_space_qc_summary = assess_cell_qc_space(
-        ncount,
-        nfeature,
-        mt_ncount,
+    ncount_summary = assess_ncount_distribution(raw_full_ncount, ncount_complete)
+    fixed_qc_summary = assess_fixed_qc(
+        qc_ncount,
+        qc_nfeature,
+        qc_mt_ncount,
+        qc_hb_ncount,
         ncount_complete,
-        "public_full_feature",
-        "public_space",
     )
-    author_like_qc_summary = assess_cell_qc_space(
-        author_like_ncount,
-        author_like_nfeature,
-        author_like_mt_ncount,
-        ncount_complete,
-        "author_like",
-        "author_like_space",
-    )
-    author_feature_filter_summary = assess_author_feature_filter_boundary(
+    working_feature_summary = assess_working_feature_space(
         gene_detected_in_0_cells,
         gene_detected_in_1_cell,
         gene_detected_in_2_cells,
@@ -809,63 +927,21 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
         rows,
         ncount_complete,
     )
-    public_space_status = str(
-        public_space_qc_summary["author_cell_qc_reproduction_status_public_space"]
-    )
-    author_like_status = str(
-        author_like_qc_summary["author_cell_qc_reproduction_status_author_like_space"]
-    )
-    if "not_evaluable" in {public_space_status, author_like_status}:
-        author_cell_qc_reproduction_status = "not_evaluable"
-    elif public_space_status == "pass" and author_like_status == "pass":
-        author_cell_qc_reproduction_status = "pass"
-    else:
-        author_cell_qc_reproduction_status = "measured_mismatch"
-    author_cell_qc_reproduction_note = (
-        f"public_full_feature_space={public_space_status}; "
-        f"author_like_min_cells3_feature_space={author_like_status}; "
-        "the two spaces are reported separately and are not interchangeable"
-    )
-    if ncount_complete and np.all(ncount > 0) and np.all(author_like_ncount > 0):
-        nfeature_decrease = nfeature.astype(np.int64) - author_like_nfeature.astype(np.int64)
-        ncount_decrease = ncount - author_like_ncount
-        public_percent_mt = mt_ncount.astype(np.float64) * 100.0 / ncount.astype(np.float64)
-        author_like_percent_mt = (
-            author_like_mt_ncount.astype(np.float64)
-            * 100.0
-            / author_like_ncount.astype(np.float64)
-        )
-        percent_mt_change = np.abs(public_percent_mt - author_like_percent_mt)
-        feature_space_difference_summary: Dict[str, object] = {
-            "feature_space_nFeature_changed_cell_count": int(
-                np.count_nonzero(nfeature_decrease != 0)
-            ),
-            "feature_space_nFeature_max_decrease": int(np.max(nfeature_decrease)),
-            "feature_space_nCount_changed_cell_count": int(np.count_nonzero(ncount_decrease != 0)),
-            "feature_space_nCount_max_decrease": int(np.max(ncount_decrease)),
-            "feature_space_percent_mt_changed_cell_count": int(
-                np.count_nonzero(percent_mt_change > 1e-12)
-            ),
-            "feature_space_percent_mt_max_absolute_change": format_number(
-                float(np.max(percent_mt_change))
-            ),
-        }
-    else:
-        feature_space_difference_summary = {
-            "feature_space_nFeature_changed_cell_count": "",
-            "feature_space_nFeature_max_decrease": "",
-            "feature_space_nCount_changed_cell_count": "",
-            "feature_space_nCount_max_decrease": "",
-            "feature_space_percent_mt_changed_cell_count": "",
-            "feature_space_percent_mt_max_absolute_change": "",
-        }
     gene_mean_summary = summarize_gene_means(
         gene_means,
         rows,
         zero_value_count,
         total_values_checked,
     )
-    return {
+    globin_present_ordered = [gene for gene in GLOBIN_PANEL if gene in globin_panel_present]
+    globin_missing_ordered = [gene for gene in GLOBIN_PANEL if gene not in globin_panel_present]
+    globin_used_ordered = [gene for gene in GLOBIN_PANEL if gene in globin_panel_used_for_qc]
+    globin_excluded_by_min_cells = [
+        gene
+        for gene in GLOBIN_PANEL
+        if gene in globin_panel_present and gene not in globin_panel_used_for_qc
+    ]
+    result: Dict[str, object] = {
         "matrix_rows_genes": rows,
         "matrix_cols_cells": expected_cells,
         "header_total_columns_including_gene_col": len(header_fields),
@@ -898,21 +974,27 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
         "max_value": format_number(global_max),
         "has_negative_value": "true" if global_min is not None and global_min < 0 else "false",
         **ncount_summary,
-        **public_space_qc_summary,
-        **author_like_qc_summary,
-        "author_cell_qc_reproduction_status": author_cell_qc_reproduction_status,
-        "author_cell_qc_reproduction_note": author_cell_qc_reproduction_note,
-        **feature_space_difference_summary,
-        **author_feature_filter_summary,
+        **working_feature_summary,
+        **fixed_qc_summary,
         **gene_mean_summary,
         "mt_gene_count": mt_gene_count,
         "mt_gene_examples": "|".join(mt_genes),
-        "hb_gene_count": hb_gene_count,
-        "hb_gene_examples": "|".join(hb_genes),
+        "qc_mt_gene_count": len(qc_mt_genes),
+        "qc_mt_gene_examples": "|".join(qc_mt_genes[:8]),
+        "globin_panel_expected": "|".join(GLOBIN_PANEL),
+        "globin_panel_present": "|".join(globin_present_ordered),
+        "globin_panel_missing": "|".join(globin_missing_ordered) or "none",
+        "globin_panel_used_for_qc": "|".join(globin_used_ordered),
+        "globin_panel_excluded_by_min_cells3": "|".join(globin_excluded_by_min_cells) or "none",
+        "false_hb_prefix_genes_excluded": (
+            "|".join(sorted(false_hb_prefix_genes_excluded)) or "none"
+        ),
         "gene_order_sha256": gene_hash.hexdigest().upper(),
         "observed_numeric_type": observed_numeric_type,
         "scan_seconds": round(time.perf_counter() - start, 2),
     }
+    result.update(validate_frozen_pilot(path.name, result, globin_used_ordered))
+    return result
 
 
 def legacy_numeric_precheck(stats: Dict[str, object], precheck: Dict[str, str]) -> Tuple[str, List[str]]:
@@ -960,7 +1042,6 @@ def build_data_audit(
             "matrix_rows_genes",
             "matrix_cols_cells",
             "mt_gene_count",
-            "hb_gene_count",
             "gene_order_sha256",
         ]:
             observed = str(stats.get(field, ""))
@@ -982,7 +1063,6 @@ def build_data_audit(
 
         legacy_status, legacy_mismatches = legacy_numeric_precheck(stats, precheck)
         row_mismatches.extend(legacy_mismatches)
-        precheck_match = not row_mismatches
         pre_decision = precheck.get("audit_decision_precheck", "")
         processed_match = (
             sample.get("sample_file") == member
@@ -992,6 +1072,7 @@ def build_data_audit(
         )
         if not processed_match:
             row_mismatches.append("processed manifest, GEO accession/title and sample_info mapping do not match")
+        precheck_match = not row_mismatches
         structural_failures: List[str] = []
         if stats["observed_numeric_type"] != "nonnegative_integer_count_like":
             structural_failures.append("numeric_or_column_structure_issue")
@@ -1007,12 +1088,22 @@ def build_data_audit(
             structural_failures.append("per_gene_mean_distribution_not_confirmed")
         if stats["normalization_artifact_flag"] != "false":
             structural_failures.append("normalization_artifact_or_not_evaluable")
-        author_cell_qc_status = str(stats["author_cell_qc_reproduction_status"])
-        if author_cell_qc_status == "not_evaluable":
-            structural_failures.append("reported_author_cell_QC_thresholds_not_evaluable")
-        feature_filter_status = str(stats["author_feature_filter_reproduction_status"])
-        if feature_filter_status not in {"pass", "measured_mismatch"}:
-            structural_failures.append("reported_author_feature_filter_not_evaluable")
+        fixed_qc_status = str(stats["fixed_qc_rule_recalculation_status"])
+        if fixed_qc_status != "pass":
+            structural_failures.append("fixed_QC_rule_not_evaluable")
+        working_feature_status = str(stats["working_feature_space_recalculation_status"])
+        if working_feature_status != "pass":
+            structural_failures.append("min_cells3_working_feature_space_not_evaluable")
+        pilot_applicable = str(stats["pilot_validation_applicable"])
+        pilot_status = str(stats["pilot_validation_status"])
+        if pilot_applicable == "true" and pilot_status != "pass":
+            structural_failures.append("sample1_frozen_pilot_regression_failed")
+        if pilot_applicable == "false" and pilot_status != "not_applicable":
+            structural_failures.append("nonpilot_sample_has_invalid_pilot_status")
+        if str(stats.get("globin_panel_expected", "")) != "|".join(GLOBIN_PANEL):
+            structural_failures.append("frozen_globin_panel_definition_mismatch")
+        if not str(stats.get("globin_panel_present", "")):
+            structural_failures.append("no_frozen_globin_panel_gene_present_in_matrix")
         structural_ok = not structural_failures
         processing_boundary_ok = (
             structural_ok
@@ -1032,22 +1123,16 @@ def build_data_audit(
         if pre_decision != "enter_full_F1_candidate":
             failure_details.append(f"unexpected_precheck_decision={pre_decision or 'missing'}")
         if ok:
-            if feature_filter_status == "pass":
-                feature_boundary_reason = (
-                    "public feature rows satisfy the reported per-sample min.cells=3 boundary"
-                )
-            else:
-                feature_boundary_reason = (
-                    f"public feature rows include {stats['feature_rows_detected_lt_3_count']} genes detected "
-                    "in fewer than three cells, so the author's per-sample feature filtering is not "
-                    "embedded in this public file"
-                )
             decision_reason = (
                 "full-stream numeric/structure audit passed; per-cell nCount showed no preregistered "
-                "normalization artifact; nFeature and percent.mt were recomputed in both the public full "
-                "feature space and an author-like per-sample min.cells=3 feature space; sparse right-skew "
-                "evidence was present; processed manifest and GEO sample mapping matched; "
-                f"author_cell_qc_status={author_cell_qc_status}; {feature_boundary_reason}"
+                "normalization artifact; all 26571 archived feature rows remain unchanged; one per-sample "
+                "min.cells=3 working feature space was built and nCount, nFeature, percent.mt and percent.HB "
+                "were recalculated there; the fixed source-aligned plus project QC rule was fully evaluable; "
+                "the frozen globin panel was applied by exact gene matching; sparse right-skew evidence was "
+                "present; processed manifest and GEO sample mapping matched; "
+                f"working_features={stats['qc_retained_feature_count']}; "
+                f"source_rule_pass={stats['source_reported_qc_pass_count']}; "
+                f"final_fixed_QC_pass={stats['final_fixed_qc_pass_count']}; pilot={pilot_status}"
             )
         else:
             decision_reason = (
@@ -1055,17 +1140,10 @@ def build_data_audit(
                 + "; ".join(failure_details)
                 + f"; artifact_evidence={stats['normalization_artifact_reason']}"
             )
-        boundary_notes: List[str] = []
-        if author_cell_qc_status == "measured_mismatch":
-            boundary_notes.append(
-                "nonblocking processing-boundary limitation: at least one retained public cell differs "
-                "from an author-reported cell threshold in one or both explicitly measured feature spaces"
-            )
-        if feature_filter_status == "measured_mismatch":
-            boundary_notes.append(
-                "nonblocking processing-boundary limitation: public feature rows do not reflect the "
-                "author-reported per-sample min.cells=3 filter"
-            )
+        boundary_notes = [
+            "Rows detected in fewer than three cells remain in the immutable archived matrix; they are "
+            "excluded only from this sample's QC working feature space and are not labeled as a provenance mismatch."
+        ]
         output.append(
             {
                 "dataset_id": "GSE183904",
@@ -1080,9 +1158,12 @@ def build_data_audit(
                 "matrix_orientation": "gene_by_cell",
                 **stats,
                 "legacy_numeric_precheck_status": legacy_status,
+                "legacy_hb_precheck_status": "not_compared_definition_changed_to_frozen_exact_globin_panel",
                 "precheck_audit_decision": pre_decision,
                 "public_processing_evidence_status": (
-                    "public_input_shape_verified_author_processing_boundaries_measured"
+                    "public_input_shape_verified_fixed_QC_recalculated_processing_history_pending_F0_step3"
+                    if ok
+                    else "not_confirmed_due_to_F0_step2_pause_condition"
                 ),
                 "suspected_matrix_type": suspected_matrix_type,
                 "audit_decision": "enter_full_F1_independent_reQC" if ok else "pause_for_review",
@@ -1123,7 +1204,11 @@ def execute(root: Path) -> int:
     require_paths(root, STAGE_REQUIRED, STAGE_NAME)
     manifest = read_tsv(root / "data/metadata/processed_input_manifest.tsv")
     validate_step1_manifest(root, manifest)
-    append_log(root, f"F0 step2 started; run_id={current_run_id()}; validated_step1_files=40")
+    append_log(
+        root,
+        f"F0 step2 started; run_id={current_run_id()}; validated_step1_files=40; "
+        f"python={sys.version.split()[0]}; numpy={np.__version__}",
+    )
 
     sample_fields, patient_by_sample = parse_gse183904_series(
         root / "data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz"
@@ -1166,7 +1251,9 @@ def execute(root: Path) -> int:
         "SCHEMA_MIGRATION precheck.suspected_matrix_type -> observed_numeric_type; "
         "precheck.audit_decision_precheck=enter_full_F1_candidate -> "
         "audit_decision=enter_full_F1_independent_reQC only after formal audit; "
-        "suspected_matrix_type now records public input shape only",
+        "legacy broad HB count is not compared because HB_percent now uses the frozen exact globin panel; "
+        "suspected_matrix_type records public input shape only; raw_full_nCount and the single min.cells=3 "
+        "QC metric space are stored separately",
     )
     data_fields = [
         "dataset_id",
@@ -1208,70 +1295,56 @@ def execute(root: Path) -> int:
         "has_negative_value",
         "zero_value_count",
         "zero_value_rate",
-        "per_cell_nCount_min",
-        "per_cell_nCount_Q1",
-        "per_cell_nCount_median",
-        "per_cell_nCount_Q3",
-        "per_cell_nCount_max",
-        "public_full_feature_nCount_min",
-        "public_full_feature_nCount_Q1",
-        "public_full_feature_nCount_median",
-        "public_full_feature_nCount_Q3",
-        "public_full_feature_nCount_max",
-        "public_full_feature_nFeature_min",
-        "public_full_feature_nFeature_Q1",
-        "public_full_feature_nFeature_median",
-        "public_full_feature_nFeature_Q3",
-        "public_full_feature_nFeature_max",
-        "public_full_feature_percent_mt_min",
-        "public_full_feature_percent_mt_Q1",
-        "public_full_feature_percent_mt_median",
-        "public_full_feature_percent_mt_Q3",
-        "public_full_feature_percent_mt_max",
-        "author_nFeature_lt_500_count_public_space",
-        "author_nFeature_ge_6000_count_public_space",
-        "author_percent_mt_gt_20_count_public_space",
-        "author_cell_threshold_mismatch_count_public_space",
-        "author_cell_qc_reproduction_status_public_space",
-        "author_cell_qc_reproduction_note_public_space",
-        "author_like_nCount_min",
-        "author_like_nCount_Q1",
-        "author_like_nCount_median",
-        "author_like_nCount_Q3",
-        "author_like_nCount_max",
-        "author_like_nFeature_min",
-        "author_like_nFeature_Q1",
-        "author_like_nFeature_median",
-        "author_like_nFeature_Q3",
-        "author_like_nFeature_max",
-        "author_like_percent_mt_min",
-        "author_like_percent_mt_Q1",
-        "author_like_percent_mt_median",
-        "author_like_percent_mt_Q3",
-        "author_like_percent_mt_max",
-        "author_nFeature_lt_500_count_author_like_space",
-        "author_nFeature_ge_6000_count_author_like_space",
-        "author_percent_mt_gt_20_count_author_like_space",
-        "author_cell_threshold_mismatch_count_author_like_space",
-        "author_cell_qc_reproduction_status_author_like_space",
-        "author_cell_qc_reproduction_note_author_like_space",
-        "author_cell_qc_reproduction_status",
-        "author_cell_qc_reproduction_note",
-        "feature_space_nFeature_changed_cell_count",
-        "feature_space_nFeature_max_decrease",
-        "feature_space_nCount_changed_cell_count",
-        "feature_space_nCount_max_decrease",
-        "feature_space_percent_mt_changed_cell_count",
-        "feature_space_percent_mt_max_absolute_change",
-        "author_min_cells_per_feature_reported",
+        "raw_full_nCount_min",
+        "raw_full_nCount_Q1",
+        "raw_full_nCount_median",
+        "raw_full_nCount_Q3",
+        "raw_full_nCount_max",
+        "qc_min_cells_per_feature",
         "feature_rows_detected_in_0_cells",
         "feature_rows_detected_in_1_cell",
         "feature_rows_detected_in_2_cells",
         "feature_rows_detected_lt_3_count",
         "feature_rows_detected_lt_3_examples",
-        "author_like_retained_feature_count",
-        "author_feature_filter_reproduction_status",
-        "author_feature_filter_reproduction_note",
+        "qc_retained_feature_count",
+        "working_feature_space_recalculation_status",
+        "working_feature_space_recalculation_note",
+        "qc_nCount_min",
+        "qc_nCount_Q1",
+        "qc_nCount_median",
+        "qc_nCount_Q3",
+        "qc_nCount_max",
+        "qc_nFeature_min",
+        "qc_nFeature_Q1",
+        "qc_nFeature_median",
+        "qc_nFeature_Q3",
+        "qc_nFeature_max",
+        "qc_percent_mt_min",
+        "qc_percent_mt_Q1",
+        "qc_percent_mt_median",
+        "qc_percent_mt_Q3",
+        "qc_percent_mt_max",
+        "qc_percent_hb_min",
+        "qc_percent_hb_Q1",
+        "qc_percent_hb_median",
+        "qc_percent_hb_Q3",
+        "qc_percent_hb_max",
+        "fail_nFeature_low_count",
+        "fail_nFeature_high_count",
+        "fail_nCount_count",
+        "fail_percent_mt_count",
+        "fail_percent_hb_count",
+        "source_reported_qc_fail_count",
+        "source_reported_qc_pass_count",
+        "additional_fail_nCount_after_source_count",
+        "additional_fail_percent_hb_after_source_nCount_count",
+        "final_fixed_qc_fail_count",
+        "final_fixed_qc_pass_count",
+        "fixed_qc_rule_recalculation_status",
+        "fixed_qc_rule_recalculation_note",
+        "pilot_validation_applicable",
+        "pilot_validation_status",
+        "pilot_validation_note",
         "ncount_distinct_count",
         "ncount_relative_iqr",
         "ncount_relative_range",
@@ -1285,14 +1358,21 @@ def execute(root: Path) -> int:
         "normalization_artifact_reason",
         "mt_gene_count",
         "mt_gene_examples",
-        "hb_gene_count",
-        "hb_gene_examples",
+        "qc_mt_gene_count",
+        "qc_mt_gene_examples",
+        "globin_panel_expected",
+        "globin_panel_present",
+        "globin_panel_missing",
+        "globin_panel_used_for_qc",
+        "globin_panel_excluded_by_min_cells3",
+        "false_hb_prefix_genes_excluded",
         "gene_order_sha256",
         "observed_numeric_type",
         "public_processing_evidence_status",
         "suspected_matrix_type",
         "scan_seconds",
         "legacy_numeric_precheck_status",
+        "legacy_hb_precheck_status",
         "precheck_audit_decision",
         "audit_decision",
         "format_decision_scope",
@@ -1312,15 +1392,21 @@ def execute(root: Path) -> int:
 
     unclear = [row for row in sample_info if row.get("group_analysis") == "Unclear"]
     artifacts = [row for row in data_audit if row.get("normalization_artifact_flag") != "false"]
-    feature_filter_boundary_mismatches = [
+    working_feature_failures = [
         row
         for row in data_audit
-        if row.get("author_feature_filter_reproduction_status") == "measured_mismatch"
+        if row.get("working_feature_space_recalculation_status") != "pass"
     ]
-    cell_qc_boundary_mismatches = [
+    fixed_qc_failures = [
         row
         for row in data_audit
-        if row.get("author_cell_qc_reproduction_status") == "measured_mismatch"
+        if row.get("fixed_qc_rule_recalculation_status") != "pass"
+    ]
+    pilot_failures = [
+        row
+        for row in data_audit
+        if row.get("pilot_validation_applicable") == "true"
+        and row.get("pilot_validation_status") != "pass"
     ]
     paused = [
         row
@@ -1332,8 +1418,8 @@ def execute(root: Path) -> int:
         f"F0 step2 completed; sample_rows={len(sample_info)}; audit_rows={len(data_audit)}; "
         f"precheck_mismatches={len(mismatches)}; sample_id_mismatches={len(sample_id_mismatches)}; "
         f"unclear_groups={len(unclear)}; artifacts_or_not_evaluable={len(artifacts)}; "
-        f"cell_qc_boundary_mismatches={len(cell_qc_boundary_mismatches)}; "
-        f"feature_filter_boundary_mismatches={len(feature_filter_boundary_mismatches)}; "
+        f"working_feature_failures={len(working_feature_failures)}; "
+        f"fixed_qc_failures={len(fixed_qc_failures)}; pilot_failures={len(pilot_failures)}; "
         f"paused={len(paused)}",
     )
     if len(sample_info) != 40 or unclear or sample_id_mismatches or mismatches or artifacts or paused:

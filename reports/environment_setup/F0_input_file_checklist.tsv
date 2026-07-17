@@ -10,7 +10,7 @@ F0_IN_008	data/metadata/software_versions.tsv	software baseline	yes	project_loca
 F0_IN_009	environment/execution_environment_inventory.tsv	environment baseline	yes	project_local_available	Default laptop inventory.
 F0_IN_010	environment/environment_lock_manifest.tsv	environment baseline	yes	project_local_available	Records explicit R path and missing lock/package state.
 F0_IN_011	environment/random_seed_registry.tsv	seed baseline	yes	project_local_available	May be header-only before randomized analyses.
-F0_IN_012	results/F0_audit/gse183904_csv_structure_precheck.tsv	GSE183904 formal audit comparison	yes	project_local_available	Formal data_audit must compare key fields to this precheck.
+F0_IN_012	results/F0_audit/gse183904_csv_structure_precheck.tsv	GSE183904 formal audit comparison	yes	project_local_available	Formal data_audit compares structural/numeric key fields and gene-order SHA256; the legacy broad HB count is not reused because HB_percent now uses the frozen exact globin panel.
 F0_IN_013	results/F0_audit/non_GSE183904_data_structure_precheck.tsv	global data inventory	yes	project_local_available	Used to populate non-GSE183904 data map.
 F0_IN_014	results/F0_audit/predownloaded_resource_structure_audit.tsv	global resource inventory	yes	project_local_available	Used to distinguish downloaded resources from approved analysis inputs.
 F0_IN_015	results/F0_audit/bulk_GEO_series_matrix_deep_precheck.tsv	bulk candidate map	yes	project_local_available	Used for bulk expression scale and clinical field limitations.

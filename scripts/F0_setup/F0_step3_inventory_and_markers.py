@@ -84,17 +84,35 @@ PROCESSING_HISTORY_FIELDS = [
     "unresolved_detail",
     "implication_for_downstream_plan",
     "requires_special_handling",
+    "record_status",
     "observed_public_cell_count",
     "paper_reported_final_tissue_cell_count",
     "count_difference",
     "count_difference_fraction",
-    "observed_author_qc_mismatch_cell_count_public_space",
-    "observed_author_qc_mismatch_cell_count_author_like_space",
-    "observed_samples_with_author_cell_qc_mismatch",
-    "observed_samples_author_cell_qc_not_evaluable",
-    "observed_samples_with_feature_filter_mismatch",
-    "observed_sample_gene_rows_below_3",
-    "observed_samples_feature_filter_not_evaluable",
+    "observed_source_reported_qc_pass_cell_count",
+    "observed_fixed_qc_pass_cell_count",
+    "observed_fixed_qc_fail_cell_count",
+    "observed_fail_nFeature_low_count",
+    "observed_fail_nFeature_high_count",
+    "observed_fail_nCount_count",
+    "observed_fail_percent_mt_count",
+    "observed_fail_percent_hb_count",
+    "observed_samples_fixed_qc_not_evaluable",
+    "observed_sample1_pilot_validation_status",
+    "observed_sample_feature_rows_below_min_cells3",
+    "observed_working_feature_count_min",
+    "observed_working_feature_count_max",
+    "observed_samples_working_feature_not_evaluable",
+]
+
+F0_SCRIPT_PATHS = [
+    "scripts/F0_setup/f0_utils.py",
+    "scripts/F0_setup/F0_step1_structure_and_extract.py",
+    "scripts/F0_setup/F0_step2_sample_info_and_audit.py",
+    "scripts/F0_setup/F0_step3_inventory_and_markers.py",
+    "scripts/F0_setup/F0_step4_decisions_and_gate.py",
+    "scripts/F0_setup/run_F0_full_audit.py",
+    "scripts/F0_setup/validate_F0_readonly.py",
 ]
 
 
@@ -248,109 +266,137 @@ def build_author_processing_audit(
 
     rows: List[Dict[str, object]] = [dict(row) for row in source_rows]
     public_cells = sum(int(row.get("matrix_cols_cells", "0") or 0) for row in data_audit)
-    public_space_qc_mismatches = sum(
-        int(row.get("author_cell_threshold_mismatch_count_public_space", "0") or 0)
-        for row in data_audit
+    source_qc_pass_cells = sum(
+        int(row.get("source_reported_qc_pass_count", "0") or 0) for row in data_audit
     )
-    author_like_qc_mismatches = sum(
-        int(row.get("author_cell_threshold_mismatch_count_author_like_space", "0") or 0)
-        for row in data_audit
+    fixed_qc_pass_cells = sum(
+        int(row.get("final_fixed_qc_pass_count", "0") or 0) for row in data_audit
     )
-    cell_qc_mismatch_rows = [
-        row
-        for row in data_audit
-        if row.get("author_cell_qc_reproduction_status") == "measured_mismatch"
+    fixed_qc_fail_cells = sum(
+        int(row.get("final_fixed_qc_fail_count", "0") or 0) for row in data_audit
+    )
+    rule_fail_counts = {
+        field: sum(int(row.get(field, "0") or 0) for row in data_audit)
+        for field in (
+            "fail_nFeature_low_count",
+            "fail_nFeature_high_count",
+            "fail_nCount_count",
+            "fail_percent_mt_count",
+            "fail_percent_hb_count",
+        )
+    }
+    fixed_qc_not_evaluable_rows = [
+        row for row in data_audit if row.get("fixed_qc_rule_recalculation_status") != "pass"
     ]
-    cell_qc_not_evaluable_rows = [
-        row
-        for row in data_audit
-        if row.get("author_cell_qc_reproduction_status") not in {"pass", "measured_mismatch"}
+    pilot_rows = [
+        row for row in data_audit if row.get("pilot_validation_applicable") == "true"
     ]
-    cell_qc_evaluable = bool(data_audit) and not cell_qc_not_evaluable_rows
-    feature_filter_mismatch_rows = [
-        row
-        for row in data_audit
-        if row.get("author_feature_filter_reproduction_status") == "measured_mismatch"
-    ]
-    feature_filter_not_evaluable_rows = [
-        row
-        for row in data_audit
-        if row.get("author_feature_filter_reproduction_status") not in {"pass", "measured_mismatch"}
-    ]
-    sample_gene_rows_below_3 = sum(
+    pilot_status = (
+        pilot_rows[0].get("pilot_validation_status", "missing")
+        if len(pilot_rows) == 1
+        else f"invalid_pilot_row_count_{len(pilot_rows)}"
+    )
+    fixed_qc_evaluable = (
+        bool(data_audit)
+        and not fixed_qc_not_evaluable_rows
+        and fixed_qc_pass_cells + fixed_qc_fail_cells == public_cells
+        and pilot_status == "pass"
+    )
+    sample_feature_rows_below_3 = sum(
         int(row.get("feature_rows_detected_lt_3_count", "0") or 0)
         for row in data_audit
     )
-    feature_filter_evaluable = bool(data_audit) and not feature_filter_not_evaluable_rows
-    if not cell_qc_evaluable:
-        cell_qc_status = "not_evaluable"
-    elif cell_qc_mismatch_rows:
-        cell_qc_status = "measured_mismatch_in_one_or_both_feature_spaces"
-    else:
-        cell_qc_status = "verified_in_both_feature_spaces"
+    working_feature_not_evaluable_rows = [
+        row
+        for row in data_audit
+        if row.get("working_feature_space_recalculation_status") != "pass"
+    ]
+    working_feature_counts = [
+        int(row.get("qc_retained_feature_count", "0") or 0)
+        for row in data_audit
+        if row.get("working_feature_space_recalculation_status") == "pass"
+    ]
+    working_feature_evaluable = (
+        bool(data_audit)
+        and not working_feature_not_evaluable_rows
+        and len(working_feature_counts) == len(data_audit)
+        and all(value > 0 for value in working_feature_counts)
+    )
+    fixed_qc_status = (
+        "F0_fixed_QC_recalculation_pass_all_samples"
+        if fixed_qc_evaluable
+        else "not_evaluable"
+    )
     rows.append(
         {
             "history_record_id": "H018",
             "stage_order": "92",
             "dataset_id": "GSE183904",
-            "processing_step": "cell_QC_filtering_verification",
+            "processing_step": "fixed_QC_rule_recalculation",
             "processing_scope": "public_matrix_verification",
             "relation_to_public_matrix": "public_matrix_observed",
-            "author_reported_status": cell_qc_status,
+            "author_reported_status": "not_applicable_F0_observation",
+            "record_status": fixed_qc_status,
             "method_or_threshold_if_reported": (
-                f"F0 recomputed nFeature and percent.mt for {public_cells} public cells in both "
-                "public_full_feature_space and author_like_min_cells3_feature_space; "
-                f"public-space mismatches={public_space_qc_mismatches}; "
-                f"author-like-space mismatches={author_like_qc_mismatches}."
+                f"For {public_cells} public cells, F0 first retained per-sample features detected in at "
+                "least 3 cells, then recomputed nCount, nFeature, percent.mt and percent.HB. Source-reported "
+                "rules were 500<=nFeature<6000 and percent.mt<=20; project rules were nCount>1000 and "
+                f"percent.HB<5. Source-rule pass={source_qc_pass_cells}; final fixed-QC pass={fixed_qc_pass_cells}."
             ),
             "source_reference_or_file": "data/metadata/data_audit.tsv",
-            "evidence_location": "F0 full-stream two-space per-cell nFeature and percent.mt fields",
+            "evidence_location": "F0 full-stream min.cells=3 working-space QC fields and frozen sample1 regression",
             "evidence_basis": "F0_full_stream_recomputation",
             "source_accessed_date": now_iso()[:10],
-            "confidence_level": "high" if cell_qc_evaluable else "not_evaluable",
+            "confidence_level": "high" if fixed_qc_evaluable else "not_evaluable",
             "matrix_content_effect": (
-                "Tests whether public cells satisfy the author's reported cell thresholds under both "
-                "the archived public feature space and an explicit author-like min.cells=3 feature space."
+                "Quantifies which currently public cells would be retained by the approved project QC rule; "
+                "it does not alter the archived 26571-row matrices in F0."
             ),
             "unresolved_detail": (
-                "The initial Cell Ranger-called cell set and per-step excluded-barcode lists are unavailable, "
-                "so this verifies retained public cells rather than reconstructing all removed cells."
+                "Cell Ranger-called barcodes and author per-step excluded-barcode lists are unavailable, so "
+                "the public cells' complete pre-export filtering history cannot be reconstructed."
             ),
             "implication_for_downstream_plan": (
-                "F1 must use public_full_feature_space for independent project QC and retain the author-like "
-                "space only for provenance; a measured mismatch is reported rather than silently normalized away."
+                "F1 must independently apply the same min.cells=3 working space and fixed QC inequalities, "
+                "then record every cell-level decision before doublet and ambient-RNA assessment."
             ),
             "requires_special_handling": (
-                "Do not treat author reporting alone as proof of threshold compliance and do not merge the two spaces."
+                "Do not claim that this recalculation reproduces the author's final object, and do not target "
+                "the paper's final cell count."
             ),
             "observed_public_cell_count": public_cells,
-            "observed_author_qc_mismatch_cell_count_public_space": public_space_qc_mismatches,
-            "observed_author_qc_mismatch_cell_count_author_like_space": author_like_qc_mismatches,
-            "observed_samples_with_author_cell_qc_mismatch": len(cell_qc_mismatch_rows),
-            "observed_samples_author_cell_qc_not_evaluable": len(cell_qc_not_evaluable_rows),
+            "observed_source_reported_qc_pass_cell_count": source_qc_pass_cells,
+            "observed_fixed_qc_pass_cell_count": fixed_qc_pass_cells,
+            "observed_fixed_qc_fail_cell_count": fixed_qc_fail_cells,
+            "observed_fail_nFeature_low_count": rule_fail_counts["fail_nFeature_low_count"],
+            "observed_fail_nFeature_high_count": rule_fail_counts["fail_nFeature_high_count"],
+            "observed_fail_nCount_count": rule_fail_counts["fail_nCount_count"],
+            "observed_fail_percent_mt_count": rule_fail_counts["fail_percent_mt_count"],
+            "observed_fail_percent_hb_count": rule_fail_counts["fail_percent_hb_count"],
+            "observed_samples_fixed_qc_not_evaluable": len(fixed_qc_not_evaluable_rows),
+            "observed_sample1_pilot_validation_status": pilot_status,
         }
     )
-    if not feature_filter_evaluable:
-        feature_filter_status = "not_evaluable"
-    elif feature_filter_mismatch_rows:
-        feature_filter_status = (
-            "public_feature_rows_include_genes_below_reported_per_sample_threshold"
-        )
-    else:
-        feature_filter_status = "verified_against_all_public_sample_feature_rows"
+    working_feature_status = (
+        "F0_working_feature_space_recalculation_pass_all_samples"
+        if working_feature_evaluable
+        else "not_evaluable"
+    )
     rows.append(
         {
             "history_record_id": "H020",
             "stage_order": "94",
             "dataset_id": "GSE183904",
-            "processing_step": "feature_filtering_verification",
+            "processing_step": "working_feature_space_recalculation",
             "processing_scope": "public_matrix_verification",
             "relation_to_public_matrix": "public_matrix_observed",
-            "author_reported_status": feature_filter_status,
+            "author_reported_status": "not_applicable_F0_observation",
+            "record_status": working_feature_status,
             "method_or_threshold_if_reported": (
-                "The original paper reports considering each sample for features shared by at least "
-                f"3 cells; F0 found {sample_gene_rows_below_3} sample-by-gene rows below that threshold "
-                f"across {len(feature_filter_mismatch_rows)} of {len(data_audit)} public sample matrices."
+                "The original paper reports considering per-sample features detected in at least 3 cells. "
+                f"F0 found {sample_feature_rows_below_3} sample-by-gene rows below that threshold; the "
+                f"resulting working feature counts range from {min(working_feature_counts) if working_feature_counts else 'NA'} "
+                f"to {max(working_feature_counts) if working_feature_counts else 'NA'} across {len(data_audit)} samples."
             ),
             "source_reference_or_file": (
                 "data/metadata/data_audit.tsv; "
@@ -361,32 +407,34 @@ def build_author_processing_audit(
             ),
             "evidence_basis": "F0_full_stream_recomputation_plus_original_paper",
             "source_accessed_date": now_iso()[:10],
-            "confidence_level": "high" if feature_filter_evaluable else "not_evaluable",
+            "confidence_level": "high" if working_feature_evaluable else "not_evaluable",
             "matrix_content_effect": (
-                "Determines whether public feature rows reproduce the author's reported per-sample "
-                "Seurat min.cells=3 analysis feature space."
+                "Defines the only per-sample feature space used to compute F0/F1 cell-QC metrics while "
+                "leaving the archived raw count rows intact."
             ),
             "unresolved_detail": (
-                "When low-detection feature rows are present, the available sources cannot determine "
-                "whether Cell Ranger feature rows were retained through export or reintroduced after "
-                "the author's Seurat feature filtering."
+                "Public CSV feature rows do not identify the exact Seurat object export step; low-detection "
+                "rows in the archive therefore cannot establish whether the author's working object was filtered."
             ),
             "implication_for_downstream_plan": (
-                "Preserve every archived CSV feature row unchanged; F1 must compute the author-like space "
-                "only for provenance and define project/downstream feature eligibility separately."
+                "Preserve every archived CSV feature row unchanged; F1 recomputes min.cells=3 per sample for "
+                "QC/object construction, while DE, pseudobulk and scoring retain method-specific coverage rules."
             ),
             "requires_special_handling": (
-                "A feature-row boundary mismatch limits provenance claims but does not invalidate "
-                "nonnegative integer counts or require deletion of public cells."
+                "Do not label low-detection archived rows as an author-processing mismatch and do not use "
+                "min.cells=3 as a permanent downstream gene filter."
             ),
             "observed_public_cell_count": public_cells,
-            "observed_author_qc_mismatch_cell_count_public_space": public_space_qc_mismatches,
-            "observed_author_qc_mismatch_cell_count_author_like_space": author_like_qc_mismatches,
-            "observed_samples_with_author_cell_qc_mismatch": len(cell_qc_mismatch_rows),
-            "observed_samples_author_cell_qc_not_evaluable": len(cell_qc_not_evaluable_rows),
-            "observed_samples_with_feature_filter_mismatch": len(feature_filter_mismatch_rows),
-            "observed_sample_gene_rows_below_3": sample_gene_rows_below_3,
-            "observed_samples_feature_filter_not_evaluable": len(feature_filter_not_evaluable_rows),
+            "observed_sample_feature_rows_below_min_cells3": sample_feature_rows_below_3,
+            "observed_working_feature_count_min": (
+                min(working_feature_counts) if working_feature_counts else ""
+            ),
+            "observed_working_feature_count_max": (
+                max(working_feature_counts) if working_feature_counts else ""
+            ),
+            "observed_samples_working_feature_not_evaluable": len(
+                working_feature_not_evaluable_rows
+            ),
         }
     )
 
@@ -401,7 +449,8 @@ def build_author_processing_audit(
             "processing_step": "export_boundary_reconciliation",
             "processing_scope": "cross_source_reconciliation",
             "relation_to_public_matrix": "export_boundary_unresolved",
-            "author_reported_status": "cross_source_count_difference_observed",
+            "author_reported_status": "not_applicable_cross_source_reconciliation",
+            "record_status": "cross_source_count_difference_observed",
             "method_or_threshold_if_reported": (
                 f"Public matrices contain {public_cells} cells; the original-paper 40-tissue-sample "
                 f"analysis reports {paper_final_cells}; difference={count_difference} "
@@ -430,10 +479,11 @@ def build_author_processing_audit(
             "paper_reported_final_tissue_cell_count": paper_final_cells,
             "count_difference": count_difference,
             "count_difference_fraction": format(difference_fraction, ".12g"),
-            "observed_author_qc_mismatch_cell_count_public_space": public_space_qc_mismatches,
-            "observed_author_qc_mismatch_cell_count_author_like_space": author_like_qc_mismatches,
-            "observed_samples_with_author_cell_qc_mismatch": len(cell_qc_mismatch_rows),
-            "observed_samples_author_cell_qc_not_evaluable": len(cell_qc_not_evaluable_rows),
+            "observed_source_reported_qc_pass_cell_count": source_qc_pass_cells,
+            "observed_fixed_qc_pass_cell_count": fixed_qc_pass_cells,
+            "observed_fixed_qc_fail_cell_count": fixed_qc_fail_cells,
+            "observed_samples_fixed_qc_not_evaluable": len(fixed_qc_not_evaluable_rows),
+            "observed_sample1_pilot_validation_status": pilot_status,
         }
     )
     rows.append(
@@ -444,7 +494,8 @@ def build_author_processing_audit(
             "processing_step": "external_scRNA_processing",
             "processing_scope": "external_validation_candidate",
             "relation_to_public_matrix": "separate_dataset",
-            "author_reported_status": "processed_matrix_local_candidate",
+            "author_reported_status": "not_applicable_project_inventory",
+            "record_status": "processed_matrix_local_candidate",
             "method_or_threshold_if_reported": "log1p(count)-like cell-by-gene matrix",
             "source_reference_or_file": "results/F0_audit/GSE206785_dataset_structure_precheck.tsv",
             "evidence_location": "results/F0_audit/GSE206785_dataset_structure_precheck.tsv",
@@ -681,6 +732,43 @@ def build_file_manifest(
             "note": "Separates author report, F0 verification, cross-source inference and unresolved history.",
         }
     )
+    for script_relative_path in F0_SCRIPT_PATHS:
+        script_path = root / script_relative_path
+        rows.append(
+            {
+                "file_name": script_path.name,
+                "relative_path_if_available": script_relative_path,
+                "dataset_id": "F0",
+                "file_role": (
+                    "F0_readonly_validation_script"
+                    if script_path.name == "validate_F0_readonly.py"
+                    else "F0_formal_execution_script"
+                ),
+                "data_domain": "execution_code",
+                "source_type": "git_tracked_project_code",
+                "source_url_or_local_manifest": "git repository and current F0_file_manifest.tsv",
+                "file_size_bytes": script_path.stat().st_size if script_path.exists() else "",
+                "sha256": sha256_file(script_path) if script_path.exists() else "",
+                "compression_format": "py",
+                "read_status": "checksum_recorded" if script_path.exists() else "missing",
+                "availability_status": (
+                    "project_local_available" if script_path.exists() else "not_found_at_expected_path"
+                ),
+                "used_in_F0": (
+                    "pre_execution_validation"
+                    if script_path.name == "validate_F0_readonly.py"
+                    else "true"
+                ),
+                "planned_F_section_use": "F0",
+                "audit_status": (
+                    "code_checksum_locked_at_F0_execution" if script_path.exists() else "missing"
+                ),
+                "artifact_class": "audit_trail",
+                "publication_destination": "not_planned",
+                "review_priority": "full",
+                "note": "SHA256 is written in uppercase; git commit records the reviewed source state.",
+            }
+        )
     for output in generated_paths:
         path = root / output
         output_name = Path(output).name
