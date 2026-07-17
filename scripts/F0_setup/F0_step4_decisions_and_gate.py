@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""F0 step 4: write method decisions, gate checklist, and final reports.
+"""F0 Step4：形成方法决策、十项 gate checklist 和最终审计报告。
 
-Dependencies: all successful step 1-3 outputs. Outputs: readiness/method/
-decision/exclusion tables, the final gate checklist and reports, and a refreshed
-F0 file manifest. This step finalizes F0 only; it never starts F1.
+为什么要做：前 3 步产生了大量事实表，但不能仅凭“脚本跑完”就进入 F1。
+Step4 把事实转换成明确的就绪状态、方法限制和通过/阻断判断，并为每个判断
+保留证据文件。
+
+主要输入：全部成功的 Step1-Step3 输出。
+主要输出：各 F 节数据就绪表、方法前提表、决策证据日志、样本排除表、十项
+F0 gate checklist、全局数据摸底报告和正式执行报告。
+
+重要边界：本步骤只完成 F0。即使 gate 通过，也必须再经过 Claude Code 审核
+和用户批准；脚本不会自动开始 F1。
 """
 
 from __future__ import annotations
@@ -51,11 +58,18 @@ STAGE_OUTPUTS = [
     "results/F0_audit/F0_execution_report.md",
 ]
 
+# 再次冻结关键契约，用于检查 Step2 输出没有在阶段之间被意外改变。
 EXPECTED_GLOBIN_PANEL = "HBA1|HBA2|HBB|HBD|HBE1|HBG1|HBG2|HBM|HBQ1|HBZ"
 PILOT_FILE_NAME = "GSM5573466_sample1.csv.gz"
 
 
 def build_data_readiness() -> List[Dict[str, object]]:
+    """登记 F1-F8 当前具备什么数据、还缺什么以及何时必须暂停。
+
+    这是一张路线导航表，不代表 F2-F8 已获准执行。每个 F 节仍需在开始前做
+    自己的数据专项审计和资源评估。
+    """
+
     return [
         {
             "F_section": "F1",
@@ -157,6 +171,12 @@ def build_data_readiness() -> List[Dict[str, object]]:
 
 
 def build_method_prior_decision() -> List[Dict[str, object]]:
+    """根据已知数据形态预先限制可用方法，防止把错误输入交给算法。
+
+    例如，没有 raw droplets 就不能声称重做真实 cell calling；小数或标准化
+    矩阵也不能伪装成 DESeq2 所需的原始整数 counts。
+    """
+
     return [
         {
             "dataset_or_resource_id": "GSE183904",
@@ -240,6 +260,12 @@ def build_method_prior_decision() -> List[Dict[str, object]]:
 
 
 def build_decision_evidence_log() -> List[Dict[str, object]]:
+    """记录关键研究决策、理由、证据来源、证据强度和敏感性分析要求。
+
+    这样后续审稿或复查时可以区分：哪些是原始数据事实，哪些是文献报告，
+    哪些是本项目明确作出的选择。
+    """
+
     date = now_iso()
     return [
         {
@@ -344,6 +370,12 @@ def build_decision_evidence_log() -> List[Dict[str, object]]:
 
 
 def build_excluded_samples(sample_info: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
+    """生成样本层排除记录；即使没有排除，也显式写出 ``no_exclusion``。
+
+    注意：Normal_Peritoneum 默认仍进入对象构建，只是不进入主要组间比较。
+    这里登记的是样本去留，不是 Step2 重算得到的细胞去留。
+    """
+
     excluded = [row for row in sample_info if row.get("include_in_f1") != "true"]
     if not excluded:
         return [
@@ -378,6 +410,13 @@ def build_gate_checklist(
     processed_manifest: Sequence[Dict[str, str]],
     author_processing: Sequence[Dict[str, str]],
 ) -> List[Dict[str, object]]:
+    """把 F0 证据归并为恰好十项 gate，并判断能否提交审核。
+
+    每项都包含：要求、实测状态、PASS/FAIL、是否阻断和证据文件。
+    ``PASS_WITH_NOTED_ISSUES`` 表示核心契约成立，但仍有公开数据本身无法提供的
+    上游信息；这些未知项必须已映射到保守的 F1 处理，不能静默忽略。
+    """
+
     rows: List[Dict[str, object]] = []
 
     def add(
@@ -389,6 +428,8 @@ def build_gate_checklist(
         evidence: str,
         note: str = "",
     ) -> None:
+        """以统一格式向 gate checklist 添加一项判断。"""
+
         rows.append(
             {
                 "gate_item": item,
@@ -402,8 +443,11 @@ def build_gate_checklist(
         )
 
     def pass_fail(ok: bool) -> str:
+        """把布尔检查转换成审核表使用的 PASS/FAIL 文本。"""
+
         return "PASS" if ok else "FAIL"
 
+    # Gate 1：项目目录和追加式日志是否存在。
     structure_ready = (root / "data/metadata/project_structure_ready.txt").exists()
     analysis_log_ready = (root / "logs/F0_setup/analysis_log.md").exists()
     add(
@@ -414,6 +458,7 @@ def build_gate_checklist(
         "blocking",
         "data/metadata/project_structure_ready.txt; logs/F0_setup/analysis_log.md",
     )
+    # Gate 2：40 个提取矩阵是否都有文件大小和合法的大写 SHA256。
     manifest_ok = len(processed_manifest) == 40 and all(
         row.get("sha256")
         and row.get("sha256") == row.get("sha256", "").upper()
@@ -430,6 +475,7 @@ def build_gate_checklist(
         "blocking",
         "data/metadata/processed_input_manifest.tsv",
     )
+    # Gate 3：40 个样本的文件名、GEO title 和分组是否完全闭合。
     sample_ok = len(sample_info) == 40 and all(
         row.get("group_analysis") != "Unclear"
         and row.get("sample_id_match_status") == "match"
@@ -446,6 +492,7 @@ def build_gate_checklist(
         "blocking",
         "data/metadata/sample_info.tsv",
     )
+    # Gate 4：矩阵审计、固定 QC 可计算性和 sample1 冻结回归是否通过。
     included_audits = [row for row in data_audit if row.get("include_in_f1") == "true"]
     pilot_rows = [row for row in data_audit if row.get("file_name") == PILOT_FILE_NAME]
     nonpilot_rows = [row for row in data_audit if row.get("file_name") != PILOT_FILE_NAME]
@@ -498,6 +545,7 @@ def build_gate_checklist(
         "blocking",
         "data/metadata/data_audit.tsv",
     )
+    # Gate 5：正式完整审计是否与预登记结构事实一致。
     mismatches = [row for row in data_audit if row.get("precheck_comparison_status") != "match"]
     add(
         "precheck_comparison",
@@ -508,6 +556,7 @@ def build_gate_checklist(
         "data/metadata/data_audit.tsv; results/F0_audit/gse183904_csv_structure_precheck.tsv",
         "Must pause on any mismatch.",
     )
+    # Gate 6：作者声明、F0 实测和未知处理史是否区分清楚且覆盖关键阶段。
     history_rows = [
         row for row in author_processing if row.get("dataset_id") == "GSE183904"
     ]
@@ -671,6 +720,7 @@ def build_gate_checklist(
         "docs/source_verification/GSE183904_processing_history_source_audit.tsv; data/metadata/F0_author_processing_audit.tsv",
         f"{len(unresolved_rows)} unresolved or unavailable provenance row(s); unknown history is allowed only when explicit and linked to a conservative F1 action.",
     )
+    # Gate 7：固定 QC 在全部样本可计算；不同样本保留数不同本身不算失败。
     add(
         "fixed_QC_rule_recalculation",
         "all 40 samples have an evaluable fixed QC mask; sample1 reproduces the frozen regression",
@@ -681,6 +731,7 @@ def build_gate_checklist(
         "data/metadata/data_audit.tsv; data/metadata/F0_author_processing_audit.tsv",
         "Cell counts are expected to differ by sample; only non-evaluable calculation or pilot disagreement blocks F0.",
     )
+    # Gate 8：每个样本都能建立非空的 min.cells=3 QC 工作 feature 空间。
     add(
         "working_feature_space_recalculation",
         "all 40 samples have a nonempty per-sample min.cells=3 QC working feature space",
@@ -693,6 +744,7 @@ def build_gate_checklist(
         "data/metadata/data_audit.tsv; data/metadata/F0_author_processing_audit.tsv",
         "Low-detection archived rows are preserved and are not classified as an author-processing mismatch.",
     )
+    # Gate 9：marker panel 问题只作非阻断 warning，且 F0 不修改 panel。
     issue_path = root / "results/F0_audit/marker_panel_issue_report.tsv"
     issue_count = len(read_tsv(issue_path)) if issue_path.exists() else 0
     marker_status = "PASS_WITH_NOTED_ISSUES" if issue_count else "PASS"
@@ -705,6 +757,7 @@ def build_gate_checklist(
         "data/metadata/cell_type_marker_panel.tsv; results/F0_audit/marker_panel_issue_report.tsv (conditional)",
         "F0 never modifies the marker panel.",
     )
+    # Gate 10：全部契约表存在，7 个正式 F0 脚本均有合法大写 SHA256。
     required_contract_files = [
         "data/metadata/F0_dataset_inventory.tsv",
         "data/metadata/F0_file_manifest.tsv",
@@ -761,6 +814,12 @@ def write_reports(
     gate_rows: Sequence[Dict[str, object]],
     author_processing: Sequence[Dict[str, str]],
 ) -> None:
+    """把结构化表中的关键结果整理为两份便于人工审核的 Markdown 报告。
+
+    报告只概括表格，不替代原始 TSV。整体 gate 若有阻断失败则为 FAIL；若无
+    阻断但存在已登记限制，则为 PASS_WITH_NOTED_LIMITATIONS。
+    """
+
     group_counts: Dict[str, int] = {}
     for row in sample_info:
         group = row.get("group_analysis", "")
@@ -860,6 +919,9 @@ def write_reports(
 
 
 def execute(root: Path) -> int:
+    """正式执行 Step4，写出决策表、gate、报告并检查 17 项输出契约。"""
+
+    # 1. 读取前三步已经冻结的输入事实。
     require_paths(root, STAGE_REQUIRED, STAGE_NAME)
     append_log(root, f"F0 step4 started; run_id={current_run_id()}")
     sample_info = read_tsv(root / "data/metadata/sample_info.tsv")
@@ -867,6 +929,7 @@ def execute(root: Path) -> int:
     processed_manifest = read_tsv(root / "data/metadata/processed_input_manifest.tsv")
     author_processing = read_tsv(root / "data/metadata/F0_author_processing_audit.tsv")
 
+    # 2. 写出“后续能做什么、不能做什么、依据是什么”的四类决策表。
     readiness = build_data_readiness()
     write_tsv(root / "data/metadata/F0_data_readiness_by_F_section.tsv", readiness, [
         "F_section", "required_data_domains", "available_datasets_or_files", "missing_or_pending_items",
@@ -889,6 +952,7 @@ def execute(root: Path) -> int:
         "sample_id", "geo_accession", "exclusion_scope", "exclusion_status", "reason", "evidence_file", "note",
     ])
 
+    # 3. 生成十项 gate 和两份人工可读报告；这里仍不会启动 F1。
     gate_rows = build_gate_checklist(
         root,
         sample_info,
@@ -907,6 +971,7 @@ def execute(root: Path) -> int:
         "F1 marker-panel/evidence method-prior reminder retained for F1 execution planning.",
     )
 
+    # 4. 报告生成后刷新 manifest，使最终文件状态和脚本 SHA256 都进入清单。
     file_rows = build_file_manifest(root, processed_manifest, F0_OUTPUTS)
     write_tsv(root / "data/metadata/F0_file_manifest.tsv", file_rows, [
         "file_name", "relative_path_if_available", "dataset_id", "file_role", "data_domain", "source_type",
@@ -914,6 +979,7 @@ def execute(root: Path) -> int:
         "availability_status", "used_in_F0", "planned_F_section_use", "audit_status", "artifact_class",
         "publication_destination", "review_priority", "note",
     ])
+    # 5. 最终完整性检查：17 个正式输出必须存在且非空，阻断失败必须报错。
     missing_or_empty_outputs = [
         relative_path
         for relative_path in F0_OUTPUTS
@@ -933,6 +999,8 @@ def execute(root: Path) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """默认 dry run；显式提供 ``--execute`` 后才写决策表和报告。"""
+
     args = parse_stage_args(__doc__ or STAGE_NAME, argv)
     root = Path(args.project_root).resolve()
     if not args.execute:

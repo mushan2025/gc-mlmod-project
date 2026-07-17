@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
-"""F0 step 2: build sample_info and full-stream audit 40 GSE183904 matrices.
+"""F0 Step2：建立样本信息并完整审计 40 个 GSE183904 表达矩阵。
 
-Dependencies: step 1 processed_input_manifest.tsv and extracted CSV.gz files,
-the GSE183904 GEO series matrix, and the preregistered structure precheck.
-Outputs: sample_info.tsv and data_audit.tsv. Any unresolved group, key-field
-precheck mismatch, or numeric/format issue stops the staged wrapper.
+本步骤回答两个问题：
+1. 每个表达矩阵究竟对应哪个 GEO 样本、患者和组织分组？
+2. 公开矩阵是否真的是可用于独立 QC 的非负整数 count 矩阵？
+
+主要输入：Step1 生成的 ``processed_input_manifest.tsv`` 和提取矩阵、GEO
+series matrix，以及此前登记的结构预检查表。
+
+主要输出：
+- ``sample_info.tsv``：样本、患者、组织来源和是否允许进入 F1；
+- ``data_audit.tsv``：每个矩阵的结构、数值、QC 重算和 sample1 回归结果。
+
+实现特点：逐个样本、逐个基因流式读取，不合并 40 个大矩阵。任何未知分组、
+样本映射冲突、关键预检查不一致或数值/格式问题都会阻断后续阶段。
 """
 
 from __future__ import annotations
@@ -48,15 +57,16 @@ STAGE_OUTPUTS = [
     "data/metadata/data_audit.tsv",
 ]
 
+# 这些正则表达式用于确认矩阵内容和命名格式，而不是进行生物学筛选。
 NONNEGATIVE_INTEGER_ROW = re.compile(r"\d+(?:,\d+)*\Z")
 GENE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*\Z")
 CELL_BARCODE = re.compile(r"[ACGTN]{16}_\d+\Z", re.IGNORECASE)
 SAMPLE_ID = re.compile(r"sample\d+\Z", re.IGNORECASE)
 
-# Project-specific, high-specificity sentinels preregistered before inspecting
-# the new per-cell nCount results. Fixed targets reflect common CP1k/CP10k/
-# CP100k/CPM library-size normalization scales; the concentration thresholds
-# are deliberately stringent and trigger review rather than proving a method.
+# 标准化伪影哨兵在查看新算出的细胞 nCount 前已经预登记。
+# 常见 CP1k/CP10k/CP100k/CPM 会把每个细胞的总量强行缩放到相近固定值；
+# 因此若绝大多数细胞 nCount 异常集中在这些值附近，就要怀疑输入并非原始 counts。
+# 这些阈值设置得很严格：触发只代表“必须复核”，不能单独证明作者使用了哪种方法。
 FIXED_LIBRARY_SIZE_TARGETS = (1_000, 10_000, 100_000, 1_000_000)
 FIXED_TARGET_RELATIVE_TOLERANCE = 0.01
 FIXED_TARGET_MIN_CELL_FRACTION = 0.90
@@ -71,6 +81,7 @@ LOW_NCOUNT_REVIEW_BOUNDARY = 500
 HIGH_NCOUNT_MEDIAN_REVIEW_BOUNDARY = 100_000
 HIGH_NCOUNT_MAX_REVIEW_BOUNDARY = 1_000_000
 SPARSE_MATRIX_MIN_ZERO_RATE = 0.50
+# 冻结 QC 阈值。变量名中的 EXCLUSIVE 表示该边界本身不通过。
 SOURCE_MIN_NFEATURE = 500
 SOURCE_MAX_NFEATURE_EXCLUSIVE = 6000
 SOURCE_MAX_PERCENT_MT = 20.0
@@ -78,9 +89,9 @@ PROJECT_MIN_NCOUNT_EXCLUSIVE = 1000
 PROJECT_MAX_PERCENT_HB_EXCLUSIVE = 5.0
 QC_MIN_CELLS_PER_FEATURE = 3
 
-# Human globin transcript panel frozen in the approved F0/F1 plan. Matching is
-# exact after uppercasing; broad ``^HB`` matching would incorrectly include
-# genes such as HBEGF, HBS1L and HBP1.
+# 获批 F0/F1 方案冻结的人 globin 转录本 panel。
+# 基因名先转成大写再精确匹配；宽泛的 ``^HB`` 会把 HBEGF、HBS1L、HBP1
+# 等非 globin 基因误计入红细胞比例，因此明确禁止。
 GLOBIN_PANEL = (
     "HBA1",
     "HBA2",
@@ -95,6 +106,7 @@ GLOBIN_PANEL = (
 )
 GLOBIN_PANEL_SET = frozenset(GLOBIN_PANEL)
 
+# sample1 的结果已在正式执行前冻结，用作“同一代码、同一数据是否仍给出同一结果”的回归检查。
 PILOT_FILE_NAME = "GSM5573466_sample1.csv.gz"
 PILOT_EXPECTED = {
     "matrix_cols_cells": 2685,
@@ -108,11 +120,19 @@ PILOT_EXPECTED_GLOBIN_GENES_USED = frozenset({"HBA1", "HBA2", "HBB", "HBD"})
 
 
 def parse_geo_line(line: str) -> Tuple[str, List[str]]:
+    """解析 GEO series matrix 的一行，去除字段外围引号。"""
+
     parts = next(csv.reader([line.rstrip("\n")], delimiter="\t"))
     return parts[0], [value.strip().strip('"') for value in parts[1:]]
 
 
 def parse_gse183904_series(series_path: Path) -> Tuple[Dict[str, List[str]], Dict[str, str]]:
+    """读取 GEO 元数据，并提取样本字段和 patient_id 对应关系。
+
+    GEO 文件中患者与 sampleN 的映射藏在 Series_summary 文本中，因此这里
+    单独解析；无法确认的患者不会被猜测，而会在 sample_info 中记为 unknown。
+    """
+
     sample_fields: Dict[str, List[str]] = {}
     patient_by_sample: Dict[str, str] = {}
     mapping_header: List[str] | None = None
@@ -149,6 +169,12 @@ def parse_gse183904_series(series_path: Path) -> Tuple[Dict[str, List[str]], Dic
 
 
 def group_from_title(title: str) -> Tuple[str, str, str, str, str]:
+    """按预登记关键词把 GEO title 映射为四种组织分组。
+
+    没有命中规则时返回 ``Unclear``，由 gate 阻断，而不是根据文件顺序或主观
+    判断补分组。
+    """
+
     text = title.lower()
     if "primary gastric tissue" in text and "normal" in text:
         return (
@@ -190,6 +216,12 @@ def build_sample_info(
     patient_by_sample: Dict[str, str],
     manifest_rows: Sequence[Dict[str, str]],
 ) -> Tuple[List[Dict[str, object]], List[str]]:
+    """交叉核对 GEO accession、title 中的 sampleN 和压缩包文件名。
+
+    输出每个样本的分组、patient_id、纳入状态和所有已知限制。Normal_Peritoneum
+    被保留为参考，但不进入主要组间比较；PM 因样本数仅 3，后续只能方向性解释。
+    """
+
     accessions = sample_fields["!Sample_geo_accession"]
     titles = sample_fields["!Sample_title"]
     sources = sample_fields.get("!Sample_source_name_ch1", [""] * len(accessions))
@@ -305,6 +337,8 @@ def build_sample_info(
 
 
 def format_number(value: float | int | None) -> str:
+    """把数值转换为稳定、紧凑的文本格式，供 TSV 输出使用。"""
+
     if value is None or not math.isfinite(float(value)):
         return ""
     numeric = float(value)
@@ -314,6 +348,12 @@ def format_number(value: float | int | None) -> str:
 
 
 def classify_anomalous_values(values: str, expected_cells: int) -> Dict[str, object]:
+    """在快速整数解析失败时，逐值区分缺失、小数、非数值和负整数。
+
+    公开 count 矩阵应由非负整数构成。异常分类的目的不是修补数据，而是提供
+    可定位的失败原因并暂停执行。
+    """
+
     tokens = values.split(",")
     counts: Dict[str, object] = {
         "observed_values": len(tokens),
@@ -368,6 +408,13 @@ def classify_anomalous_values(values: str, expected_cells: int) -> Dict[str, obj
 
 
 def assess_ncount_distribution(ncount: np.ndarray, complete: bool) -> Dict[str, object]:
+    """检查基于全部存档行的细胞总 count 分布是否像原始 counts。
+
+    这里的 ``raw_full_nCount`` 只用于识别固定库大小等标准化伪影，不参与细胞
+    去留。若大量细胞总量几乎相同或集中在 1,000/10,000 等固定值，脚本会
+    标记复核，而不会擅自断言具体标准化方法。
+    """
+
     blank = {
         "raw_full_nCount_min": "",
         "raw_full_nCount_Q1": "",
@@ -478,6 +525,17 @@ def assess_fixed_qc(
     hb_ncount: np.ndarray,
     complete: bool,
 ) -> Dict[str, object]:
+    """在唯一的 ``min.cells=3`` 工作空间中重算固定细胞 QC 规则。
+
+    四项指标含义：
+    - nCount：细胞总 UMI/count，过低提示信息量不足；
+    - nFeature：检出的基因数，过低常见于低质量细胞，过高可能提示混合细胞；
+    - percent.mt：线粒体转录本比例，过高常提示细胞受损；
+    - percent.HB：globin 转录本比例，过高提示红细胞/血液成分干扰。
+
+    本函数只返回各规则和最终联合规则的计数，不在 F0 中真正删除细胞。
+    """
+
     metric_fields = {
         "qc_nCount_min": "",
         "qc_nCount_Q1": "",
@@ -525,6 +583,7 @@ def assess_fixed_qc(
     ):
         return metric_fields
 
+    # 百分比的分母和分子都来自同一个 min.cells=3 工作 feature 空间。
     percent_mt = np.divide(
         mt_ncount.astype(np.float64) * 100.0,
         ncount.astype(np.float64),
@@ -533,6 +592,7 @@ def assess_fixed_qc(
         hb_ncount.astype(np.float64) * 100.0,
         ncount.astype(np.float64),
     )
+    # 明确写出五个失败布尔数组，便于核对等号究竟属于保留还是排除。
     feature_low = nfeature < SOURCE_MIN_NFEATURE
     feature_high = nfeature >= SOURCE_MAX_NFEATURE_EXCLUSIVE
     count_low = ncount <= PROJECT_MIN_NCOUNT_EXCLUSIVE
@@ -541,6 +601,7 @@ def assess_fixed_qc(
     source_fail = feature_low | feature_high | mt_high
     source_pass = ~source_fail
     after_source_and_ncount = source_pass & ~count_low
+    # “或”表示违反任一规则即不通过；联合计数不会重复计算同一个细胞。
     final_fail = source_fail | count_low | hb_high
     ncount_q1, ncount_median, ncount_q3 = np.quantile(
         ncount, [0.25, 0.5, 0.75], method="linear"
@@ -616,6 +677,12 @@ def assess_working_feature_space(
     total_features: int,
     complete: bool,
 ) -> Dict[str, object]:
+    """汇总每个样本中低于 ``min.cells=3`` 的 feature 数和最终工作维度。
+
+    这些低检出 feature 只是不参与细胞 QC 指标计算；原始矩阵行仍完整保留，
+    也不能据此声称作者导出数据时没有做过基因过滤。
+    """
+
     below_threshold = detected_in_0_cells + detected_in_1_cell + detected_in_2_cells
     if not complete:
         return {
@@ -654,6 +721,8 @@ def summarize_gene_means(
     zero_value_count: int,
     total_values_checked: int,
 ) -> Dict[str, object]:
+    """用零值率和基因均值分布确认矩阵具有单细胞 count 的稀疏右偏特征。"""
+
     zero_rate = zero_value_count / total_values_checked if total_values_checked else math.nan
     if len(gene_means) != matrix_rows or not gene_means:
         return {
@@ -697,6 +766,12 @@ def validate_frozen_pilot(
     observed: Dict[str, object],
     globin_genes_used: Sequence[str],
 ) -> Dict[str, object]:
+    """仅对指定 sample1 检查冻结数字；其他样本标记为不适用。
+
+    该回归检查用于发现代码或输入发生意外变化，不要求其他样本复制 sample1
+    的细胞数或基因数。
+    """
+
     if file_name != PILOT_FILE_NAME:
         return {
             "pilot_validation_applicable": "false",
@@ -736,6 +811,13 @@ def validate_frozen_pilot(
 
 
 def audit_csv_gz(path: Path) -> Dict[str, object]:
+    """完整流式审计一个“基因 × 细胞”的压缩 CSV 矩阵。
+
+    每次只把一个基因的整行 count 读入内存，因此内存主要随单个样本的细胞数
+    增长，而不是随 40 个样本的总矩阵增长。函数同时完成结构检查、数值检查、
+    工作 feature 空间构建、QC 重算和可复现性摘要。
+    """
+
     start = time.perf_counter()
     rows = 0
     bad_column_count_rows = 0
@@ -766,6 +848,7 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
     global_max: float | None = None
     ncount_complete = True
 
+    # 第一行是细胞 barcode；后续每行是一个基因及其在所有细胞中的 counts。
     with gzip.open(path, "rt", encoding="utf-8", errors="replace", newline="") as handle:
         header = handle.readline()
         if not header:
@@ -782,6 +865,8 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
             if cell_barcodes and all(CELL_BARCODE.fullmatch(value) for value in cell_barcodes)
             else "mixed_or_unrecognized_cell_barcode"
         )
+        # raw_full_ncount 使用全部存档行，只审计输入形态。
+        # qc_* 数组只累加“至少在 3 个细胞检出”的基因，用于唯一一套细胞 QC。
         raw_full_ncount = np.zeros(expected_cells, dtype=np.int64)
         qc_ncount = np.zeros(expected_cells, dtype=np.int64)
         qc_nfeature = np.zeros(expected_cells, dtype=np.int32)
@@ -792,6 +877,7 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
             barcode.rsplit("_", 1)[-1] if "_" in barcode else "" for barcode in header_fields[1:6]
         ]
 
+        # 流式逐基因扫描：不创建完整矩阵，也不修改原文件。
         for line in handle:
             rows += 1
             stripped = line.rstrip("\r\n")
@@ -859,6 +945,7 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
             if row_array is not None and row_array.size == expected_cells:
                 raw_full_ncount += row_array
                 detected_cells = int(np.count_nonzero(row_array > 0))
+                # 只有达到 min.cells=3 的基因才进入 QC 工作空间。
                 if detected_cells >= QC_MIN_CELLS_PER_FEATURE:
                     qc_ncount += row_array
                     qc_nfeature += row_array > 0
@@ -899,6 +986,7 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
             elif upper_gene.startswith("HB"):
                 false_hb_prefix_genes_excluded.add(upper_gene)
 
+    # 文件扫描结束后，把累计量转换成每个样本的一行结构化审计结果。
     numeric_anomaly_count = (
         missing_value_count
         + noninteger_float_count
@@ -998,6 +1086,12 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
 
 
 def legacy_numeric_precheck(stats: Dict[str, object], precheck: Dict[str, str]) -> Tuple[str, List[str]]:
+    """把旧的行级异常预检查与本次更严格的逐值审计作兼容核对。
+
+    旧 HB 计数没有在这里比较，因为旧定义使用宽泛前缀，新方案已冻结为精确
+    globin panel；把二者强行比较会制造没有方法学意义的“不一致”。
+    """
+
     mismatches: List[str] = []
     missing_rows = precheck.get("missing_value_rows", "")
     invalid_rows = precheck.get("invalid_numeric_value_rows", "")
@@ -1024,11 +1118,19 @@ def build_data_audit(
     sample_info: Sequence[Dict[str, object]],
     precheck_rows: Sequence[Dict[str, str]],
 ) -> Tuple[List[Dict[str, object]], List[str]]:
+    """对 40 个矩阵运行完整审计，并与 Step1、GEO 和预检查逐项核对。
+
+    只有文件结构、数值类型、样本映射、工作空间、固定 QC 和 pilot 均可评估
+    时，样本才得到 ``enter_full_F1_independent_reQC``。该状态只表示允许 F1
+    重新 QC，不表示作者完整处理史已经还原。
+    """
+
     sample_by_file = {str(row["sample_file"]): row for row in sample_info}
     precheck_by_member = {row["member_name"]: row for row in precheck_rows}
     mismatch_notes: List[str] = []
     output: List[Dict[str, object]] = []
 
+    # 每个样本独立审计，避免把不同测序深度和样本来源混为一个总体。
     for manifest_row in processed_manifest:
         path = root / manifest_row["extracted_path"]
         stats = audit_csv_gz(path)
@@ -1038,6 +1140,7 @@ def build_data_audit(
         row_mismatches: List[str] = []
         if not precheck:
             row_mismatches.append("precheck row missing for archive member")
+        # 复核此前已登记的关键结构事实；新旧结果不一致时必须暂停解释。
         for field in [
             "matrix_rows_genes",
             "matrix_cols_cells",
@@ -1073,6 +1176,7 @@ def build_data_audit(
         if not processed_match:
             row_mismatches.append("processed manifest, GEO accession/title and sample_info mapping do not match")
         precheck_match = not row_mismatches
+        # 将每类失败原因单独保存，便于用户和审核者判断问题出在哪里。
         structural_failures: List[str] = []
         if stats["observed_numeric_type"] != "nonnegative_integer_count_like":
             structural_failures.append("numeric_or_column_structure_issue")
@@ -1181,6 +1285,8 @@ def build_data_audit(
 
 
 def validate_step1_manifest(root: Path, rows: Sequence[Dict[str, str]]) -> None:
+    """再次核对 Step1 的 40 个提取文件及 SHA256，防止阶段间文件被替换。"""
+
     if len(rows) != 40:
         raise RuntimeError(f"processed_input_manifest.tsv must contain 40 rows; observed {len(rows)}")
     seen: set[str] = set()
@@ -1201,6 +1307,9 @@ def validate_step1_manifest(root: Path, rows: Sequence[Dict[str, str]]) -> None:
 
 
 def execute(root: Path) -> int:
+    """正式执行 Step2，写出两个核心表，并在任何阻断条件出现时停止。"""
+
+    # 1. 输入与 Step1 文件完整性核验。
     require_paths(root, STAGE_REQUIRED, STAGE_NAME)
     manifest = read_tsv(root / "data/metadata/processed_input_manifest.tsv")
     validate_step1_manifest(root, manifest)
@@ -1210,6 +1319,7 @@ def execute(root: Path) -> int:
         f"python={sys.version.split()[0]}; numpy={np.__version__}",
     )
 
+    # 2. 建立样本映射。文件名和 GEO title 必须独立一致，不能按顺序猜测。
     sample_fields, patient_by_sample = parse_gse183904_series(
         root / "data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz"
     )
@@ -1244,6 +1354,7 @@ def execute(root: Path) -> int:
     ]
     write_tsv(root / "data/metadata/sample_info.tsv", sample_info, sample_fields_out)
 
+    # 3. 对 40 个矩阵进行完整流式审计并与预检查对照。
     precheck = read_tsv(root / "results/F0_audit/gse183904_csv_structure_precheck.tsv")
     data_audit, mismatches = build_data_audit(root, manifest, sample_info, precheck)
     append_log(
@@ -1390,6 +1501,7 @@ def execute(root: Path) -> int:
     for mismatch in sample_id_mismatches:
         append_log(root, "SAMPLE_ID_MISMATCH " + mismatch)
 
+    # 4. 汇总所有阻断条件。任一问题存在时，Step3 不应被自动执行。
     unclear = [row for row in sample_info if row.get("group_analysis") == "Unclear"]
     artifacts = [row for row in data_audit if row.get("normalization_artifact_flag") != "false"]
     working_feature_failures = [
@@ -1433,6 +1545,8 @@ def execute(root: Path) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """默认仅列出输入输出；显式提供 ``--execute`` 后才运行完整审计。"""
+
     args = parse_stage_args(__doc__ or STAGE_NAME, argv)
     root = Path(args.project_root).resolve()
     if not args.execute:

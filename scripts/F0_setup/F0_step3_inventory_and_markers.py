@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
-"""F0 step 3: build inventories, processing provenance and marker audit.
+"""F0 Step3：整理数据清单、处理历史证据，并审计 marker panel。
 
-Dependencies: successful step 1/2 outputs plus existing project manifests and
-precheck tables. Outputs: dataset/file/metadata/author/resource inventories and
-the conditional marker_panel_issue_report.tsv. The marker evidence table is
-used only for reference-ID integrity, never to alter or expand the panel.
+为什么要做：Step2 证明了矩阵能否计算，但还需要回答“项目有哪些数据和资源、
+每份数据能支持哪一步、作者公开说明了哪些处理、哪些环节仍未知”。Step3 把
+这些信息整理成结构化表，供 Step4 作 gate 判断，也供后续 F1-F8 追溯。
+
+主要输入：成功完成的 Step1/Step2 输出、项目已有 manifest、各数据集预检查表、
+处理历史来源审计，以及只读 marker panel。
+
+主要输出：数据集/文件/metadata/处理历史/外部资源清单；仅在 marker panel 发现
+问题时生成 ``marker_panel_issue_report.tsv``。
+
+重要边界：marker 证据表只用于检查 evidence ID 是否存在。脚本不会自动修改、
+补充或扩展 marker panel，避免程序未经研究者批准改变细胞注释依据。
 """
 
 from __future__ import annotations
@@ -57,6 +65,7 @@ STAGE_OUTPUTS = [
     "results/F0_audit/marker_panel_issue_report.tsv (conditional)",
 ]
 
+# marker 基因仅做格式审计，不在本步骤评价其生物学正确性。
 MARKER_GENE_PATTERN = re.compile(r"^[A-Z][A-Z0-9-]*$")
 MARKER_REQUIRED_FIELDS = [
     "cell_type",
@@ -66,6 +75,9 @@ MARKER_REQUIRED_FIELDS = [
     "evidence_ids",
 ]
 
+# 处理史表同时容纳来源声明和本项目观察，但用两个状态字段严格区分：
+# author_reported_status = 原论文/GEO/工具说明实际报告了什么；
+# record_status = F0 重算或跨来源核对得到什么。二者不能互相替代。
 PROCESSING_HISTORY_FIELDS = [
     "history_record_id",
     "stage_order",
@@ -105,6 +117,7 @@ PROCESSING_HISTORY_FIELDS = [
     "observed_samples_working_feature_not_evaluable",
 ]
 
+# 这 7 个文件构成正式 F0 代码范围；其大写 SHA256 会写入文件 manifest。
 F0_SCRIPT_PATHS = [
     "scripts/F0_setup/f0_utils.py",
     "scripts/F0_setup/F0_step1_structure_and_extract.py",
@@ -117,6 +130,8 @@ F0_SCRIPT_PATHS = [
 
 
 def summarize_unique(values: Iterable[str], max_items: int = 8) -> str:
+    """压缩显示字段的不同取值及频数，避免清单单元格无限变长。"""
+
     counts: Dict[str, int] = {}
     for value in values:
         key = value if value != "" else "<empty>"
@@ -132,6 +147,12 @@ def build_metadata_inventory(
     sample_fields: Dict[str, List[str]],
     prechecks: Dict[str, List[Dict[str, str]]],
 ) -> List[Dict[str, object]]:
+    """汇总各数据集 metadata 字段的记录数、缺失情况和可用边界。
+
+    这张表帮助后续区分“字段真实不存在”和“分析者忘记读取”。它只登记字段
+    可用性，不把尚未审核的数据集自动批准为验证队列。
+    """
+
     rows: List[Dict[str, object]] = []
     for key, values in sample_fields.items():
         field = key.replace("!Sample_", "")
@@ -226,6 +247,16 @@ def build_author_processing_audit(
     source_rows: Sequence[Dict[str, str]],
     data_audit: Sequence[Dict[str, str]],
 ) -> List[Dict[str, object]]:
+    """把来源处理史与 F0 实测结果合并成一条可审计时间线。
+
+    来源行必须覆盖组织解离、建库、测序、count 生成、cell calling、QC、导出、
+    doublet、ambient、标准化、整合/聚类及 raw droplets 可用性等关键阶段。
+
+    F0 另外加入三类记录：固定 QC 重算、min.cells=3 工作空间重算，以及
+    158,641 个公开细胞与论文 152,423 个最终细胞的跨来源核对。细胞数差异只
+    记录事实，不擅自归因于 DoubletFinder 或其他单一步骤。
+    """
+
     if not source_rows:
         raise RuntimeError("GSE183904 processing-history source audit is empty")
     missing_fields = [field for field in PROCESSING_HISTORY_FIELDS[:17] if field not in source_rows[0]]
@@ -264,6 +295,7 @@ def build_author_processing_audit(
             + ", ".join(missing_steps)
         )
 
+    # 先原样保留来源审计，再追加 F0 自己产生的观察记录。
     rows: List[Dict[str, object]] = [dict(row) for row in source_rows]
     public_cells = sum(int(row.get("matrix_cols_cells", "0") or 0) for row in data_audit)
     source_qc_pass_cells = sum(
@@ -512,6 +544,8 @@ def build_author_processing_audit(
 
 
 def gse239_inventory_row(predownloaded: Sequence[Dict[str, str]]) -> Dict[str, object] | None:
+    """把 GSE239676 的多文件预检查压缩为一条外部验证候选记录。"""
+
     rows = [row for row in predownloaded if row.get("dataset_id") == "GSE239676"]
     if not rows:
         return None
@@ -543,6 +577,12 @@ def build_dataset_inventory(
     sample_info: Sequence[Dict[str, str]],
     prechecks: Dict[str, List[Dict[str, str]]],
 ) -> List[Dict[str, object]]:
+    """建立全项目数据集总表，并注明用途、现状、限制和下一次专项审计。
+
+    “本地已有”不等于“已经批准使用”。外部验证集仍必须遵守签名冻结和队列
+    隔离规则，避免验证数据反向参与参数选择。
+    """
+
     group_counts: Dict[str, int] = {}
     for row in sample_info:
         group = row.get("group_analysis", "")
@@ -625,6 +665,12 @@ def build_file_manifest(
     processed_manifest: Sequence[Dict[str, str]],
     generated_paths: Sequence[str],
 ) -> List[Dict[str, object]]:
+    """建立文件级来源、大小、SHA256、用途和审核优先级清单。
+
+    正式 F0 的 7 个脚本也进入此表，从而能够证明某次结果由哪一版代码生成。
+    manifest 自身的 SHA256 故意留空，因为把自己的校验和写入自身会形成循环。
+    """
+
     rows: List[Dict[str, object]] = []
     for source_path, source_name in [
         ("data/metadata/download_manifest.tsv", "download_manifest"),
@@ -805,6 +851,11 @@ def build_file_manifest(
 
 
 def build_external_resource_inventory(root: Path) -> List[Dict[str, object]]:
+    """登记 SCENIC、inferCNV 和后续数据库资源的当前可用状态。
+
+    尚未做版本、许可或兼容性审计的数据库只标记为候选，F0 不会下载或使用它们。
+    """
+
     rows: List[Dict[str, object]] = []
     for row in read_tsv(root / "data/metadata/preupload_resources_manifest.tsv"):
         dataset = row.get("dataset_id", "")
@@ -854,6 +905,12 @@ def build_external_resource_inventory(root: Path) -> List[Dict[str, object]]:
 
 
 def audit_marker_panel(root: Path) -> List[Dict[str, object]]:
+    """只读检查 marker panel 的必需列、格式、重复项和证据 ID 完整性。
+
+    检查结果均为 warning，不在 F0 中自动改 panel。细胞类型 marker 的生物学
+    合理性将在 F1 注释阶段结合表达结果和来源证据审核。
+    """
+
     panel_path = root / "data/metadata/cell_type_marker_panel.tsv"
     evidence_path = root / "data/metadata/cell_marker_reference_evidence.tsv"
     panel = read_tsv(panel_path)
@@ -863,6 +920,8 @@ def audit_marker_panel(root: Path) -> List[Dict[str, object]]:
     issues: List[Dict[str, object]] = []
 
     def add(cell_type: str, issue_type: str, field: str, observed: str, action: str) -> None:
+        """以统一字段记录一条 marker panel 审计问题。"""
+
         issues.append(
             {
                 "issue_id": f"MARKER_ISSUE_{len(issues) + 1:03d}",
@@ -909,6 +968,9 @@ def audit_marker_panel(root: Path) -> List[Dict[str, object]]:
 
 
 def execute(root: Path) -> int:
+    """正式执行 Step3，生成清单和处理史；Step2 有暂停样本时拒绝继续。"""
+
+    # 1. 先确认 Step1/Step2 三张关键表均有 40 行且全部允许独立重新 QC。
     require_paths(root, STAGE_REQUIRED, STAGE_NAME)
     append_log(root, f"F0 step3 started; run_id={current_run_id()}")
     sample_info = read_tsv(root / "data/metadata/sample_info.tsv")
@@ -923,6 +985,7 @@ def execute(root: Path) -> int:
         for row in data_audit
     ):
         raise RuntimeError("F0 step3 cannot continue while data_audit.tsv contains paused samples")
+    # 2. 收集主队列和候选数据集的 metadata/结构预检查信息。
     sample_fields, _ = parse_gse183904_series(
         root / "data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz"
     )
@@ -933,6 +996,7 @@ def execute(root: Path) -> int:
         "GSE206785_metadata_precheck": read_tsv(root / "results/F0_audit/GSE206785_metadata_precheck.tsv"),
     }
 
+    # 3. 分别生成数据集、metadata、处理历史和外部资源清单。
     dataset_rows = build_dataset_inventory(sample_info, prechecks)
     write_tsv(
         root / "data/metadata/F0_dataset_inventory.tsv",
@@ -976,6 +1040,7 @@ def execute(root: Path) -> int:
         ],
     )
 
+    # 4. marker panel 保持只读；只有发现问题时才输出单独的 warning 表。
     issues = audit_marker_panel(root)
     issue_path = root / "results/F0_audit/marker_panel_issue_report.tsv"
     if issues:
@@ -990,6 +1055,7 @@ def execute(root: Path) -> int:
     elif issue_path.exists():
         issue_path.unlink()
 
+    # 5. 最后登记输入、输出和脚本 SHA256，锁定本次 F0 所用文件版本。
     file_rows = build_file_manifest(root, processed_manifest, F0_OUTPUTS)
     write_tsv(
         root / "data/metadata/F0_file_manifest.tsv",
@@ -1014,6 +1080,8 @@ def execute(root: Path) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """默认 dry run；显式提供 ``--execute`` 后才写正式清单。"""
+
     args = parse_stage_args(__doc__ or STAGE_NAME, argv)
     root = Path(args.project_root).resolve()
     if not args.execute:

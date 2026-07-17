@@ -1,115 +1,115 @@
-# F0 Formal Execution Plan For Review
+# F0 正式执行计划（审核版）
 
-Status: scripts and plan prepared for Claude Code review and user approval; full F0 has not been executed.
+状态：执行计划和脚本已经写好，等待 Claude Code 审核及用户批准；尚未正式执行完整 F0。
 
-## 1. Objective And Boundary
+## 1. 目标与边界
 
-F0 establishes the data and reproducibility baseline required before F1. It will:
+F0 的任务是在进入 F1 前建立可信的数据与可复现性基线，具体包括：
 
-- verify the GSE183904 archive, 40 sample matrices, GEO sample mapping and checksums;
-- perform a full-stream structural and numeric audit of every matrix;
-- recalculate the approved fixed-QC rule on every currently public cell, only to verify that the rule is computable and to estimate its effect;
-- document the known and unknown processing history from tissue acquisition to public export;
-- produce the project data inventory, readiness map, method-prior decisions and F0 gate report.
+- 核验 GSE183904 压缩包、40 个样本矩阵、GEO 样本映射关系和文件校验和；
+- 对每个矩阵中的全部数值进行流式结构与数值审计；
+- 在当前公开细胞上重新计算已经批准的固定 QC 规则，仅用于确认规则可计算并估计其影响；
+- 记录从组织获取到公开数据导出的已知和未知处理历史；
+- 生成项目数据清单、各 F 节数据就绪状态、方法前提决策和 F0 gate 报告。
 
-F0 will not remove cells, create a filtered Seurat object, run doublet/ambient algorithms, start F1, or make biological claims. Actual cell exclusion begins only in F1 after the F0 gate is independently reviewed and approved.
+F0 **不会**删除细胞、创建过滤后的 Seurat 对象、运行双细胞或环境 RNA 算法、启动 F1，也不会作出生物学结论。只有 F0 gate 经独立审核并由用户批准后，F1 才会真正开始排除细胞。
 
-## 2. Technical Judgment
+## 2. 技术判断
 
-### Premise verification
+### 2.1 前提验证
 
-- The local archive is expected to contain 40 gene-by-cell `csv.gz` matrices with 26,571 rows and 158,641 public cells in total.
-- Current public inputs do not contain FASTQ files, raw/empty droplets, Cell Ranger cell-calling records, author-excluded barcode lists or complete DoubletFinder parameters.
-- The approved QC definition is already frozen in the main plan and therefore must be implemented deterministically rather than selected from F0 outcomes.
+- 本地压缩包预期包含 40 个“基因 × 细胞”的 `csv.gz` 矩阵；合计 26,571 个存档 feature 行和 158,641 个公开细胞。
+- 当前公开输入不包括 FASTQ、raw/empty droplets、Cell Ranger cell-calling 记录、作者排除的 barcode 清单或完整 DoubletFinder 参数。
+- QC 定义已在主线方案中冻结，因此 F0 必须按固定规则确定性执行，不能根据 F0 结果临时挑选阈值。
 
-### Quantitative evidence
+### 2.2 定量依据
 
-The full-file sample1 pilot gave:
+对 sample1 完整文件的 pilot 检查得到：
 
-- 2,685 public cells and 26,571 archived feature rows;
-- 19,294 features after per-sample `min.cells=3`;
-- 2,684 cells passing the source-reported `nFeature` and mitochondrial rules;
-- 53 additional cells removed by `nCount>1000` and 0 additional cells removed by `HB_percent<5` in sequential accounting;
-- 2,631 cells passing the final fixed rule;
-- exact QC globin intersection `HBA1,HBA2,HBB,HBD`;
-- false broad-prefix genes `HBEGF,HBP1,HBS1L` excluded from `HB_percent`.
+- 2,685 个公开细胞，26,571 个存档 feature 行；
+- 每个样本应用 `min.cells=3` 后有 19,294 个工作 feature；
+- 2,684 个细胞通过原研究报告的 `nFeature` 和线粒体规则；
+- 按顺序统计时，`nCount>1000` 额外排除 53 个细胞，`HB_percent<5` 再额外排除 0 个细胞；
+- 最终有 2,631 个细胞通过全部固定规则；
+- 实际参与 HB 百分比计算的精确 globin 基因交集为 `HBA1,HBA2,HBB,HBD`；
+- `HBEGF,HBP1,HBS1L` 虽以 `HB` 开头，但不是 globin 基因，已明确排除。
 
-The read-only validation script also tests every inequality boundary on synthetic cells and exact globin matching on a synthetic matrix.
-It additionally sends a synthetic 40-sample audit contract through Step3 processing-history construction and the ten-item Step4 gate, so renamed fields cannot silently break downstream decisions.
+只读验证脚本还使用合成细胞检查每个不等式边界，并使用合成矩阵检查 globin 基因的精确匹配。它还把一个合成的 40 样本审计结果送入 Step3 的处理史构建和 Step4 的十项 gate，用于防止字段改名后下游决策在无提示的情况下失效。
 
-### Conclusion
+### 2.3 结论
 
-F0 is suitable for Windows-native streaming execution on the default laptop. R, WSL, GPU and a temporary server are not required. Full execution remains blocked until Claude Code review and explicit user approval.
-Immediately before an approved formal run, available RAM and D-drive space must be measured again; the current resource row is evidence for planning, not permission to ignore changed machine state.
+F0 适合在默认笔记本上通过 Windows 原生 Python 流式执行，不需要 R、WSL、GPU 或临时服务器。完整执行仍须等待 Claude Code 审核和用户明确批准。
 
-## 3. Inputs
+正式运行前必须再次测量可用内存和 D 盘剩余空间。当前资源记录只能支持执行环境规划，不能代替正式运行前的实时检查。
 
-The complete checklist is `reports/environment_setup/F0_input_file_checklist.tsv`. Critical inputs are:
+## 3. 输入文件
+
+完整清单见 `reports/environment_setup/F0_input_file_checklist.tsv`。关键输入包括：
 
 - `data/public_downloads/GSE183904_RAW.tar`
 - `data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz`
 - `docs/source_verification/GSE183904_processing_history_source_audit.tsv`
-- existing manifests under `data/metadata/`
-- preregistered structure checks under `results/F0_audit/`
-- environment baseline files under `environment/`
-- read-only `data/metadata/cell_type_marker_panel.tsv`
+- `data/metadata/` 下已有的 manifest 文件
+- `results/F0_audit/` 下已登记的结构预检查结果
+- `environment/` 下的执行环境基线文件
+- 只读参考文件 `data/metadata/cell_type_marker_panel.tsv`
 
-No network download is part of this F0 execution.
+本次 F0 执行不包含任何联网下载。
 
-## 4. Scripts And Stage Order
+## 4. 脚本及执行顺序
 
-The wrapper runs four stages as one F0 approval unit:
+总入口脚本把以下四个阶段作为一个完整的 F0 审批单元顺序执行：
 
 1. `F0_step1_structure_and_extract.py`
-   - verify required paths and archive SHA256;
-   - verify exactly 40 unique `csv.gz` members;
-   - extract compressed matrices to `data/processed_input/GSE183904/`;
-   - write the processed-input manifest with uppercase SHA256 values.
+   - 检查所有必需路径和压缩包 SHA256；
+   - 确认压缩包中恰好有 40 个文件名不重复的 `csv.gz` 成员；
+   - 将压缩矩阵解压到 `data/processed_input/GSE183904/`；
+   - 写出处理后输入清单，所有 SHA256 统一使用大写。
 
 2. `F0_step2_sample_info_and_audit.py`
-   - derive sample and group metadata from independent filename and GEO-title evidence;
-   - full-stream every value in all 40 matrices without loading a merged matrix;
-   - check orientation, dimensions, integer values, missing/invalid/negative values, duplicate genes/barcodes, gene order, sparsity and normalization-artifact sentinels;
-   - preserve raw full-matrix `nCount` summaries only for input-shape auditing;
-   - construct one per-sample `min.cells=3` QC working feature space;
-   - calculate the only QC metric set in that working space;
-   - calculate fixed-rule pass/fail counts and run the frozen sample1 regression.
+   - 分别依据文件名和 GEO title 建立样本及分组信息，并核对两种证据是否一致；
+   - 流式读取 40 个矩阵中的每个数值，不建立占用大量内存的合并矩阵；
+   - 检查矩阵方向、维度、整数性、缺失/非法/负值、重复基因或 barcode、基因顺序、稀疏性和标准化伪影哨兵；
+   - 仅为判断输入矩阵形态，保留基于全部原始行计算的 `raw_full_nCount` 摘要；
+   - 对每个样本建立唯一的 `min.cells=3` QC 工作 feature 空间；
+   - 在该工作空间内计算唯一一套细胞 QC 指标；
+   - 统计固定规则的通过/不通过细胞数，并执行冻结的 sample1 回归检查。
 
 3. `F0_step3_inventory_and_markers.py`
-   - build dataset, file, metadata and external-resource inventories;
-   - record uppercase SHA256 for every formal F0 script and the read-only validator in `F0_file_manifest.tsv`;
-   - audit marker-panel structure without modifying the panel;
-   - combine primary-source processing history with F0 observations;
-   - keep author reports, F0 recalculation, cross-source inference and unresolved history distinct.
+   - 建立数据集、文件、metadata 字段和外部资源清单；
+   - 在 `F0_file_manifest.tsv` 中记录所有正式 F0 脚本及只读验证脚本的大写 SHA256；
+   - 审计 marker panel 的结构，但不修改只读 panel；
+   - 合并原始来源记录的处理史与 F0 实测结果；
+   - 明确区分作者报告、F0 重算、跨来源推断和仍未知的处理环节。
 
 4. `F0_step4_decisions_and_gate.py`
-   - write readiness, method-prior, decision-evidence and exclusion tables;
-   - evaluate a ten-item F0 gate checklist;
-   - write the global reconnaissance and execution reports;
-   - stop without starting F1.
+   - 写出数据就绪状态、方法前提、决策证据和样本排除表；
+   - 评估十项 F0 gate checklist；
+   - 写出全局数据摸底报告和执行报告；
+   - 完成后停止，不自动启动 F1。
 
-All stages default to a non-writing dry run unless `--execute` is supplied. The wrapper stops at the first exception or blocking condition.
+所有脚本在未提供 `--execute` 时默认只做不写文件的 dry run。总入口脚本一旦遇到异常或阻断条件就立即停止，不会跳过错误继续执行。
 
-## 5. Fixed-QC Recalculation Contract
+## 5. 固定 QC 重算契约
 
-### Immutable raw input
+### 5.1 不可修改的原始输入
 
-All 26,571 archived rows remain unchanged. `raw_full_nCount_*` is calculated from those rows only to assess count-matrix shape and possible prior normalization; it never determines cell removal.
+存档矩阵中的 26,571 行全部原样保留。`raw_full_nCount_*` 只用于判断 count 矩阵形态以及是否可能经历过标准化，绝不参与细胞删除决策。
 
-### One QC working feature space
+### 5.2 唯一的 QC 工作 feature 空间
 
-For each sample independently, retain features detected in at least 3 cells. In this one working space calculate:
+每个样本独立保留至少在 3 个细胞中检出的 feature，然后仅在这一工作空间内计算：
 
-- `nCount_RNA`
-- `nFeature_RNA`
-- `mt_percent`
-- `HB_percent`
+- `nCount_RNA`：该细胞的总 UMI/count 数；
+- `nFeature_RNA`：该细胞中检出的基因数；
+- `mt_percent`：线粒体基因 count 占总 count 的百分比；
+- `HB_percent`：冻结 globin 基因 count 占总 count 的百分比。
 
-There is no second cell-QC metric space.
+不存在第二套细胞 QC 指标空间。
 
-### Fixed cell rule
+### 5.3 固定细胞规则
 
-A cell passes only when all conditions hold:
+只有同时满足以下全部条件的细胞才算通过：
 
 ```text
 500 <= nFeature_RNA < 6000
@@ -118,88 +118,98 @@ mt_percent <= 20
 HB_percent < 5
 ```
 
-The `nFeature` and mitochondrial conditions are source-reported. The `nCount` and globin conditions are project additions. Per-rule failure counts and the unique final union are both recorded so overlapping failures are not double-counted.
+其中 `nFeature` 和线粒体条件来自原研究报告，`nCount` 和 globin 条件为本项目新增。脚本同时记录每条规则各自不通过的细胞数和全部规则合并后的唯一不通过细胞数，避免一个细胞违反多条规则时被重复计数。
 
-### Frozen globin definition
+### 5.4 冻结的 globin 定义
 
-`HB_percent` uses exact, case-normalized matching to:
+`HB_percent` 仅按不区分大小写的精确基因名匹配以下 panel：
 
 ```text
 HBA1,HBA2,HBB,HBD,HBE1,HBG1,HBG2,HBM,HBQ1,HBZ
 ```
 
-For every sample the audit records expected genes, genes present in the archived matrix, genes retained in the `min.cells=3` working space, missing genes and excluded false `^HB` matches. Broad prefix matching is forbidden.
+每个样本都要记录：预期 panel、存档矩阵中实际存在的基因、经 `min.cells=3` 后实际参与 QC 的基因、缺失基因，以及因不是 panel 成员而被排除的 `^HB` 假匹配基因。禁止使用宽泛的前缀匹配计算 `HB_percent`。
 
-### Downstream boundary
+### 5.5 下游边界
 
-The per-sample `min.cells=3` rule is not a permanent gene filter for later differential expression, pseudobulk or scoring. Those methods must use their own approved expression-coverage rules.
+每个样本的 `min.cells=3` 仅用于建立 F0/F1 的 QC 工作空间，不是差异表达、pseudobulk 或评分分析的永久基因过滤条件。这些下游方法必须采用各自获批的表达覆盖规则。
 
-## 6. Processing-History Interpretation
+## 6. 处理历史的解释原则
 
-The audit may support all of the following simultaneously:
+以下情况可以同时成立，并不互相矛盾：
 
-- the source reports Cell Ranger v3.0/hg38 and Seurat QC thresholds;
-- the public matrices are nonnegative-integer called/retained-cell count matrices;
-- the 158,641 public cells differ from the 152,423 cells in the paper's final 40-tissue-sample object;
-- the exact timing and barcode effect of author QC, DoubletFinder and public export remain unresolved.
+- 原始来源报告使用 Cell Ranger v3.0/hg38 和 Seurat QC 阈值；
+- 公开矩阵是非负整数形式的已调用/已保留细胞 count 矩阵；
+- 公开矩阵有 158,641 个细胞，而论文最终 40 个组织样本对象有 152,423 个细胞；
+- 作者 QC、DoubletFinder 和公开导出的准确先后顺序及其具体 barcode 影响仍无法完全还原。
 
-F0 must not attribute the 6,218-cell difference to one specific step. Recalculated pass counts describe what the approved rule does to the currently public matrices; they do not reconstruct cells that were removed before public export.
+F0 不得把 6,218 个细胞的差值归因于某一个特定步骤。重算得到的通过细胞数只说明获批规则应用到“当前公开矩阵”时会产生什么结果，不能重建公开前已经被排除的细胞。
 
-In `F0_author_processing_audit.tsv`, `author_reported_status` is reserved for what a reviewed source says. F0 recomputation and cross-source reconciliation outcomes are stored separately in `record_status`; generated F0 rows use an explicit `not_applicable_*` value in the author-status field.
+在 `F0_author_processing_audit.tsv` 中：
 
-## 7. Commands
+- `author_reported_status` 只记录经审阅来源明确报告的内容；
+- `record_status` 单独记录 F0 重算或跨来源核对结果；
+- F0 自动生成的记录在作者状态字段中明确写为 `not_applicable_*`，防止把本项目观察误写成作者声明。
 
-Read-only input/output-contract dry run:
+## 7. 运行命令
+
+### 7.1 只读检查输入和输出契约
 
 ```powershell
 & 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/run_F0_full_audit.py --project-root .
 ```
 
-Read-only code validation, including the real sample1 regression:
+该命令不写正式输出，只检查必需输入是否存在并列出计划生成的文件。
+
+### 7.2 只读代码验证，包括真实 sample1 回归
 
 ```powershell
 & 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/validate_F0_readonly.py --project-root .
 ```
 
-Formal execution, permitted only after Claude Code review and user approval:
+该命令只在系统临时目录中写测试文件，不生成正式 F0 产物。
+
+### 7.3 正式执行
+
+仅在 Claude Code 审核通过并得到用户批准后允许运行：
 
 ```powershell
 & 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/run_F0_full_audit.py --project-root . --execute
 ```
 
-## 8. Blocking Conditions
+## 8. 阻断条件
 
-F0 pauses if any of the following occurs:
+出现以下任一情况时，F0 必须暂停：
 
-- archive missing, unreadable, checksum mismatch, duplicate member basename, or member count other than 40;
-- archive filename, GSM accession, `sample_id` and GEO-title mapping disagree;
-- any group remains `Unclear`;
-- matrix orientation, dimensions, gene order or preregistered structural fields disagree without an approved explanation;
-- missing, nonnumeric, noninteger or negative values; duplicate genes/barcodes; or an unevaluable numeric distribution;
-- a normalization-artifact sentinel triggers;
-- the `min.cells=3` working feature space or any fixed-QC metric is not evaluable;
-- the frozen globin definition changes or no panel gene can be recognized;
-- sample1 does not reproduce 19,294 working features, 2,684 source-rule pass cells, 53 additional `nCount` failures, 0 additional HB failures and 2,631 final pass cells;
-- required processing-history stages or downstream constraints are missing;
-- any formal F0 script is missing from `F0_file_manifest.tsv` or lacks a valid uppercase SHA256;
-- any required F0 contract table or report is not generated.
+- 压缩包缺失、无法读取、校验和不一致、成员文件名重复，或 `csv.gz` 成员数不是 40；
+- 压缩包文件名、GSM accession、`sample_id` 与 GEO title 的映射不一致；
+- 任何样本的分组仍为 `Unclear`；
+- 矩阵方向、维度、基因顺序或预登记结构字段出现无法解释且未经批准的差异；
+- 存在缺失值、非数值、非整数、负值、重复基因、重复 barcode，或数值分布无法评估；
+- 标准化伪影哨兵被触发；
+- `min.cells=3` 工作 feature 空间或任何固定 QC 指标无法计算；
+- 冻结 globin 定义发生变化，或完全无法识别 panel 基因；
+- sample1 未复现 19,294 个工作 feature、2,684 个原研究规则通过细胞、53 个新增 `nCount` 不通过细胞、0 个新增 HB 不通过细胞和 2,631 个最终通过细胞；
+- 必需的处理历史阶段或下游约束缺失；
+- 任一正式 F0 脚本未进入 `F0_file_manifest.tsv`，或缺少合法的大写 SHA256；
+- 任一必需 F0 契约表或报告没有生成。
 
-Known unavailable upstream information is nonblocking only when explicitly labeled and mapped to a conservative F1 action. It yields `PASS_WITH_NOTED_LIMITATIONS`, not a silent clean pass.
+已确认无法获得的上游信息，只有在明确标注并映射到保守的 F1 处理措施时才不阻断执行；对应 checklist 项记为 `PASS_WITH_NOTED_ISSUES`，总体报告据此记为 `PASS_WITH_NOTED_LIMITATIONS`，不能无提示地当作完全通过。
 
-## 9. F1 Constraints Carried Forward
+## 9. 传递给 F1 的约束
 
-If F0 is approved:
+如果 F0 获批：
 
-- F1 preserves the full raw matrices and independently applies the same one-space fixed QC rule;
-- scDblFinder is the primary per-sample doublet call; DoubletFinder is sensitivity only;
-- DecontX is run on filtered raw integer counts after fixed QC and primary doublet removal;
-- ambient scores do not delete cells, and raw counts remain the main matrix;
-- true barcode knee/cell calling, emptyDrops, SoupX and CellBender remain `not_evaluable_input_limited` without raw droplets;
-- Normal_Peritoneum remains reference-only, and PM sample-level inference remains directional because `n=3`.
+- F1 保留完整原始矩阵，并独立应用同一套单工作空间固定 QC 规则；
+- scDblFinder 作为逐样本双细胞识别的主方法，DoubletFinder 只作敏感性分析；
+- DecontX 在固定 QC 和主双细胞排除后，对 filtered raw integer counts 运行；
+- ambient score 不直接删除细胞，raw counts 始终是主分析矩阵；
+- 在没有 raw droplets 时，真实 barcode knee/cell calling、emptyDrops、SoupX 和 CellBender 均记为 `not_evaluable_input_limited`；
+- Normal_Peritoneum 只作参考；PM 仅 3 个样本，因此样本层结果只能作方向性观察。
 
-## 10. Expected Outputs
+## 10. 预期输出
 
-The formal list is `reports/environment_setup/F0_expected_output_manifest.tsv`. Core outputs include:
+正式清单见 `reports/environment_setup/F0_expected_output_manifest.tsv`。核心输出包括：
 
 - `data/metadata/sample_info.tsv`
 - `data/metadata/data_audit.tsv`
@@ -213,17 +223,19 @@ The formal list is `reports/environment_setup/F0_expected_output_manifest.tsv`. 
 - `results/F0_audit/F0_execution_report.md`
 - `logs/F0_setup/analysis_log.md`
 
-## 11. Claude Code Review Requests
+这些文件分别回答“输入是什么、数据经历过什么、哪些信息仍未知、后续方法能否使用、F0 是否允许进入 F1”等问题。任何关键结论都必须能够追溯到相应表格、脚本和日志。
 
-Please verify that:
+## 11. 请 Claude Code 重点审核
 
-- F0 recalculates but does not execute F1 cell deletion;
-- the exact inequality boundaries match the main plan;
-- all QC metrics are calculated only after per-sample `min.cells=3`;
-- raw rows remain intact and are not confused with the QC working space;
-- globin matching is exact and auditable;
-- sample1 regression is an enforced gate rather than narrative documentation;
-- author-reported processing and F0-observed effects are not conflated;
-- the ten gate items, output contracts, checksums and pause conditions are closed;
-- the laptop resource estimate remains credible;
-- no script starts F1 or uses MLMOD/outcome information.
+请核对以下内容：
+
+- F0 只重算规则影响，没有真正执行 F1 的细胞删除；
+- 不等式边界与主线方案完全一致；
+- 所有细胞 QC 指标都只在每个样本应用 `min.cells=3` 后计算；
+- 原始行保持不变，且没有与 QC 工作空间混淆；
+- globin 采用精确匹配且全过程可审计；
+- sample1 回归是强制 gate，而不是仅写在说明文字中的参考结果；
+- 作者报告的处理与 F0 实测影响没有混在一起；
+- 十项 gate、输出契约、校验和与暂停条件均已闭合；
+- 笔记本资源估算仍然可信；
+- 没有任何脚本自动启动 F1，也没有使用 MLMOD 或预后信息参与 F0 判断。

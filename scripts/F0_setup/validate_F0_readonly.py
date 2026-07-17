@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Read-only validation for the F0 fixed-QC implementation.
+"""只读验证 F0 固定 QC 的代码实现是否忠实于方案。
 
-This script writes only inside a temporary directory. It checks the frozen
-inequality boundaries, exact globin-panel matching, and the real sample1
-regression target without creating any formal F0 output.
+这个脚本相当于正式执行前的“单元考试”，重点检查：
+1. 每个 QC 不等式在等号边界处是否写对；
+2. HB 百分比是否只使用冻结 globin panel，而没有误收 HBEGF 等基因；
+3. 真实 sample1 是否复现已冻结的基准数字；
+4. Step2 的字段能否顺利传到 Step3 和 Step4 的十项 gate。
+
+脚本只在系统临时目录中写合成测试文件，结束后自动删除，不会生成任何正式
+F0 输出，也不会删除真实细胞。
 """
 
 from __future__ import annotations
@@ -29,17 +34,27 @@ from f0_utils import read_tsv
 
 
 def require_equal(observed: object, expected: object, label: str) -> None:
+    """比较实测值与预期值；不一致时给出容易定位的错误标签。"""
+
     if observed != expected:
         raise AssertionError(f"{label}: observed={observed!r}; expected={expected!r}")
 
 
 def validate_fixed_boundaries() -> None:
+    """用人工构造的 7 个细胞检查所有 QC 等号边界。
+
+    例如 nFeature=500 应保留、nFeature=6000 应排除；percent.mt=20 应
+    保留，而 percent.HB=5 应排除。这样可防止 ``<``、``<=`` 写反。
+    """
+
+    # 每个位置代表一个合成细胞，四个数组分别提供该细胞的 QC 原始量。
     ncount = np.asarray([2000, 2000, 2000, 2000, 1000, 1001, 2000], dtype=np.int64)
     nfeature = np.asarray([499, 500, 5999, 6000, 550, 550, 550], dtype=np.int32)
     mt_ncount = np.asarray([0, 400, 0, 0, 0, 201, 0], dtype=np.int64)
     hb_ncount = np.asarray([0, 0, 0, 0, 0, 0, 100], dtype=np.int64)
     result = assess_fixed_qc(ncount, nfeature, mt_ncount, hb_ncount, complete=True)
 
+    # 这些预期计数由冻结规则人工推导，不从正式脚本动态生成。
     expected = {
         "fail_nFeature_low_count": 1,
         "fail_nFeature_high_count": 1,
@@ -58,6 +73,8 @@ def validate_fixed_boundaries() -> None:
 
 
 def validate_exact_globin_matching(temp_dir: Path) -> None:
+    """构造小矩阵，确认只有 HBA1 被计入，三个假 ``HB`` 前缀基因被排除。"""
+
     path = temp_dir / "synthetic_nonpilot.csv.gz"
     barcodes = [
         "AAAAAAAAAAAAAAAA_1",
@@ -88,6 +105,8 @@ def validate_exact_globin_matching(temp_dir: Path) -> None:
 
 
 def validate_real_sample1(project_root: Path, temp_dir: Path) -> None:
+    """从真实压缩包临时提取 sample1，并复现冻结的 pilot 数字。"""
+
     archive = project_root / "data/public_downloads/GSE183904_RAW.tar"
     if not archive.exists():
         raise FileNotFoundError(f"Required pilot archive is missing: {archive}")
@@ -103,6 +122,7 @@ def validate_real_sample1(project_root: Path, temp_dir: Path) -> None:
         with target.open("wb") as handle:
             shutil.copyfileobj(source, handle)
 
+    # 调用与正式 Step2 完全相同的审计函数，避免测试和正式代码各算一套。
     result = audit_csv_gz(target)
     require_equal(result["pilot_validation_status"], "pass", "real sample1 regression")
     require_equal(result["qc_retained_feature_count"], 19294, "sample1 working features")
@@ -111,6 +131,12 @@ def validate_real_sample1(project_root: Path, temp_dir: Path) -> None:
 
 
 def validate_downstream_gate_contract(project_root: Path) -> None:
+    """用 40 个合成样本验证 Step2→Step3→Step4 的字段和 gate 契约。
+
+    这里不冒充真实 F0 结果，只测试字段名、状态值和 gate 判断能否闭合。
+    如果上游字段被改名而下游忘记同步，本测试会立即失败。
+    """
+
     audits = []
     samples = []
     processed_manifest = []
@@ -171,6 +197,7 @@ def validate_downstream_gate_contract(project_root: Path) -> None:
         )
         processed_manifest.append({"sha256": "A" * 64, "file_size": "1"})
 
+    # 处理史来源表使用真实只读文件；表达审计部分使用上面构造的合成结果。
     source_rows = read_tsv(
         project_root / "docs/source_verification/GSE183904_processing_history_source_audit.tsv"
     )
@@ -200,6 +227,8 @@ def validate_downstream_gate_contract(project_root: Path) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """依次运行四类只读验证；任何断言失败都会以非 0 状态退出。"""
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", default=".")
     args = parser.parse_args(argv)

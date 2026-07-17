@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
-"""F0 step 1: verify structure/archive, extract 40 matrices, and manifest them.
+"""F0 Step1：核验项目结构和压缩包，并提取 40 个样本矩阵。
 
-Dependencies: the preregistered F0 inputs, especially GSE183904_RAW.tar and
-download_manifest.tsv. Outputs: project_structure_ready.txt,
-processed_input_manifest.tsv, and the initialized analysis_log.md.
+为什么要做：后续所有单细胞分析都依赖这 40 个矩阵。必须先确认压缩包没有
+损坏、成员数量正确、文件名唯一，并锁定每个提取文件的 SHA256，才能保证
+以后分析使用的是同一份数据。
+
+主要输入：
+- ``data/public_downloads/GSE183904_RAW.tar``
+- ``data/metadata/download_manifest.tsv``
+
+主要输出：
+- ``data/metadata/project_structure_ready.txt``
+- ``data/metadata/processed_input_manifest.tsv``
+- ``logs/F0_setup/analysis_log.md``
+
+本步骤只提取并登记压缩矩阵，不读取表达值，也不做 QC 或删除细胞。
 """
 
 from __future__ import annotations
@@ -42,6 +53,8 @@ STAGE_OUTPUTS = [
 
 
 def write_project_structure(root: Path) -> None:
+    """建立缺失的标准目录，并记录本次确认过的项目根目录。"""
+
     for directory in REQUIRED_DIRS:
         (root / directory).mkdir(parents=True, exist_ok=True)
     path = root / "data/metadata/project_structure_ready.txt"
@@ -56,6 +69,8 @@ def write_project_structure(root: Path) -> None:
 
 
 def initialize_log(root: Path) -> None:
+    """在日志不存在时建立日志标题；已有日志不会被清空。"""
+
     path = root / "logs/F0_setup/analysis_log.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists() or path.stat().st_size == 0:
@@ -63,6 +78,8 @@ def initialize_log(root: Path) -> None:
 
 
 def tar_csv_members(tar_path: Path) -> List[tarfile.TarInfo]:
+    """列出压缩包内所有 ``csv.gz`` 文件，并按文件名排序。"""
+
     with tarfile.open(tar_path, "r") as archive:
         members = [
             member
@@ -73,6 +90,12 @@ def tar_csv_members(tar_path: Path) -> List[tarfile.TarInfo]:
 
 
 def extract_members(tar_path: Path, members: Sequence[tarfile.TarInfo], out_dir: Path) -> None:
+    """安全提取成员文件，同时防止压缩包路径跳出目标目录。
+
+    每个文件先写成 ``.tmp``，完整写入后再替换目标文件，以减少中断导致的
+    半文件风险。这里只保留 ``csv.gz``，不展开成体积更大的纯 CSV。
+    """
+
     out_dir.mkdir(parents=True, exist_ok=True)
     resolved_out = out_dir.resolve()
     with tarfile.open(tar_path, "r") as archive:
@@ -90,6 +113,8 @@ def extract_members(tar_path: Path, members: Sequence[tarfile.TarInfo], out_dir:
 
 
 def archive_expected_sha(root: Path) -> str:
+    """从已登记的下载 manifest 中读取原始压缩包预期 SHA256。"""
+
     rows = read_tsv(root / "data/metadata/download_manifest.tsv")
     row = next((item for item in rows if item.get("file_name") == "GSE183904_RAW.tar"), None)
     if row is None or not row.get("sha256"):
@@ -98,6 +123,8 @@ def archive_expected_sha(root: Path) -> str:
 
 
 def build_processed_manifest(root: Path, members: Sequence[tarfile.TarInfo]) -> List[Dict[str, object]]:
+    """为 40 个已提取矩阵生成文件大小、样本编号和 SHA256 清单。"""
+
     rows: List[Dict[str, object]] = []
     for member in members:
         name = Path(member.name).name
@@ -123,6 +150,9 @@ def build_processed_manifest(root: Path, members: Sequence[tarfile.TarInfo]) -> 
 
 
 def execute(root: Path) -> int:
+    """正式执行 Step1；任一完整性检查失败都会抛出错误并停止。"""
+
+    # 1. 先检查全部 F0 输入，而不是提取一半后才发现其他关键文件缺失。
     require_paths(root, REQUIRED_INPUTS, STAGE_NAME)
     write_project_structure(root)
     initialize_log(root)
@@ -131,6 +161,7 @@ def execute(root: Path) -> int:
         f"F0 step1 started; run_id={current_run_id()}; python={sys.version.split()[0]}; os={platform.platform()}",
     )
 
+    # 2. SHA256 相当于文件“指纹”。不一致意味着文件版本不同或发生损坏。
     tar_path = root / "data/public_downloads/GSE183904_RAW.tar"
     observed_sha = sha256_file(tar_path)
     expected_sha = archive_expected_sha(root)
@@ -140,6 +171,7 @@ def execute(root: Path) -> int:
             f"GSE183904_RAW.tar SHA256 mismatch: observed={observed_sha}; expected={expected_sha}"
         )
 
+    # 3. 本研究预期恰好 40 个样本；数量或文件名异常会破坏样本映射。
     members = tar_csv_members(tar_path)
     if len(members) != 40:
         append_log(root, f"BLOCKING expected 40 csv.gz members but observed {len(members)}")
@@ -149,6 +181,7 @@ def execute(root: Path) -> int:
         append_log(root, "BLOCKING archive csv.gz member basenames are not unique")
         raise RuntimeError("GSE183904 archive contains duplicate csv.gz member basenames")
 
+    # 4. 只有完整性检查通过后才提取，并为每个提取文件重新计算 SHA256。
     extract_members(tar_path, members, root / "data/processed_input/GSE183904")
     manifest = build_processed_manifest(root, members)
     fields = [
@@ -172,6 +205,8 @@ def execute(root: Path) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """默认执行只读检查；显式提供 ``--execute`` 后才写正式输出。"""
+
     args = parse_stage_args(__doc__ or STAGE_NAME, argv)
     root = Path(args.project_root).resolve()
     if not args.execute:
