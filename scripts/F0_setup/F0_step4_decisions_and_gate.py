@@ -21,7 +21,11 @@ from typing import Dict, List, Sequence
 
 import numpy as np
 
-from F0_step3_inventory_and_markers import F0_SCRIPT_PATHS, build_file_manifest
+from F0_step3_inventory_and_markers import (
+    F0_ENVIRONMENT_LOCK_PATHS,
+    F0_SCRIPT_PATHS,
+    build_file_manifest,
+)
 from f0_utils import (
     F0_OUTPUTS,
     append_log,
@@ -517,6 +521,10 @@ def build_gate_checklist(
             and row.get("normalization_artifact_flag") == "false"
             and row.get("observed_numeric_type") == "nonnegative_integer_count_like"
             and row.get("suspected_matrix_type") == "public_called_cell_raw_gene_count_matrix"
+            and row.get("matrix_orientation") == "gene_by_cell"
+            and row.get("matrix_orientation_validation_status") == "pass_gene_by_cell"
+            and row.get("row_label_cell_barcode_like_count") == "0"
+            and row.get("cell_barcode_pattern") == "10x_16nt_barcode_with_numeric_suffix"
             and row.get("processed_input_manifest_match") == "true"
             and row.get("per_gene_mean_distribution_status") == "consistent_with_sparse_right_skew"
             and row.get("public_processing_evidence_status")
@@ -539,7 +547,7 @@ def build_gate_checklist(
     )
     add(
         "data_audit",
-        "40 rows; included samples pass numeric/distribution/mapping checks; one min.cells=3 QC space and the fixed rule are evaluable; sample1 frozen regression passes",
+        "40 rows; gene-by-cell orientation is confirmed; included samples pass numeric/distribution/mapping checks; one min.cells=3 QC space and the fixed rule are evaluable; sample1 frozen regression passes",
         f"{len(data_audit)} rows; included={len(included_audits)}; pause={sum(1 for row in data_audit if row.get('audit_decision') != 'enter_full_F1_independent_reQC')}; pilot={'pass' if pilot_ok else 'fail'}",
         pass_fail(audit_ok),
         "blocking",
@@ -757,7 +765,7 @@ def build_gate_checklist(
         "data/metadata/cell_type_marker_panel.tsv; results/F0_audit/marker_panel_issue_report.tsv (conditional)",
         "F0 never modifies the marker panel.",
     )
-    # Gate 10：全部契约表存在，7 个正式 F0 脚本均有合法大写 SHA256。
+    # Gate 10：全部契约表存在，7 个正式脚本和 2 个 F0 环境锁均有合法大写 SHA256。
     required_contract_files = [
         "data/metadata/F0_dataset_inventory.tsv",
         "data/metadata/F0_file_manifest.tsv",
@@ -792,13 +800,28 @@ def build_gate_checklist(
             or any(character not in "0123456789ABCDEF" for character in checksum)
         ):
             script_checksum_failures.append(script_path)
+    environment_lock_checksum_failures = []
+    for lock_path in F0_ENVIRONMENT_LOCK_PATHS:
+        manifest_row = file_manifest_by_path.get(lock_path, {})
+        checksum = manifest_row.get("sha256", "")
+        if (
+            len(checksum) != 64
+            or checksum != checksum.upper()
+            or any(character not in "0123456789ABCDEF" for character in checksum)
+        ):
+            environment_lock_checksum_failures.append(lock_path)
     add(
         "required_F0_contract_tables",
-        "all inventory, readiness, method, decision and exclusion tables exist; every F0 script has an uppercase SHA256 in F0_file_manifest.tsv",
+        "all inventory, readiness, method, decision and exclusion tables exist; every F0 script and F0 environment lock has an uppercase SHA256 in F0_file_manifest.tsv",
         f"present={len(required_contract_files) - len(missing_contract_files)}/{len(required_contract_files)}; "
         f"missing={','.join(missing_contract_files) or 'none'}; "
-        f"script_checksum_failures={','.join(script_checksum_failures) or 'none'}",
-        pass_fail(not missing_contract_files and not script_checksum_failures),
+        f"script_checksum_failures={','.join(script_checksum_failures) or 'none'}; "
+        f"environment_lock_checksum_failures={','.join(environment_lock_checksum_failures) or 'none'}",
+        pass_fail(
+            not missing_contract_files
+            and not script_checksum_failures
+            and not environment_lock_checksum_failures
+        ),
         "blocking",
         "; ".join(required_contract_files),
     )

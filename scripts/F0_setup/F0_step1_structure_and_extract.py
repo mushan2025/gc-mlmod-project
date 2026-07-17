@@ -123,7 +123,11 @@ def archive_expected_sha(root: Path) -> str:
 
 
 def build_processed_manifest(root: Path, members: Sequence[tarfile.TarInfo]) -> List[Dict[str, object]]:
-    """为 40 个已提取矩阵生成文件大小、样本编号和 SHA256 清单。"""
+    """为 40 个已提取候选矩阵生成文件大小、样本编号和 SHA256 清单。
+
+    Step1 只根据压缩包成员和文件名登记“预期为基因 × 细胞”，不能据此证明
+    矩阵方向。真正的方向验证由 Step2 读取表头和行名后完成。
+    """
 
     rows: List[Dict[str, object]] = []
     for member in members:
@@ -142,8 +146,13 @@ def build_processed_manifest(root: Path, members: Sequence[tarfile.TarInfo]) -> 
                 "file_size": path.stat().st_size,
                 "sha256": sha256_file(path),
                 "extraction_date": now_iso(),
-                "file_role": "cell_ranger_derived_public_called_cell_raw_gene_count_gene_by_cell_matrix",
-                "note": "Compressed csv.gz retained; no permanent plain CSV extraction.",
+                "file_role": "expected_gene_by_cell_matrix_pending_validation",
+                "expected_matrix_orientation": "gene_by_cell",
+                "orientation_validation_status": "pending_F0_step2_full_stream_validation",
+                "note": (
+                    "Compressed csv.gz retained; no permanent plain CSV extraction. "
+                    "Filename and extension do not prove orientation; Step2 must validate row/column identities."
+                ),
             }
         )
     return rows
@@ -194,6 +203,8 @@ def execute(root: Path) -> int:
         "sha256",
         "extraction_date",
         "file_role",
+        "expected_matrix_orientation",
+        "orientation_validation_status",
         "note",
     ]
     write_tsv(root / "data/metadata/processed_input_manifest.tsv", manifest, fields)

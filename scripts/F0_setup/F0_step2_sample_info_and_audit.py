@@ -42,6 +42,7 @@ from f0_utils import (
     require_paths,
     sha256_equal,
     sha256_file,
+    validate_f0_python_environment,
     write_tsv,
 )
 
@@ -51,6 +52,8 @@ STAGE_REQUIRED = [
     "data/metadata/processed_input_manifest.tsv",
     "data/public_downloads/GEO_metadata/GSE183904_series_matrix.txt.gz",
     "results/F0_audit/gse183904_csv_structure_precheck.tsv",
+    "environment/F0/requirements.txt",
+    "environment/F0/environment.yml",
 ]
 STAGE_OUTPUTS = [
     "data/metadata/sample_info.tsv",
@@ -110,6 +113,7 @@ GLOBIN_PANEL_SET = frozenset(GLOBIN_PANEL)
 PILOT_FILE_NAME = "GSM5573466_sample1.csv.gz"
 PILOT_EXPECTED = {
     "matrix_cols_cells": 2685,
+    "row_label_cell_barcode_like_count": 0,
     "qc_retained_feature_count": 19294,
     "source_reported_qc_pass_count": 2684,
     "additional_fail_nCount_after_source_count": 53,
@@ -803,6 +807,18 @@ def validate_frozen_pilot(
         + "|".join(sorted(PILOT_EXPECTED_GLOBIN_GENES_USED))
         + f",status={'pass' if globin_passed else 'fail'})"
     )
+    orientation_passed = (
+        observed.get("matrix_orientation") == "gene_by_cell"
+        and observed.get("matrix_orientation_validation_status") == "pass_gene_by_cell"
+    )
+    passed = passed and orientation_passed
+    checks.append(
+        "matrix_orientation="
+        f"{observed.get('matrix_orientation', '')}; "
+        "validation_status="
+        f"{observed.get('matrix_orientation_validation_status', '')}"
+        f"(expected=gene_by_cell/pass_gene_by_cell,status={'pass' if orientation_passed else 'fail'})"
+    )
     return {
         "pilot_validation_applicable": "true",
         "pilot_validation_status": "pass" if passed else "fail",
@@ -838,6 +854,7 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
     gene_names: set[str] = set()
     gene_duplicate_count = 0
     gene_name_issue_count = 0
+    row_label_cell_barcode_like_count = 0
     gene_means: List[float] = []
     gene_detected_in_0_cells = 0
     gene_detected_in_1_cell = 0
@@ -893,6 +910,8 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
             upper_gene = gene.upper()
             is_mt_gene = upper_gene.startswith("MT-")
             is_globin_panel_gene = upper_gene in GLOBIN_PANEL_SET
+            if CELL_BARCODE.fullmatch(gene):
+                row_label_cell_barcode_like_count += 1
             if observed_cells != expected_cells:
                 bad_column_count_rows += 1
                 ncount_complete = False
@@ -987,6 +1006,26 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
                 false_hb_prefix_genes_excluded.add(upper_gene)
 
     # 文件扫描结束后，把累计量转换成每个样本的一行结构化审计结果。
+    # 矩阵方向不能由 .csv.gz 扩展名推断。只有“列名像 10x barcode、行名像基因、
+    # 行名不整体像 barcode、左上角为空”同时成立，才确认 gene × cell。
+    row_gene_identity_confirmed = (
+        rows > 0
+        and gene_name_issue_count == 0
+        and row_label_cell_barcode_like_count == 0
+    )
+    orientation_confirmed = (
+        first_header_blank
+        and cell_barcode_pattern == "10x_16nt_barcode_with_numeric_suffix"
+        and row_gene_identity_confirmed
+    )
+    orientation_evidence = (
+        f"first_header_blank={'true' if first_header_blank else 'false'}; "
+        f"column_barcode_pattern={cell_barcode_pattern}; "
+        f"row_gene_name_issue_count={gene_name_issue_count}; "
+        f"row_label_cell_barcode_like_count={row_label_cell_barcode_like_count}; "
+        f"rows={rows}; columns={expected_cells}"
+    )
+
     numeric_anomaly_count = (
         missing_value_count
         + noninteger_float_count
@@ -1030,6 +1069,11 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
         if gene in globin_panel_present and gene not in globin_panel_used_for_qc
     ]
     result: Dict[str, object] = {
+        "matrix_orientation": "gene_by_cell" if orientation_confirmed else "not_confirmed",
+        "matrix_orientation_validation_status": (
+            "pass_gene_by_cell" if orientation_confirmed else "fail_not_gene_by_cell"
+        ),
+        "matrix_orientation_validation_evidence": orientation_evidence,
         "matrix_rows_genes": rows,
         "matrix_cols_cells": expected_cells,
         "header_total_columns_including_gene_col": len(header_fields),
@@ -1037,14 +1081,23 @@ def audit_csv_gz(path: Path) -> Dict[str, object]:
         "first_genes": "|".join(first_genes),
         "barcode_suffix_examples": "|".join(barcode_suffixes),
         "row_identity": (
-            "gene_symbol_or_ensembl_like_name" if gene_name_issue_count == 0 else "mixed_or_invalid_gene_name"
+            "gene_symbol_or_ensembl_like_name"
+            if row_gene_identity_confirmed
+            else "cell_barcode_like_or_invalid_row_labels"
         ),
-        "column_identity": "cell_barcode",
+        "column_identity": (
+            "cell_barcode"
+            if cell_barcode_pattern == "10x_16nt_barcode_with_numeric_suffix"
+            else "not_confirmed_cell_barcode"
+        ),
         "first_header_blank": "true" if first_header_blank else "false",
         "gene_name_type": (
-            "gene_symbol_or_ensembl_like_name" if gene_name_issue_count == 0 else "mixed_or_invalid_gene_name"
+            "gene_symbol_or_ensembl_like_name"
+            if row_gene_identity_confirmed
+            else "cell_barcode_like_or_invalid_row_labels"
         ),
         "gene_name_issue_count": gene_name_issue_count,
+        "row_label_cell_barcode_like_count": row_label_cell_barcode_like_count,
         "cell_barcode_pattern": cell_barcode_pattern,
         "gene_duplicate_count": gene_duplicate_count,
         "cell_barcode_duplicate_count": cell_barcode_duplicate_count,
@@ -1178,6 +1231,8 @@ def build_data_audit(
         precheck_match = not row_mismatches
         # 将每类失败原因单独保存，便于用户和审核者判断问题出在哪里。
         structural_failures: List[str] = []
+        if stats["matrix_orientation_validation_status"] != "pass_gene_by_cell":
+            structural_failures.append("matrix_orientation_not_confirmed_as_gene_by_cell")
         if stats["observed_numeric_type"] != "nonnegative_integer_count_like":
             structural_failures.append("numeric_or_column_structure_issue")
         if stats["first_header_blank"] != "true":
@@ -1229,7 +1284,8 @@ def build_data_audit(
         if ok:
             decision_reason = (
                 "full-stream numeric/structure audit passed; per-cell nCount showed no preregistered "
-                "normalization artifact; all 26571 archived feature rows remain unchanged; one per-sample "
+                "normalization artifact; row/column identities confirmed gene-by-cell orientation; all 26571 "
+                "archived feature rows remain unchanged; one per-sample "
                 "min.cells=3 working feature space was built and nCount, nFeature, percent.mt and percent.HB "
                 "were recalculated there; the fixed source-aligned plus project QC rule was fully evaluable; "
                 "the frozen globin panel was applied by exact gene matching; sparse right-skew evidence was "
@@ -1259,7 +1315,6 @@ def build_data_audit(
                 "processed_input_manifest_match": "true" if processed_match else "false",
                 "file_format": "csv",
                 "compressed": "true",
-                "matrix_orientation": "gene_by_cell",
                 **stats,
                 "legacy_numeric_precheck_status": legacy_status,
                 "legacy_hb_precheck_status": "not_compared_definition_changed_to_frozen_exact_globin_panel",
@@ -1295,6 +1350,18 @@ def validate_step1_manifest(root: Path, rows: Sequence[Dict[str, str]]) -> None:
         if not member or member in seen:
             raise RuntimeError(f"Duplicate or empty archive member in processed manifest: {member!r}")
         seen.add(member)
+        if (
+            row.get("file_role") != "expected_gene_by_cell_matrix_pending_validation"
+            or row.get("expected_matrix_orientation") != "gene_by_cell"
+            or row.get("orientation_validation_status")
+            != "pending_F0_step2_full_stream_validation"
+        ):
+            raise RuntimeError(
+                f"Step1 orientation contract is invalid for {member}: "
+                f"file_role={row.get('file_role', '')}; "
+                f"expected={row.get('expected_matrix_orientation', '')}; "
+                f"status={row.get('orientation_validation_status', '')}"
+            )
         path = root / row.get("extracted_path", "")
         if not path.exists():
             raise RuntimeError(f"Extracted matrix missing: {path}")
@@ -1311,6 +1378,11 @@ def execute(root: Path) -> int:
 
     # 1. 输入与 Step1 文件完整性核验。
     require_paths(root, STAGE_REQUIRED, STAGE_NAME)
+    validate_f0_python_environment(
+        root,
+        actual_python_version=sys.version.split()[0],
+        actual_numpy_version=np.__version__,
+    )
     manifest = read_tsv(root / "data/metadata/processed_input_manifest.tsv")
     validate_step1_manifest(root, manifest)
     append_log(
@@ -1363,6 +1435,7 @@ def execute(root: Path) -> int:
         "precheck.audit_decision_precheck=enter_full_F1_candidate -> "
         "audit_decision=enter_full_F1_independent_reQC only after formal audit; "
         "legacy broad HB count is not compared because HB_percent now uses the frozen exact globin panel; "
+        "Step1 orientation is an expectation only and Step2 validates row/column identities; "
         "suspected_matrix_type records public input shape only; raw_full_nCount and the single min.cells=3 "
         "QC metric space are stored separately",
     )
@@ -1377,6 +1450,8 @@ def execute(root: Path) -> int:
         "file_format",
         "compressed",
         "matrix_orientation",
+        "matrix_orientation_validation_status",
+        "matrix_orientation_validation_evidence",
         "matrix_rows_genes",
         "matrix_cols_cells",
         "header_total_columns_including_gene_col",
@@ -1387,6 +1462,7 @@ def execute(root: Path) -> int:
         "first_header_blank",
         "gene_name_type",
         "gene_name_issue_count",
+        "row_label_cell_barcode_like_count",
         "cell_barcode_pattern",
         "barcode_suffix_examples",
         "gene_duplicate_count",

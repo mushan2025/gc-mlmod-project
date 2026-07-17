@@ -24,6 +24,8 @@ from typing import Dict, Iterable, List, Sequence
 # F0 本身没有随机算法，但仍登记统一随机种子，便于后续阶段沿用和审计。
 RANDOM_SEED = 42
 RUN_ID = dt.datetime.now(dt.timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
+F0_EXPECTED_PYTHON_VERSION = "3.10.11"
+F0_EXPECTED_NUMPY_VERSION = "2.2.6"
 
 # F0 正式运行必须生成的完整输出契约。Step4 会检查这些文件是否齐全。
 F0_OUTPUTS = [
@@ -103,6 +105,8 @@ REQUIRED_INPUTS = [
     "environment/execution_environment_inventory.tsv",
     "environment/environment_lock_manifest.tsv",
     "environment/random_seed_registry.tsv",
+    "environment/F0/requirements.txt",
+    "environment/F0/environment.yml",
     "results/F0_audit/gse183904_csv_structure_precheck.tsv",
     "results/F0_audit/non_GSE183904_data_structure_precheck.tsv",
     "results/F0_audit/predownloaded_resource_structure_audit.tsv",
@@ -130,6 +134,61 @@ def now_iso() -> str:
     """返回带时区的当前时间，用于日志和 manifest。"""
 
     return dt.datetime.now(dt.timezone.utc).astimezone().isoformat(timespec="seconds")
+
+
+def validate_f0_python_environment(
+    root: Path,
+    actual_python_version: str,
+    actual_numpy_version: str,
+) -> None:
+    """核对 F0 实际 Python/NumPy 版本及两份独立依赖规格。
+
+    requirements.txt 和 environment.yml 是 pip/Conda 两条替代路线，不要求
+    同时安装；但两份受 Git 管理的规格必须表达同一组获批核心版本。
+    """
+
+    requirements_path = root / "environment/F0/requirements.txt"
+    conda_path = root / "environment/F0/environment.yml"
+    requirement_lines = [
+        line.strip()
+        for line in requirements_path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    expected_requirements = [f"numpy=={F0_EXPECTED_NUMPY_VERSION}"]
+    if requirement_lines != expected_requirements:
+        raise RuntimeError(
+            f"F0 requirements mismatch: observed={requirement_lines}; "
+            f"expected={expected_requirements}"
+        )
+
+    conda_lines = [
+        line.strip()
+        for line in conda_path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    expected_conda_lines = [
+        "name: gc-mlmod-f0",
+        "channels:",
+        "- conda-forge",
+        "dependencies:",
+        f"- python={F0_EXPECTED_PYTHON_VERSION}",
+        f"- numpy={F0_EXPECTED_NUMPY_VERSION}",
+    ]
+    if conda_lines != expected_conda_lines:
+        raise RuntimeError(
+            f"F0 Conda specification mismatch: observed={conda_lines}; "
+            f"expected={expected_conda_lines}"
+        )
+    if actual_python_version != F0_EXPECTED_PYTHON_VERSION:
+        raise RuntimeError(
+            f"F0 Python version mismatch: observed={actual_python_version}; "
+            f"expected={F0_EXPECTED_PYTHON_VERSION}"
+        )
+    if actual_numpy_version != F0_EXPECTED_NUMPY_VERSION:
+        raise RuntimeError(
+            f"F0 NumPy version mismatch: observed={actual_numpy_version}; "
+            f"expected={F0_EXPECTED_NUMPY_VERSION}"
+        )
 
 
 def normalize_sha256(value: object) -> str:

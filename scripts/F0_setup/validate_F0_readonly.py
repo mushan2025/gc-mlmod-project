@@ -2,10 +2,13 @@
 """只读验证 F0 固定 QC 的代码实现是否忠实于方案。
 
 这个脚本相当于正式执行前的“单元考试”，重点检查：
-1. 每个 QC 不等式在等号边界处是否写对；
-2. HB 百分比是否只使用冻结 globin panel，而没有误收 HBEGF 等基因；
-3. 真实 sample1 是否复现已冻结的基准数字；
-4. Step2 的字段能否顺利传到 Step3 和 Step4 的十项 gate。
+1. Step1 是否只登记“预期方向、待 Step2 验证”；
+2. Step2 能否接受 gene × cell 并拒绝 cell × gene；
+3. 每个 QC 不等式在等号边界处是否写对；
+4. HB 百分比是否只使用冻结 globin panel，而没有误收 HBEGF 等基因；
+5. 真实 sample1 是否复现已冻结的基准数字；
+6. Step2 的字段能否顺利传到 Step3 和 Step4 的十项 gate；
+7. F0 独立 Python 环境文件是否与当前获批版本一致。
 
 脚本只在系统临时目录中写合成测试文件，结束后自动删除，不会生成任何正式
 F0 输出，也不会删除真实细胞。
@@ -16,6 +19,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import shutil
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
@@ -23,14 +27,23 @@ from typing import Sequence
 
 import numpy as np
 
-from F0_step2_sample_info_and_audit import assess_fixed_qc, audit_csv_gz
-from F0_step3_inventory_and_markers import build_author_processing_audit
+from F0_step1_structure_and_extract import build_processed_manifest
+from F0_step2_sample_info_and_audit import (
+    assess_fixed_qc,
+    audit_csv_gz,
+    validate_step1_manifest,
+)
+from F0_step3_inventory_and_markers import (
+    F0_ENVIRONMENT_LOCK_PATHS,
+    build_author_processing_audit,
+    build_file_manifest,
+)
 from F0_step4_decisions_and_gate import (
     EXPECTED_GLOBIN_PANEL,
     PILOT_FILE_NAME,
     build_gate_checklist,
 )
-from f0_utils import read_tsv
+from f0_utils import read_tsv, validate_f0_python_environment
 
 
 def require_equal(observed: object, expected: object, label: str) -> None:
@@ -38,6 +51,62 @@ def require_equal(observed: object, expected: object, label: str) -> None:
 
     if observed != expected:
         raise AssertionError(f"{label}: observed={observed!r}; expected={expected!r}")
+
+
+def validate_f0_environment_lock(project_root: Path) -> None:
+    """确认 F0 的 pip/Conda 两套替代规格与实际获批运行时一致。"""
+
+    validate_f0_python_environment(
+        project_root,
+        actual_python_version=sys.version.split()[0],
+        actual_numpy_version=np.__version__,
+    )
+
+    lock_registry = {
+        row.get("lock_item", ""): row
+        for row in read_tsv(project_root / "environment/environment_lock_manifest.tsv")
+    }
+    for lock_item in ("F0_pip_requirements", "F0_conda_environment"):
+        require_equal(lock_registry.get(lock_item, {}).get("lock_status"), "recorded", lock_item)
+
+    # 在内存中生成 file manifest，确认两个环境文件都会得到大写 SHA256。
+    manifest_rows = build_file_manifest(project_root, [], [])
+    manifest_by_path = {
+        row.get("relative_path_if_available", ""): row for row in manifest_rows
+    }
+    for lock_path in F0_ENVIRONMENT_LOCK_PATHS:
+        checksum = manifest_by_path.get(lock_path, {}).get("sha256", "")
+        require_equal(len(checksum), 64, f"{lock_path} SHA256 length")
+        require_equal(checksum, checksum.upper(), f"{lock_path} SHA256 uppercase")
+
+
+def validate_step1_pending_orientation_contract(temp_dir: Path) -> None:
+    """确认 Step1 manifest 只写预期方向，不提前声称已经验证。"""
+
+    root = temp_dir / "step1_contract"
+    matrix_dir = root / "data/processed_input/GSE183904"
+    matrix_dir.mkdir(parents=True)
+    members = []
+    for index in range(1, 41):
+        name = f"GSM{index:07d}_sample{index}.csv.gz"
+        (matrix_dir / name).write_bytes(
+            f"temporary orientation-contract test {index}".encode("ascii")
+        )
+        members.append(tarfile.TarInfo(name=name))
+    manifest_rows = build_processed_manifest(root, members)
+    validate_step1_manifest(root, manifest_rows)
+    row = manifest_rows[0]
+    require_equal(
+        row["file_role"],
+        "expected_gene_by_cell_matrix_pending_validation",
+        "Step1 pending-orientation file role",
+    )
+    require_equal(row["expected_matrix_orientation"], "gene_by_cell", "Step1 expected orientation")
+    require_equal(
+        row["orientation_validation_status"],
+        "pending_F0_step2_full_stream_validation",
+        "Step1 pending orientation status",
+    )
 
 
 def validate_fixed_boundaries() -> None:
@@ -95,6 +164,12 @@ def validate_exact_globin_matching(temp_dir: Path) -> None:
             handle.write(gene + "," + ",".join(str(value) for value in values) + "\n")
 
     result = audit_csv_gz(path)
+    require_equal(result["matrix_orientation"], "gene_by_cell", "gene-by-cell orientation")
+    require_equal(
+        result["matrix_orientation_validation_status"],
+        "pass_gene_by_cell",
+        "gene-by-cell validation state",
+    )
     require_equal(result["globin_panel_used_for_qc"], "HBA1", "exact globin inclusion")
     require_equal(
         result["false_hb_prefix_genes_excluded"],
@@ -102,6 +177,31 @@ def validate_exact_globin_matching(temp_dir: Path) -> None:
         "false HB-prefix exclusion",
     )
     require_equal(result["pilot_validation_status"], "not_applicable", "synthetic pilot state")
+
+
+def validate_reversed_orientation_rejected(temp_dir: Path) -> None:
+    """构造 cell × gene 矩阵，确认 Step2 不会把它误报为 gene × cell。"""
+
+    path = temp_dir / "synthetic_cell_by_gene.csv.gz"
+    genes = ["HBA1", "GENE1", "MT-ND1"]
+    barcode_rows = [
+        ("AAAAAAAAAAAAAAAA_1", [1, 2, 3]),
+        ("CCCCCCCCCCCCCCCC_1", [4, 5, 6]),
+        ("GGGGGGGGGGGGGGGG_1", [7, 8, 9]),
+    ]
+    with gzip.open(path, "wt", encoding="utf-8", newline="") as handle:
+        handle.write("," + ",".join(genes) + "\n")
+        for barcode, values in barcode_rows:
+            handle.write(barcode + "," + ",".join(str(value) for value in values) + "\n")
+
+    result = audit_csv_gz(path)
+    require_equal(result["matrix_orientation"], "not_confirmed", "cell-by-gene rejection")
+    require_equal(
+        result["matrix_orientation_validation_status"],
+        "fail_not_gene_by_cell",
+        "cell-by-gene validation state",
+    )
+    require_equal(result["row_label_cell_barcode_like_count"], 3, "barcode-like row labels")
 
 
 def validate_real_sample1(project_root: Path, temp_dir: Path) -> None:
@@ -125,6 +225,12 @@ def validate_real_sample1(project_root: Path, temp_dir: Path) -> None:
     # 调用与正式 Step2 完全相同的审计函数，避免测试和正式代码各算一套。
     result = audit_csv_gz(target)
     require_equal(result["pilot_validation_status"], "pass", "real sample1 regression")
+    require_equal(result["matrix_orientation"], "gene_by_cell", "sample1 matrix orientation")
+    require_equal(
+        result["matrix_orientation_validation_status"],
+        "pass_gene_by_cell",
+        "sample1 orientation validation",
+    )
     require_equal(result["qc_retained_feature_count"], 19294, "sample1 working features")
     require_equal(result["source_reported_qc_pass_count"], 2684, "sample1 source-rule pass")
     require_equal(result["final_fixed_qc_pass_count"], 2631, "sample1 final fixed-QC pass")
@@ -148,6 +254,10 @@ def validate_downstream_gate_contract(project_root: Path) -> None:
                 "file_name": file_name,
                 "include_in_f1": "true",
                 "matrix_cols_cells": "2685",
+                "matrix_orientation": "gene_by_cell",
+                "matrix_orientation_validation_status": "pass_gene_by_cell",
+                "row_label_cell_barcode_like_count": "0",
+                "cell_barcode_pattern": "10x_16nt_barcode_with_numeric_suffix",
                 "source_reported_qc_pass_count": "2684",
                 "final_fixed_qc_pass_count": "2631",
                 "final_fixed_qc_fail_count": "54",
@@ -234,14 +344,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     project_root = Path(args.project_root).resolve()
 
+    validate_f0_environment_lock(project_root)
     validate_fixed_boundaries()
     with tempfile.TemporaryDirectory(prefix="f0_readonly_validation_") as temp_name:
         temp_dir = Path(temp_name)
+        validate_step1_pending_orientation_contract(temp_dir)
         validate_exact_globin_matching(temp_dir)
+        validate_reversed_orientation_rejected(temp_dir)
         validate_real_sample1(project_root, temp_dir)
     validate_downstream_gate_contract(project_root)
 
     print("F0 read-only validation: PASS")
+    print("- F0 Python environment locks: PASS")
+    print("- Step1 pending-orientation contract: PASS")
+    print("- gene-by-cell accepted / cell-by-gene rejected: PASS")
     print("- fixed inequality boundaries: PASS")
     print("- exact globin-panel matching: PASS")
     print("- real sample1 frozen regression: PASS")

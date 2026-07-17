@@ -1,0 +1,8 @@
+# F0 的独立 Conda 环境规格。
+# 这是 requirements.txt 之外的另一种环境创建方式，两者无需重复安装。
+name: gc-mlmod-f0
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.11
+  - numpy=2.2.6

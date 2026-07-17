@@ -128,6 +128,13 @@ F0_SCRIPT_PATHS = [
     "scripts/F0_setup/validate_F0_readonly.py",
 ]
 
+# F0 依赖环境与后续 F 节分开管理。这两个文件是 pip/Conda 两条可替代路线，
+# 都进入 manifest 锁定，但正式机器只需采用其中一条获批路线。
+F0_ENVIRONMENT_LOCK_PATHS = [
+    "environment/F0/requirements.txt",
+    "environment/F0/environment.yml",
+]
+
 
 def summarize_unique(values: Iterable[str], max_items: int = 8) -> str:
     """压缩显示字段的不同取值及频数，避免清单单元格无限变长。"""
@@ -667,7 +674,8 @@ def build_file_manifest(
 ) -> List[Dict[str, object]]:
     """建立文件级来源、大小、SHA256、用途和审核优先级清单。
 
-    正式 F0 的 7 个脚本也进入此表，从而能够证明某次结果由哪一版代码生成。
+    正式 F0 的 7 个脚本和 2 个环境锁文件也进入此表，从而能够证明某次结果
+    由哪一版代码和依赖规格生成。
     manifest 自身的 SHA256 故意留空，因为把自己的校验和写入自身会形成循环。
     """
 
@@ -813,6 +821,45 @@ def build_file_manifest(
                 "publication_destination": "not_planned",
                 "review_priority": "full",
                 "note": "SHA256 is written in uppercase; git commit records the reviewed source state.",
+            }
+        )
+    for lock_relative_path in F0_ENVIRONMENT_LOCK_PATHS:
+        lock_path = root / lock_relative_path
+        is_conda = lock_path.name == "environment.yml"
+        rows.append(
+            {
+                "file_name": lock_path.name,
+                "relative_path_if_available": lock_relative_path,
+                "dataset_id": "F0",
+                "file_role": (
+                    "F0_conda_environment_specification"
+                    if is_conda
+                    else "F0_pip_dependency_lock"
+                ),
+                "data_domain": "execution_environment",
+                "source_type": "git_tracked_F0_environment_lock",
+                "source_url_or_local_manifest": "environment/environment_lock_manifest.tsv",
+                "file_size_bytes": lock_path.stat().st_size if lock_path.exists() else "",
+                "sha256": sha256_file(lock_path) if lock_path.exists() else "",
+                "compression_format": lock_path.suffix.lstrip("."),
+                "read_status": "checksum_recorded" if lock_path.exists() else "missing",
+                "availability_status": (
+                    "project_local_available" if lock_path.exists() else "not_found_at_expected_path"
+                ),
+                "used_in_F0": "environment_reproduction_contract",
+                "planned_F_section_use": "F0_only",
+                "audit_status": (
+                    "environment_checksum_locked_at_F0_execution"
+                    if lock_path.exists()
+                    else "missing"
+                ),
+                "artifact_class": "audit_trail",
+                "publication_destination": "not_planned",
+                "review_priority": "full",
+                "note": (
+                    "F0-only dependency specification; pip and Conda are alternative setup routes, "
+                    "not two environments to combine-install."
+                ),
             }
         )
     for output in generated_paths:

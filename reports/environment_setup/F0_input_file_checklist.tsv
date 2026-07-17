@@ -8,7 +8,7 @@ F0_IN_006	data/metadata/cell_type_marker_panel.tsv	marker panel readiness	yes	pr
 F0_IN_007	data/metadata/pipeline_parameters.yaml	parameter baseline	yes	project_local_available	Records seed and environment baseline; F0 may read but should not silently change approved settings.
 F0_IN_008	data/metadata/software_versions.tsv	software baseline	yes	project_local_available	Records current local tool/package state.
 F0_IN_009	environment/execution_environment_inventory.tsv	environment baseline	yes	project_local_available	Default laptop inventory.
-F0_IN_010	environment/environment_lock_manifest.tsv	environment baseline	yes	project_local_available	Records explicit R path and missing lock/package state.
+F0_IN_010	environment/environment_lock_manifest.tsv	environment baseline	yes	project_local_available	Records explicit runtime paths and per-section dependency-lock status, including the F0 pip and Conda specifications.
 F0_IN_011	environment/random_seed_registry.tsv	seed baseline	yes	project_local_available	May be header-only before randomized analyses.
 F0_IN_012	results/F0_audit/gse183904_csv_structure_precheck.tsv	GSE183904 formal audit comparison	yes	project_local_available	Formal data_audit compares structural/numeric key fields and gene-order SHA256; the legacy broad HB count is not reused because HB_percent now uses the frozen exact globin panel.
 F0_IN_013	results/F0_audit/non_GSE183904_data_structure_precheck.tsv	global data inventory	yes	project_local_available	Used to populate non-GSE183904 data map.
@@ -21,3 +21,5 @@ F0_IN_019	results/F0_audit/TCGA_STAD_star_counts_inverse_validation.tsv	TCGA met
 F0_IN_020	results/F0_audit/GSE206785_dataset_structure_precheck.tsv	external scRNA candidate map	yes	project_local_available	Processed external scRNA candidate, not raw QC input.
 F0_IN_021	results/F0_audit/GSE206785_metadata_precheck.tsv	external scRNA metadata map	yes	project_local_available	Used for external scRNA metadata inventory.
 F0_IN_022	docs/source_verification/GSE183904_processing_history_source_audit.tsv	GSE183904 end-to-end processing provenance	yes	project_local_available	Primary-source audit separating pre-export processing, public-matrix observations, post-export author analysis and unresolved history; drives F1 method constraints.
+F0_IN_023	environment/F0/requirements.txt	F0 Python dependency lock	yes	project_local_available	Minimal pip route for F0 only; pins NumPy 2.2.6 and is paired with the separately recorded Python 3.10.11 runtime.
+F0_IN_024	environment/F0/environment.yml	F0 Conda environment specification	yes	project_local_available	Alternative F0-only environment route; pins Python 3.10.11 and NumPy 2.2.6. Do not combine-install both routes.

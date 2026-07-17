@@ -27,6 +27,7 @@ F0 **不会**删除细胞、创建过滤后的 Seurat 对象、运行双细胞�
 对 sample1 完整文件的 pilot 检查得到：
 
 - 2,685 个公开细胞，26,571 个存档 feature 行；
+- 列名全部符合本数据的 10x 16 nt barcode 加数字后缀格式，行名中 barcode-like 数为 0，方向状态为 `pass_gene_by_cell`；
 - 每个样本应用 `min.cells=3` 后有 19,294 个工作 feature；
 - 2,684 个细胞通过原研究报告的 `nFeature` 和线粒体规则；
 - 按顺序统计时，`nCount>1000` 额外排除 53 个细胞，`HB_percent<5` 再额外排除 0 个细胞；
@@ -35,6 +36,8 @@ F0 **不会**删除细胞、创建过滤后的 Seurat 对象、运行双细胞�
 - `HBEGF,HBP1,HBS1L` 虽以 `HB` 开头，但不是 globin 基因，已明确排除。
 
 只读验证脚本还使用合成细胞检查每个不等式边界，并使用合成矩阵检查 globin 基因的精确匹配。它还把一个合成的 40 样本审计结果送入 Step3 的处理史构建和 Step4 的十项 gate，用于防止字段改名后下游决策在无提示的情况下失效。
+
+方向专项反例使用人工构造的 `cell × gene` 矩阵：列名为基因、行名为 10x barcode。Step2 将其判定为 `fail_not_gene_by_cell`，证明方向检查不是根据扩展名或预期值直接写死。F0 环境锁验证同时确认当前 Python 3.10.11、NumPy 2.2.6 与两份依赖规格一致。
 
 ### 2.3 结论
 
@@ -52,6 +55,7 @@ F0 适合在默认笔记本上通过 Windows 原生 Python 流式执行，不需
 - `data/metadata/` 下已有的 manifest 文件
 - `results/F0_audit/` 下已登记的结构预检查结果
 - `environment/` 下的执行环境基线文件
+- F0 独立依赖规格 `environment/F0/requirements.txt` 和 `environment/F0/environment.yml`
 - 只读参考文件 `data/metadata/cell_type_marker_panel.tsv`
 
 本次 F0 执行不包含任何联网下载。
@@ -64,12 +68,14 @@ F0 适合在默认笔记本上通过 Windows 原生 Python 流式执行，不需
    - 检查所有必需路径和压缩包 SHA256；
    - 确认压缩包中恰好有 40 个文件名不重复的 `csv.gz` 成员；
    - 将压缩矩阵解压到 `data/processed_input/GSE183904/`；
+   - 仅将候选文件登记为 `expected_gene_by_cell_matrix_pending_validation`；文件扩展名不能证明矩阵方向；
    - 写出处理后输入清单，所有 SHA256 统一使用大写。
 
 2. `F0_step2_sample_info_and_audit.py`
    - 分别依据文件名和 GEO title 建立样本及分组信息，并核对两种证据是否一致；
    - 流式读取 40 个矩阵中的每个数值，不建立占用大量内存的合并矩阵；
-   - 检查矩阵方向、维度、整数性、缺失/非法/负值、重复基因或 barcode、基因顺序、稀疏性和标准化伪影哨兵；
+   - 根据左上角、列名 10x barcode、行名基因格式及行名是否反而像 barcode，正式验证 `gene × cell` 方向；
+   - 检查维度、整数性、缺失/非法/负值、重复基因或 barcode、基因顺序、稀疏性和标准化伪影哨兵；
    - 仅为判断输入矩阵形态，保留基于全部原始行计算的 `raw_full_nCount` 摘要；
    - 对每个样本建立唯一的 `min.cells=3` QC 工作 feature 空间；
    - 在该工作空间内计算唯一一套细胞 QC 指标；
@@ -77,7 +83,7 @@ F0 适合在默认笔记本上通过 Windows 原生 Python 流式执行，不需
 
 3. `F0_step3_inventory_and_markers.py`
    - 建立数据集、文件、metadata 字段和外部资源清单；
-   - 在 `F0_file_manifest.tsv` 中记录所有正式 F0 脚本及只读验证脚本的大写 SHA256；
+   - 在 `F0_file_manifest.tsv` 中记录所有正式 F0 脚本、只读验证脚本及两个 F0 环境锁文件的大写 SHA256；
    - 审计 marker panel 的结构，但不修改只读 panel；
    - 合并原始来源记录的处理史与 F0 实测结果；
    - 明确区分作者报告、F0 重算、跨来源推断和仍未知的处理环节。
@@ -153,7 +159,17 @@ F0 不得把 6,218 个细胞的差值归因于某一个特定步骤。重算得�
 
 ## 7. 运行命令
 
-### 7.1 只读检查输入和输出契约
+### 7.1 F0 独立环境规格
+
+F0 依赖与 F1-F8 分开管理。以下是两条**可替代**路线，不应重复混装：
+
+- pip 路线：Python 3.10.11 + `environment/F0/requirements.txt`；
+- Conda 路线：`environment/F0/environment.yml`。
+
+当前审核和只读验证使用已经存在的 Windows Python 3.10.11 / NumPy 2.2.6，
+不需要为了本次审核重新创建环境。正式执行前只需确认实际解释器版本与锁文件一致。
+
+### 7.2 只读检查输入和输出契约
 
 ```powershell
 & 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/run_F0_full_audit.py --project-root .
@@ -161,7 +177,7 @@ F0 不得把 6,218 个细胞的差值归因于某一个特定步骤。重算得�
 
 该命令不写正式输出，只检查必需输入是否存在并列出计划生成的文件。
 
-### 7.2 只读代码验证，包括真实 sample1 回归
+### 7.3 只读代码验证，包括方向测试和真实 sample1 回归
 
 ```powershell
 & 'C:\Users\14799\AppData\Local\Programs\Python\Python310\python.exe' scripts/F0_setup/validate_F0_readonly.py --project-root .
@@ -169,7 +185,10 @@ F0 不得把 6,218 个细胞的差值归因于某一个特定步骤。重算得�
 
 该命令只在系统临时目录中写测试文件，不生成正式 F0 产物。
 
-### 7.3 正式执行
+该验证会确认 Step1 方向状态仍为 pending、gene × cell 合成矩阵可通过、
+cell × gene 合成矩阵被拒绝，并核对 F0 环境锁、QC 边界和 sample1 冻结数字。
+
+### 7.4 正式执行
 
 仅在 Claude Code 审核通过并得到用户批准后允许运行：
 
@@ -185,6 +204,7 @@ F0 不得把 6,218 个细胞的差值归因于某一个特定步骤。重算得�
 - 压缩包文件名、GSM accession、`sample_id` 与 GEO title 的映射不一致；
 - 任何样本的分组仍为 `Unclear`；
 - 矩阵方向、维度、基因顺序或预登记结构字段出现无法解释且未经批准的差异；
+- Step1 提前把预期方向写成已验证，或 Step2 无法确认列为 10x barcode、行为基因；
 - 存在缺失值、非数值、非整数、负值、重复基因、重复 barcode，或数值分布无法评估；
 - 标准化伪影哨兵被触发；
 - `min.cells=3` 工作 feature 空间或任何固定 QC 指标无法计算；
@@ -192,6 +212,7 @@ F0 不得把 6,218 个细胞的差值归因于某一个特定步骤。重算得�
 - sample1 未复现 19,294 个工作 feature、2,684 个原研究规则通过细胞、53 个新增 `nCount` 不通过细胞、0 个新增 HB 不通过细胞和 2,631 个最终通过细胞；
 - 必需的处理历史阶段或下游约束缺失；
 - 任一正式 F0 脚本未进入 `F0_file_manifest.tsv`，或缺少合法的大写 SHA256；
+- 任一 F0 环境锁文件缺失、版本与实际运行时不一致，或未记录合法的大写 SHA256；
 - 任一必需 F0 契约表或报告没有生成。
 
 已确认无法获得的上游信息，只有在明确标注并映射到保守的 F1 处理措施时才不阻断执行；对应 checklist 项记为 `PASS_WITH_NOTED_ISSUES`，总体报告据此记为 `PASS_WITH_NOTED_LIMITATIONS`，不能无提示地当作完全通过。
@@ -234,8 +255,10 @@ F0 不得把 6,218 个细胞的差值归因于某一个特定步骤。重算得�
 - 所有细胞 QC 指标都只在每个样本应用 `min.cells=3` 后计算；
 - 原始行保持不变，且没有与 QC 工作空间混淆；
 - globin 采用精确匹配且全过程可审计；
+- Step1 没有根据扩展名提前断言方向，Step2 能接受 `gene × cell` 并拒绝 `cell × gene`；
 - sample1 回归是强制 gate，而不是仅写在说明文字中的参考结果；
 - 作者报告的处理与 F0 实测影响没有混在一起；
 - 十项 gate、输出契约、校验和与暂停条件均已闭合；
+- F0 的 pip/Conda 依赖规格独立于后续 F 节，并已纳入 manifest；
 - 笔记本资源估算仍然可信；
 - 没有任何脚本自动启动 F1，也没有使用 MLMOD 或预后信息参与 F0 判断。
