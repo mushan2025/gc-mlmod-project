@@ -3,13 +3,17 @@
 ## 课题
 胃癌单细胞 RNA-seq 再分析，聚焦 MLMOD（mitoxyperiosis / 线粒体定位膜氧化损伤）亚群筛选、预后关联、核心基因鉴定
 
+## 研究定位与方法尺度
+
+目标是形成一篇证据链清晰、方法符合领域常规、具有生物学解释的5-7分胃癌生信论文。核心路线为“发现MLMOD相关亚群或状态 → 证明其存在 → 评估临床/生物学意义 → 探索机制”。可复现性和质量控制服务于这条主线，不以建设高水平方法学审计系统为目标。保留F0-F8编号，但每个F大节只设一个关键质量检查点；不再为普通中间步骤建立多层gate、重复算法或大量内部审计文件。
+
 ## 核心思路（待检验的研究假设链，不是预设结论）
 
-假设 1：胃癌 scRNA-seq 数据中的恶性上皮细胞存在可识别的 MLMOD 表型亚群
-假设 2：MLMOD 签名具有相对于通用应激签名（OXPHOS / 缺氧 / 凋亡等）的特异性
+假设 1：胃癌 scRNA-seq 数据中的恶性上皮细胞存在可识别的 MLMOD 相关状态或亚群
+假设 2：MLMOD 签名具有相对于 OXPHOS、ROS、缺氧、凋亡和一般线粒体应激的特异性
 假设 3：该 MLMOD 亚群与患者预后显著相关
 假设 4：该亚群具有独特的功能特征和核心驱动基因
-假设 5：核心基因可在独立 bulk 队列中构建有效的预后标志物
+假设 5：核心基因可在独立 bulk 队列中保持方向一致的临床相关性
 
 每个假设在对应 F 节中被检验。如果某个假设不成立，按 `conventions.txt` 负面结果处理流程决定后续方案。
 
@@ -42,22 +46,26 @@ GSE183904 的 Peritoneal_Metastasis 仅 3 样本。所有涉及 PM 的分析遵�
 恶性上皮为主线，免疫细胞 / 成纤维细胞作为微环境互作对象
 
 ## 执行环境
-执行采用“本地优先、临时服务器按需补充”原则。Codex负责在获批后执行本地或服务器代码；Claude Code在用户授权后审核环境计划、代码和执行结果；用户批准后才进入下一gate。
+执行采用“本地优先、临时服务器按需补充”原则。Codex负责在获批后执行本地或服务器代码；Claude Code在用户授权后审核环境计划、代码和执行结果；用户批准后才进入下一F大节。F内普通步骤连续执行，只有输入事实、主方法、核心前提、资源环境或下游路线发生实质变化时才额外暂停。
 
-默认本地设备：`laptop_thinkbook16p`，ThinkBook 16P，AMD Ryzen 9 8945HX with Radeon Graphics（2.50 GHz），32.0 GB RAM（当前报告约27.8 GB可用），NVIDIA GeForce RTX 5060 Laptop GPU，1 TB硬盘。除非资源、兼容性、预计运行时间或设备可用性审计不通过，当前gate默认优先在该设备执行。
+默认本地设备：`laptop_thinkbook16p`，ThinkBook 16P，AMD Ryzen 9 8945HX with Radeon Graphics（2.50 GHz），32.0 GB RAM（当前报告约27.8 GB可用），NVIDIA GeForce RTX 5060 Laptop GPU，1 TB硬盘。除非资源、兼容性、预计运行时间或设备可用性检查不通过，当前F节或模块默认优先在该设备执行。
 
 备用本地设备：`desktop_i5_14600kf`，Windows台式机，Intel Core i5-14600KF，32 GB RAM，NVIDIA GeForce RTX 4060 Ti，1 TB硬盘。当默认笔记本不适合运行某个模块时，必须先评估该台式机是否可行，再决定是否需要临时服务器。切换前还需确认仓库、输入数据、锁文件和上游对象可用且SHA256一致。
 
-正式执行优先级为：默认笔记本 → 备用台式机 → 临时Linux服务器。每个gate执行前必须重新读取候选设备的实际可用内存、物理/逻辑核心数、GPU显存和剩余磁盘，不得把标称容量当作当前可用资源，也不得因两台机器均为32 GB RAM就假定性能、可用资源或兼容性等价。GPU仅在所用软件明确支持、版本和结果可复核时启用；Seurat、Harmony、inferCNV、CopyKAT、CellChat、WGCNA、Monocle3和常规pySCENIC流程不得仅因存在GPU就假定会自动加速。
+正式执行优先级为：默认笔记本 → 备用台式机 → 临时Linux服务器。每个F开始前，以及SCENIC、inferCNV/CopyKAT、WGCNA或大型多组学矩阵等高资源模块运行前，读取候选设备的实际可用内存、CPU和剩余磁盘；普通低资源步骤不重复建立复杂资源表。GPU仅在所用软件明确支持、版本和结果可复核时启用；不得仅因存在GPU就假定Seurat、Harmony、inferCNV、CopyKAT、CellChat、WGCNA、Monocle3或常规pySCENIC会自动加速。
 
-当基于真实输入规模的资源评估或必要的技术smoke/pilot显示默认笔记本不合适时，先评估备用台式机；只有两条本地路径均不适合、备用设备当前不可用且等待不合理，或用户基于完整评估明确批准时，才提出租用临时Linux服务器。若静态估算已明确超过某台设备的安全线，不要求在该设备上冒险运行资源pilot。服务器规格由当前gate评估产生并经用户批准，不预设固定配置。技术smoke test仍可用于检查输入方向、数据库/接口兼容和最小命令链，但不能为了省服务器而改变生物学输入。
+当基于真实输入规模的资源评估或必要的技术smoke/pilot显示默认笔记本不合适时，先评估备用台式机；只有两条本地路径均不适合、备用设备当前不可用且等待不合理，或用户基于完整评估明确批准时，才提出租用临时Linux服务器。若静态估算已明确超过某台设备的安全线，不要求在该设备上冒险运行资源pilot。服务器规格由当前F节或高资源模块的评估产生并经用户批准，不预设固定配置。技术smoke test仍可用于检查输入方向、数据库/接口兼容和最小命令链，但不能为了省服务器而改变生物学输入。
 
 两台Windows本地设备均可在需要Linux依赖或需要与服务器统一用户态时使用WSL；优先复用经验证的同一WSL2 Ubuntu 22.04环境、Linux容器镜像或可审计锁文件。WSL是本地设备上的运行时，不是额外算力，资源评估仍使用宿主机当时可分配给WSL的RAM、CPU和磁盘。原生Windows能够稳定支持且结果可审计的模块可在原生环境运行；涉及Linux-only依赖、编译链或服务器迁移一致性的模块优先使用WSL。至少固定R、Python、关键包、命令行工具和数据库版本。Windows原生与Linux底层系统库可能不同，即使包版本号相同也不得宣称二进制环境完全一致；任何跨平台差异必须记录并评估是否影响结果。
 
-所有中间文件最终持久保存在本地仓库或本地登记的数据目录中；git管理方案、脚本、小型文本输出和审计记录，大型数据与对象通过manifest + SHA256追踪。服务器运行结束前必须把代码、日志、参数、版本、seed、关键中间文件和结果文件全部下载到本地并校验完整性。
+下游直接需要或重建代价高的中间文件最终保存在本地仓库或本地登记的数据目录中；git管理方案、脚本和小型文本结果，大型数据与关键对象登记路径、大小并在下载或跨设备传输时校验SHA256。服务器运行结束前必须把代码、日志、参数、版本、seed、关键对象和结果同步到本地并校验完整性。
 
 ## 分析管线
-Seurat v5 + Harmony分谱系整合审计；F1完全不使用MLMOD分数、基因集或预后信息参与聚类、注释和恶性判定；inferCNV按sample_id × epithelial_cluster_id解释，CopyKAT逐样本运行并分别报告；F2.1优先按获批SRA重处理构建GSE235046/SRP444325主signature，GEO公开小数count-like表仅作limma-voom条件fallback；F2采用两层筛选，先在全细胞主要大类中筛查MLMOD信号并输出F2_candidate_cell_class_decision.tsv等待批准，再在获批候选大类内部定义MLMOD-high/low，当前优先假设为malignant_epithelial_main但必须接受反证；单细胞MLMOD使用UCell唯一主分数（MLMOD_Score = UCell_MLMOD_score，主maxRank = 1500），AUCell为关键rank-based敏感性（aucMaxRank = ceiling(0.05×nGenes)），AddModuleScore/singscore及条件性ssGSEA/JASMINE作其他敏感性，不平均、不投票；MLMOD-high/low主定义优先patient-stratified top/bottom 20%，patient_id不可用时sample-stratified top/bottom 20%，主对照为MLMOD_low_reference，中间60%为intermediate且不进入主high-vs-low DE；ferroptosis/lipid oxidation/lipid peroxidation为主机制支持模块，cuproptosis、pyroptosis、apoptosis、stress、cell cycle、ribosomal、MT_transcript_burden等为对照/混杂模块；主分析不默认删除MT-encoded genes，但必须计算MLMOD_Score_no_MT_encoded和MT_transcript_burden_score，并由MLMOD_mechanism_interpretation_matrix.tsv约束最高表述；bulk临床验证使用GSVA单一主分数、ssGSEA作敏感性；F4以样本感知pseudobulk LR为主、CellChat/LIANA为同矩阵网络敏感性；F5使用层级门控与证据分级，不使用人为加权评分；所有最终验证队列与候选筛选/参数调优隔离，采用staged gate系统
+Seurat v5 + Harmony完成常规整合、聚类和注释；F1不使用MLMOD分数、基因集或预后信息参与聚类、注释和恶性判定。F1 QC使用已经冻结的固定规则，并完成必要doublet识别和retained-cell ambient RNA评估，不再扩展多套QC体系。inferCNV与CopyKAT分别报告，用于恶性上皮判定的互补稳健性检查。
+
+F2是全文方法学核心：GSE235046/SRP444325优先按获批SRA路线构建三层signature；先做全细胞主要大类定位，再在候选谱系内部分析。UCell为唯一单细胞主分数（`maxRank=1500`），AUCell仅作必要rank-based敏感性，不常规并行运行AddModuleScore、singscore、ssGSEA和JASMINE。必须重点证明MLMOD不是OXPHOS、ROS、hypoxia、apoptosis或mitochondrial stress的另一个名称，并检查去除MT编码基因、患者/样本和QC影响后主要方向是否保留。主high/low采用patient-stratified top/bottom 20%，patient_id不可用时使用sample-stratified规则。
+
+F3-F8按领域常规各使用一套主分析和必要验证：功能与调控、样本感知细胞通讯、bulk标志物与预后、免疫关联、多组学支持和单基因深入分析。外部验证队列与signature、参数和候选选择隔离；同一矩阵上的多算法一致仅称方法稳健性。F1-F8代码默认使用R，只有工具原生依赖或Python明显更合适时才使用Python。
 
 ## 语言约定
 * 日常沟通：中文
