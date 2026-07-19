@@ -82,11 +82,12 @@ F0 的作用是给后续分析提供可信的数据地图，不是给每个文�
 已经由用户确认的 F1 QC 主方案视为冻结：
 
 - 每个样本先保留该样本中至少在 3 个细胞检出的基因，再计算 `nCount_RNA`、`nFeature_RNA`、`mt_percent` 和 `HB_percent`。
-- 主细胞规则为 `nFeature_RNA > 500`、`nFeature_RNA < 6000`、`mt_percent < 20`、`HB_percent < 5`、`nCount_RNA > 1000`。
-- `min.cells = 3`及nFeature/mt门槛源自原研究公开说明；严格不等号按本项目冻结的R规则执行。HB与nCount门槛为本项目新增规则，方法中必须区分来源。
+- 主细胞规则为 `nFeature_RNA >= 500`、`nFeature_RNA < 6000`、`mt_percent <= 20`、`HB_percent < 5`、`nCount_RNA > 1000`。
+- `min.cells = 3`、`nFeature_RNA >= 500`、`nFeature_RNA < 6000`及过滤`mt_percent > 20`源自原研究公开说明；`HB_percent < 5`与`nCount_RNA > 1000`是本项目预注册的经验性操作阈值，必须逐样本报告影响，不得归因于原作者，也不得声称为文献最优或本数据集最优。
 - 继续完成既定 doublet 识别和 retained-cell ambient RNA 评估，raw counts 保持主矩阵。
 - 除非正式执行发现明确异常，不新增 MAD、多套宽松/严格 mask、额外 QC 证据家族或更多过滤阈值。
 - QC 的目标是排除明显低质量和双细胞风险，同时保留可能具有生物学价值的细胞；不能为追求“更干净”而机械删除稀有或代谢异常的真实群体。
+- 作者已对高线粒体比例细胞进行过预过滤，公开矩阵并非作者精确最终对象，且仍可见极少量略高于20%的边界细胞；F1将按同一来源边界再次排除`mt_percent > 20`。因此最终对象不能评估`mt_percent > 20`细胞中的MLMOD状态，但保留恰好等于20%的细胞；不得据此声称高线粒体比例细胞与MLMOD无关。
 
 ## F2 是全文核心
 
@@ -198,6 +199,7 @@ Claude Code 的意见是独立 reasoning，不是论文证据。收到审核指�
 - GSE235046/SRP444325优先按获批SRA重处理；公开小数 count-like 表只作条件性 limma-voom fallback，不四舍五入后作为主 DESeq2 输入。
 - UCell 是单细胞主分数；`maxRank = 1500`。AUCell只作必要敏感性，不做多算法平均或投票。
 - 主 high/low 优先 patient-stratified top/bottom 20%；patient_id 不可用时 sample-stratified top/bottom 20%。中间 60% 不进入主 high-vs-low DE。
+- F1主归一化保持LogNormalize + Harmony且不默认回归`mt_percent`。只有聚类明确由测序深度驱动或审稿人明确要求时，才在同一QC细胞上触发一次不回归任何变量的SCTransform敏感性；若未触发，记录`not_triggered`，若主要注释、恶性判定或MLMOD high/low方向翻转则暂停报告。
 - F2必须重点排除 OXPHOS、ROS、hypoxia、apoptosis 和 mitochondrial stress 的替代解释。
 - 主分析不默认删除 MT 编码基因，但必须计算 `MLMOD_Score_no_MT_encoded` 和 `MT_transcript_burden_score`。
 - 最终验证队列与签名和参数选择隔离。
