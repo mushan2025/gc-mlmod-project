@@ -14,18 +14,20 @@ Seurat	R_package	5.5.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08
 SeuratObject	R_package	5.4.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1	ok	Core Seurat object dependency is already installed.
 DESeq2	R_package	1.46.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F2/F3	baseline_present	Present, but use only where input type satisfies project DESeq2 rules.
 SingleCellExperiment	R_package	1.28.1	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1	ok	Bioconductor single-cell object support present.
-sctransform	R_package	0.4.3	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1	ok	Available if selected by approved F1 normalization path.
+sctransform	R_package	0.4.3	installed.packages() under R 4.4.3	2026-07-21	F1.3/F1.5	ok	Available and selected for the approved SCTransform v2 main workflow.
+glmGamPoi	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-21	F1.3/F1.5	blocking_before_clustering	Missing; required to avoid the slow native SCTransform v2 fallback on the full object.
 harmony	R_package	1.2.4	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1	ok	Available for approved integration workflow.
-infercnv	R_package	1.22.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate5	baseline_present	Present; full Gate5 feasibility still depends on input size and reference setup.
-SingleR	R_package	2.8.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate3	baseline_present	Present; celldex reference package is currently missing.
+infercnv	R_package	1.22.0	installed.packages() under R 4.4.3	2026-07-21	F1.6	baseline_present	Present; formal feasibility still depends on epithelial-cell scale and reference setup.
+SingleR	R_package	2.8.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	optional_F1.4_reference_only	baseline_present	Present but not required; approved F1.4 uses marker-based researcher annotation rather than mandatory automatic labels.
 ComplexHeatmap	R_package	2.22.0	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	visualization	baseline_present	Available for heatmap outputs if approved scripts use it.
-scDblFinder	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate1	blocking_if_selected	Missing; install or select an approved alternative before formal doublet execution.
-SoupX	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate1	blocking_if_selected	Missing; install or document fallback if ambient RNA correction requires it.
-celda	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate1	blocking_if_selected	Missing; needed only if DecontX/celda path is approved.
-DoubletFinder	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate1	blocking_if_selected	Missing; do not assume availability.
-CopyKAT	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1_Gate5	blocking_if_selected	Missing; required before CopyKAT execution or replace with approved fallback.
+scDblFinder	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-21	F1.2	blocking_before_F1.2	Missing; required as the primary doublet method before formal F1.2 execution.
+SoupX	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-21	not_applicable_input_limited	not_required	Raw/empty droplets are unavailable, so SoupX is not part of the approved F1 workflow.
+celda	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-21	F1.2	blocking_before_F1.2	Missing; required for the approved DecontX retained-cell ambient assessment.
+DoubletFinder	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-21	F1.2	blocking_before_F1.2	Missing; required as the source-linked doublet sensitivity method.
+leidenbase	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-21	F1.3/F1.5	blocking_before_clustering	Missing; required for Seurat Leiden algorithm 4.
+CopyKAT	R_package	1.1.0	installed.packages() under R 4.4.3	2026-07-21	F1.6	baseline_present	Available; formal execution still requires epithelial-cell scale and device approval.
 UCell	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F2	blocking_before_F2	Missing; F2 primary MLMOD scoring requires UCell after signature freeze.
 AUCell	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F2	blocking_before_F2	Missing; F2 rank-based sensitivity scoring requires AUCell.
-renv	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-06T16:33:45+08:00	F1-F8	blocking_before_formal_F1	Missing; either install renv and create lockfile or approve equivalent explicit package manifest.
+renv	R_package	NOT_AVAILABLE	installed.packages() under R 4.4.3	2026-07-21	optional_reproducibility	warning	Not required for F1 start because explicit runtime, required_packages.tsv, actual package versions and sessionInfo are recorded.
 WSL2	runtime	not_available	wsl --status; wsl -l -v	2026-07-06T16:11:54+08:00	Linux-only modules	warning	No usable WSL distribution currently registered.
 nvidia-smi	tool	Driver 582.05; RTX 5060 Laptop GPU 8151 MiB total	nvidia-smi	2026-07-06T16:11:54+08:00	GPU inventory	ok	GPU presence recorded; not assumed useful for standard scRNA tools.

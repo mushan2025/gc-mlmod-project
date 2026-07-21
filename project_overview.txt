@@ -61,7 +61,7 @@ GSE183904 的 Peritoneal_Metastasis 仅 3 样本。所有涉及 PM 的分析遵�
 下游直接需要或重建代价高的中间文件最终保存在本地仓库或本地登记的数据目录中；git管理方案、脚本和小型文本结果，大型数据与关键对象登记路径、大小并在下载或跨设备传输时校验SHA256。服务器运行结束前必须把代码、日志、参数、版本、seed、关键对象和结果同步到本地并校验完整性。
 
 ## 分析管线
-Seurat v5 + Harmony完成常规整合、聚类和注释；F1不使用MLMOD分数、基因集或预后信息参与聚类、注释和恶性判定。F1 QC使用已经冻结的固定规则，并完成必要doublet识别和retained-cell ambient RNA评估，不再扩展多套QC体系。inferCNV与CopyKAT分别报告，用于恶性上皮判定的互补稳健性检查。
+Seurat v5中按样本运行SCTransform v2（`vars.to.regress=NULL`，不回归`mt_percent`），随后在SCT PCA上用Harmony校正`sample_id`并完成聚类和注释；RNA raw counts始终保留，供QC、doublet、ambient评估、inferCNV、CopyKAT、pseudobulk和F2 UCell使用。F1不使用MLMOD分数、基因集或预后信息参与聚类、注释和恶性判定。F1 QC使用已经冻结的固定规则，并完成必要doublet识别和retained-cell ambient RNA评估，不再扩展多套QC体系。inferCNV与CopyKAT分别报告，用于恶性上皮判定的互补稳健性检查。
 
 F2是全文方法学核心：GSE235046/SRP444325优先按获批SRA路线构建三层signature；先做全细胞主要大类定位，再在候选谱系内部分析。UCell为唯一单细胞主分数（`maxRank=1500`），AUCell仅作必要rank-based敏感性，不常规并行运行AddModuleScore、singscore、ssGSEA和JASMINE。必须重点证明MLMOD不是OXPHOS、ROS、hypoxia、apoptosis或mitochondrial stress的另一个名称，并检查去除MT编码基因、患者/样本和QC影响后主要方向是否保留。主high/low采用patient-stratified top/bottom 20%，patient_id不可用时使用sample-stratified规则。
 

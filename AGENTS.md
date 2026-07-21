@@ -199,7 +199,8 @@ Claude Code 的意见是独立 reasoning，不是论文证据。收到审核指�
 - GSE235046/SRP444325优先按获批SRA重处理；公开小数 count-like 表只作条件性 limma-voom fallback，不四舍五入后作为主 DESeq2 输入。
 - UCell 是单细胞主分数；`maxRank = 1500`。AUCell只作必要敏感性，不做多算法平均或投票。
 - 主 high/low 优先 patient-stratified top/bottom 20%；patient_id 不可用时 sample-stratified top/bottom 20%。中间 60% 不进入主 high-vs-low DE。
-- F1主归一化保持LogNormalize + Harmony且不默认回归`mt_percent`。只有聚类明确由测序深度驱动或审稿人明确要求时，才在同一QC细胞上触发一次不回归任何变量的SCTransform敏感性；若未触发，记录`not_triggered`，若主要注释、恶性判定或MLMOD high/low方向翻转则暂停报告。
+- F1主归一化采用逐样本SCTransform v2，`vars.to.regress=NULL`，不回归`mt_percent`、`nCount_RNA`或细胞周期；随后在SCT PCA上仅按`sample_id`运行Harmony并完成UMAP/Leiden。SCT Pearson residual只用于HVG、PCA、聚类和可视化，不替代RNA raw counts。
+- RNA raw counts固定用于QC、doublet、DecontX输入、inferCNV、CopyKAT、pseudobulk以及F2 UCell；RNA LogNormalize `data`层仅用于marker展示或需要非残差表达值的描述性分析。不得用SCT `scale.data`计算UCell。
 - F2必须重点排除 OXPHOS、ROS、hypoxia、apoptosis 和 mitochondrial stress 的替代解释。
 - 主分析不默认删除 MT 编码基因，但必须计算 `MLMOD_Score_no_MT_encoded` 和 `MT_transcript_burden_score`。
 - 最终验证队列与签名和参数选择隔离。

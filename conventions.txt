@@ -232,9 +232,9 @@ MLMOD来自小鼠BMDM，迁移到人胃癌上皮必须证明：
 
 这是一项聚类解释检查，不再单独设质量gate或强制HDBSCAN交叉算法。只有常规Leiden结果出现难以判断的小群或离群结构时，才条件性使用HDBSCAN/其他稳定性方法。
 
-主流程采用LogNormalize + Harmony且不默认回归`mt_percent`。这是相对于作者SCTransform并回归线粒体比例的有意独立分析选择：`mt_percent`与MLMOD不是同一指标，但回归它可能同时削弱本项目关注的线粒体相关生物学变化；作者方法只作来源参考，不要求机械复现。
+F1主流程采用逐样本SCTransform v2，`vars.to.regress=NULL`，不回归`mt_percent`、`nCount_RNA`或细胞周期；随后在SCT PCA上仅按`sample_id`运行Harmony。采用SCTransform是归一化和方差稳定化的分析选择，不据此反推数据一定“高度异质”；不回归`mt_percent`则是为了避免主动削弱本项目关注的线粒体相关生物学变化。
 
-SCTransform只作为预注册、条件触发的归一化敏感性，不构成强制平行主线。仅当F1聚类结构明确由测序深度驱动，或审稿人明确要求归一化稳健性证据时，在同一QC细胞上运行；两者均不满足时记录`not_triggered`，不得写成“已验证无差异”。触发时固定seed=42，使用`vst`且`vars.to.regress`为空，记录sctransform和glmGamPoi版本；重新计算HVG/PCA/聚类，并尽量保持其余Harmony、邻居图和聚类设置一致。比较主要细胞大类注释一致率、基于同一raw-count CNV证据重新映射后的恶性判定一致率、SCTransform `data`层与RNA LogNormalize `data`层UCell MLMOD分数的Spearman相关，以及MLMOD-high/low方向是否翻转；不得用`scale.data`计算UCell。只有主要注释、恶性判定和high/low方向均不翻转，才可写“主结论不依赖该归一化选择”；单独Spearman相关较高不充分。若结论翻转，暂停并如实报告，不选择结果更有利的一套。
+SCT assay的Pearson residual只用于HVG、PCA、Harmony、UMAP和聚类。RNA raw counts保持不变，用于QC、doublet、DecontX输入、inferCNV、CopyKAT、pseudobulk和F2 UCell；RNA LogNormalize `data`层可用于marker展示等描述性分析，但不再构成第二条主聚类管线。UCell不得使用SCT `scale.data`；本项目固定从RNA raw counts计算，因为UCell依赖细胞内基因排序，标准的按细胞正比例缩放与log1p不改变非零基因的相对次序。只有出现明确的深度驱动聚类或审稿人提出具体归一化质疑时，才在同一QC细胞上增加一次LogNormalize敏感性，不例行并行两套流程，也不按结果有利程度选择主结果。
 
 ## 16. 关键中间对象
 

@@ -1,6 +1,6 @@
 project: gc_mlmod_project
-stage: 1b_round1_execution_preparation
-created_at: "2026-07-06T16:11:54+08:00"
+stage: F1_execution_script_preparation
+updated_at: "2026-07-21"
 execution_policy:
   priority_order:
     - laptop_thinkbook16p
@@ -9,12 +9,13 @@ execution_policy:
   local_ram_safety_fraction: 0.70
   local_disk_safety_fraction: 0.70
   formal_execution_requires_user_approval: true
-  formal_gate_advancement_requires_user_approval: true
+  formal_section_advancement_requires_user_approval: true
 environment_baseline:
   default_machine_id: laptop_thinkbook16p
   os_or_runtime: Windows_native
-  observed_free_ram_gb: 14.70
-  observed_workspace_free_disk_gb: 295.09
+  observed_free_ram_gb: 4.28
+  observed_workspace_free_disk_gb: 254.19
+  resource_observed_at: "2026-07-21T19:24:20+08:00"
   R_status: explicit_path_available_not_in_path
   R_version: "4.4.3"
   Rscript_path: "D:/software/R/R443/R-4.4.3/bin/x64/Rscript.exe"
@@ -25,15 +26,41 @@ F0:
   formal_execution_status: not_started
   resource_assessment_file: reports/environment_setup/F0_execution_resource_assessment.tsv
 F1:
-  execution_unit: gated_F1
-  gates:
-    - F1_Gate1_import_qc
-    - F1_Gate2_integration_cluster_qc
-    - F1_Gate3_annotation
-    - F1_Gate4_epithelial_recluster
-    - F1_Gate5_malignancy_inference
+  execution_unit: continuous_F1_with_recoverable_milestones
+  scripts:
+    - F1_01_import.R
+    - F1_02_qc_doublet_ambient.R
+    - F1_03_sct_harmony_cluster.R
+    - F1_04_annotation.R
+    - F1_05_epithelial_recluster.R
+    - F1_06_malignancy_inference.R
+  final_checkpoint: F1_final_report
   formal_execution_status: not_started
   resource_assessment_file: reports/environment_setup/F1_execution_resource_assessment.tsv
+  seed: 42
+  qc:
+    feature_min_detected_cells_per_sample: 3
+    nFeature_RNA_min_inclusive: 500
+    nFeature_RNA_max_exclusive: 6000
+    nCount_RNA_min_exclusive: 1000
+    mt_percent_max_inclusive: 20
+    HB_percent_max_exclusive: 5
+  normalization_and_clustering:
+    main_method: SCTransform_v2
+    per_sample_model: true
+    variable_features_n: 3000
+    vars_to_regress: []
+    pca_npcs: 50
+    harmony_group_by: sample_id
+    main_dims: "1:30"
+    leiden_resolutions_for_review: [0.2, 0.4, 0.6, 0.8, 1.0]
+    default_resolution_before_marker_review: 0.6
+  matrix_routing:
+    RNA_counts: "QC, doublet, DecontX input, inferCNV, CopyKAT, pseudobulk and F2 UCell"
+    SCT_scale_data: "HVG, PCA, Harmony, UMAP and clustering only"
+    RNA_data: "marker testing and descriptive expression plots only"
+    decontX_corrected: "ambient-RNA assessment and approved sensitivity only"
 notes:
-  - "This file is an initial 1b registry, not a final locked analysis parameter file."
-  - "Each formal gate must update this registry with actual scripts, package versions, parameters, seeds and approvals."
+  - "F1 formal execution may start only after the executed F0 gate passes and the user approves the environment."
+  - "SCTransform is the F1 main normalization; mt_percent, nCount_RNA and cell cycle are not regressed."
+  - "MLMOD/UCell are not used anywhere in F1 clustering, annotation or malignancy decisions."
