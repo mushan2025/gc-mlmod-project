@@ -147,8 +147,8 @@ def validate_exact_globin_matching(temp_dir: Path) -> None:
     path = temp_dir / "synthetic_nonpilot.csv.gz"
     barcodes = [
         "AAAAAAAAAAAAAAAA_1",
-        "CCCCCCCCCCCCCCCC_1",
-        "GGGGGGGGGGGGGGGG_1",
+        "CCCCCCCCCCCCCCCC.1_1",
+        "GGGGGGGGGGGGGGGG-1_1",
     ]
     rows = [
         ("HBA1", [1, 1, 1]),

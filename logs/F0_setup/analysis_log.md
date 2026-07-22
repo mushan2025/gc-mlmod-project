@@ -1,0 +1,25 @@
+# F0 Analysis Log
+
+- 2026-07-21T22:52:10+08:00 | F0 step1 started; run_id=20260721_225210; python=3.10.11; os=Windows-10-10.0.26200-SP0
+- 2026-07-21T22:52:11+08:00 | F0 step1 completed; archive_sha256=BA089D1DC186826E84D2199D1EB6942C35EB8FB70E7A5D2B20650B72982B90B3; extracted_members=40
+- 2026-07-21T22:52:12+08:00 | F0 step2 started; run_id=20260721_225210; validated_step1_files=40; python=3.10.11; numpy=2.2.6
+- 2026-07-21T22:58:35+08:00 | SCHEMA_MIGRATION precheck.suspected_matrix_type -> observed_numeric_type; precheck.audit_decision_precheck=enter_full_F1_candidate -> audit_decision=enter_full_F1_independent_reQC only after formal audit; legacy broad HB count is not compared because HB_percent now uses the frozen exact globin panel; Step1 orientation is an expectation only and Step2 validates row/column identities; suspected_matrix_type records public input shape only; raw_full_nCount and the single min.cells=3 QC metric space are stored separately
+- 2026-07-21T22:58:35+08:00 | F0 step2 completed; sample_rows=40; audit_rows=40; precheck_mismatches=0; sample_id_mismatches=0; unclear_groups=0; artifacts_or_not_evaluable=0; working_feature_failures=0; fixed_qc_failures=0; pilot_failures=0; paused=2
+- 2026-07-21T23:01:32+08:00 | F0 step1 started; run_id=20260721_230132; python=3.10.11; os=Windows-10-10.0.26200-SP0
+- 2026-07-21T23:01:33+08:00 | F0 step1 completed; archive_sha256=BA089D1DC186826E84D2199D1EB6942C35EB8FB70E7A5D2B20650B72982B90B3; extracted_members=40
+- 2026-07-21T23:01:34+08:00 | F0 step2 started; run_id=20260721_230132; validated_step1_files=40; python=3.10.11; numpy=2.2.6
+- 2026-07-21T23:08:57+08:00 | SCHEMA_MIGRATION precheck.suspected_matrix_type -> observed_numeric_type; precheck.audit_decision_precheck=enter_full_F1_candidate -> audit_decision=enter_full_F1_independent_reQC only after formal audit; legacy broad HB count is not compared because HB_percent now uses the frozen exact globin panel; Step1 orientation is an expectation only and Step2 validates row/column identities; suspected_matrix_type records public input shape only; raw_full_nCount and the single min.cells=3 QC metric space are stored separately
+- 2026-07-21T23:08:57+08:00 | F0 step2 completed; sample_rows=40; audit_rows=40; precheck_mismatches=0; sample_id_mismatches=0; unclear_groups=0; artifacts_or_not_evaluable=0; working_feature_failures=0; fixed_qc_failures=0; pilot_failures=0; paused=0
+- 2026-07-21T23:08:57+08:00 | F0 step3 started; run_id=20260721_230132
+- 2026-07-21T23:08:57+08:00 | F0 step3 completed; dataset_rows=44; metadata_rows=45; author_processing_rows=21; resource_rows=9; marker_panel=no_issues; F1 reminder: use processing-history constraints and add marker-panel/evidence-reference method priors.
+- 2026-07-21T23:08:57+08:00 | F0 step4 started; run_id=20260721_230132
+- 2026-07-21T23:08:57+08:00 | F0 step4 finalized; gate_rows=10; blocking_failures=0; F1 marker-panel/evidence method-prior reminder retained for F1 execution planning.
+- 2026-07-21T23:12:13+08:00 | IMPLEMENTATION_CORRECTION initial run paused for sample39/sample40 because BARCODE.1_sample column names retained an R-converted 10x GEM suffix; CELL_BARCODE was extended to accept BARCODE_sample, BARCODE-1_sample and BARCODE.1_sample, the reversed-orientation rejection test still passed, and no count values or QC rules changed.
+- 2026-07-21T23:13:31+08:00 | F0 step3 started; run_id=20260721_231331
+- 2026-07-21T23:13:31+08:00 | F0 step3 completed; dataset_rows=44; metadata_rows=45; author_processing_rows=21; resource_rows=9; marker_panel=no_issues; F1 reminder: use processing-history constraints and add marker-panel/evidence-reference method priors.
+- 2026-07-21T23:13:31+08:00 | F0 step4 started; run_id=20260721_231331
+- 2026-07-21T23:13:31+08:00 | F0 step4 finalized; gate_rows=10; blocking_failures=0; F1 marker-panel/evidence method-prior reminder retained for F1 execution planning.
+- 2026-07-21T23:14:23+08:00 | F0 step3 started; run_id=20260721_230132
+- 2026-07-21T23:14:23+08:00 | F0 step3 completed; dataset_rows=44; metadata_rows=45; author_processing_rows=21; resource_rows=9; marker_panel=no_issues; F1 reminder: use processing-history constraints and add marker-panel/evidence-reference method priors.
+- 2026-07-21T23:14:24+08:00 | F0 step4 started; run_id=20260721_230132
+- 2026-07-21T23:14:24+08:00 | F0 step4 finalized; gate_rows=10; blocking_failures=0; F1 marker-panel/evidence method-prior reminder retained for F1 execution planning.

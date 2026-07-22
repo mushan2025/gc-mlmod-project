@@ -25,7 +25,7 @@ F1不计算MLMOD或UCell分数，不使用预后信息，也不根据后续结�
 - `environment/F1/required_packages.tsv`中的本阶段必需包均可用；
 - 用户已批准本次运行设备和范围。
 
-当前F0尚未正式执行，且`scDblFinder`、`celda`、`DoubletFinder`、`glmGamPoi`和`leidenbase`缺失，因此正式F1现在会主动停止。SCTransform v2没有`glmGamPoi`也能回退运行，但对本数据规模明显更慢，正式流程将其列为必需依赖以固定实现并控制时间。
+F0已正式执行并得到`PASS_WITH_NOTED_LIMITATIONS`，不存在blocking FAIL；但`scDblFinder`、`celda`、`DoubletFinder`、`glmGamPoi`和`leidenbase`仍缺失，因此正式F1现在仍会主动停止。SCTransform v2没有`glmGamPoi`也能回退运行，但对本数据规模明显更慢，正式流程将其列为必需依赖以固定实现并控制时间。
 
 依赖安装不在本轮执行。审核批准后，在固定R 4.4.3环境中使用与Bioconductor 3.20兼容的版本：
 
@@ -58,7 +58,9 @@ remotes::install_github("chris-mcginnis-ucsf/DoubletFinder")
 - 唯一主规则：`nFeature_RNA >= 500`、`nFeature_RNA < 6000`、`nCount_RNA > 1000`、`mt_percent <= 20`、`HB_percent < 5`。
 - scDblFinder按sample/capture运行并作为主删除依据；DoubletFinder按同一输入运行，只作敏感性标记，不机械取并集删除。
 - 删除scDblFinder阳性后按样本运行DecontX。corrected counts逐样本独立保存，不自动合并为主对象assay；raw counts仍是主矩阵，污染分数不用于删细胞。
-- 输出逐细胞决定、逐样本过滤影响、doublet和ambient摘要，并保存`02_all_cells_qc_filtered.rds`。
+- DecontX只运行一次，后续复用其score和corrected矩阵，在四处检查：F1保留细胞基线、主要谱系/上皮候选、CNV reference与上皮观察细胞、F2评分/关键DE及F4通讯对象。
+- 每处只看四类信息：对象内contamination中位数/P90、异谱系marker泄漏变化、本谱系marker保留、raw/corrected目标结果是否实质改变。污染分数无跨样本统一硬阈值，也不单独触发删除或校正。
+- 输出逐细胞决定、逐样本过滤影响、doublet与ambient摘要，并建立唯一跨阶段汇总表`ambient_decision_summary.tsv`；保存`02_all_cells_qc_filtered.rds`。
 
 ### F1.3 SCTransform、Harmony与全细胞聚类
 
@@ -78,6 +80,7 @@ remotes::install_github("chris-mcginnis-ucsf/DoubletFinder")
 - 用RNA LogNormalize `data`层计算cluster marker，并结合冻结marker panel制作DotPlot/FeaturePlot。
 - 第一次运行生成`F1_cluster_annotation_template.tsv`后停止；研究者审核并形成`F1_cluster_annotation_approved.tsv`。
 - 再次运行时校验每个cluster均有唯一批准标签，才写入major/minor/state/confidence并保存`03_all_cells_integrated_annotated.rds`。
+- 对marker冲突、稀有、边界cluster和上皮候选复核raw/corrected谱系证据；主要谱系标签一致率低于95%只触发人工复核，身份改变或主要marker依据消失才视为实质变化。
 - 这是必要的生物学判断点，不把自动打分当作最终细胞身份。
 
 ### F1.5 上皮提取与二次聚类
@@ -93,8 +96,9 @@ remotes::install_github("chris-mcginnis-ucsf/DoubletFinder")
 
 脚本：`scripts/F1_single_cell/F1_06_malignancy_inference.R`
 
-- inferCNV和CopyKAT均使用RNA raw counts，按样本运行；SCT residual、Harmony坐标和DecontX corrected counts均不作输入。
-- inferCNV优先使用同一样本高置信T/NK，必要时加入B/Plasma；不足时才登记使用pooled同谱系reference。
+- inferCNV和CopyKAT主分析均使用RNA raw counts，按样本运行；SCT residual和Harmony坐标不作输入。DecontX corrected counts不作默认输入，只允许按下述条件用于inferCNV敏感性。
+- inferCNV优先使用同一样本高置信T/NK，必要时加入B/Plasma；不足时才登记使用pooled同谱系reference。运行前检查reference和上皮观察细胞ambient风险，少数污染reference优先删除或替换，无合格reference则该样本记为不可评估。
+- 仅当污染可信且可能改变CNV结论时运行一次corrected inferCNV敏感性，reference与观察细胞必须同时使用同一corrected矩阵；禁止只校正reference。大片段支持等级或06a纳入改变时暂停裁决，否则raw结果保持主结果。CopyKAT不默认接受corrected输入。
 - inferCNV辅助cell burden定义为每个细胞相对于reference逐基因中心值的平均绝对偏差，并记录reference细胞burden的P95；该数值只帮助定位，不自动判恶性。最终inferCNV支持等级由sample × epithelial cluster热图中的连续大片段模式人工审核。
 - CopyKAT的aneuploid支持恶性，diploid不能排除近二倍体肿瘤，uncalled按未知。
 - 两种方法都来自RNA表达，只是互补方法稳健性，不是独立DNA证据。
@@ -129,4 +133,4 @@ F0、依赖、环境和审核文件均就绪后，才允许显式执行：
 
 SCTransform全细胞步骤和inferCNV/CopyKAT最可能成为内存瓶颈。正式执行前先以最大样本或批准的代表样本做资源pilot；出现明显换页、峰值内存超过设备安全范围或运行失败时，只切换相应阶段到台式机/服务器。
 
-只有以下情况暂停请用户决定：F0输入事实不一致、固定QC造成无法解释的样本极端损失、主doublet算法失败、SCTransform/Harmony明显破坏主要谱系结构、主要谱系无法可靠注释、CNV reference不可用、或恶性证据大范围冲突。普通格式和可恢复运行问题修复后继续，不新增多层gate。
+只有以下情况暂停请用户决定：F0输入事实不一致、固定QC造成无法解释的样本极端损失、主doublet算法失败、SCTransform/Harmony明显破坏主要谱系结构、主要谱系无法可靠注释、CNV reference不可用、恶性证据大范围冲突，或可信ambient污染使目标科学结论在raw/corrected间发生实质变化。普通格式和可恢复运行问题修复后继续，不新增多层gate。

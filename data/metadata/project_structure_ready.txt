@@ -1,0 +1,5 @@
+project_root=D:\服务器_胃癌线粒体亚群
+created_or_verified_at=2026-07-21T23:01:32+08:00
+operator=Codex
+directory_list=docs|scripts/environment_setup|logs/environment_setup|reports/environment_setup|environment|data/public_downloads|data/public_downloads/SCENIC_resources|data/processed_input/GSE183904|data/metadata|scripts/F0_setup|scripts/F1_single_cell|scripts/F2_scoring|scripts/F3_function|scripts/F4_communication|scripts/F5_bulk_marker|scripts/F6_immunity|scripts/F7_genomics_pathway|scripts/F8_single_gene|results/F0_audit|results/F1_qc|objects/F1_single_cell|results/F1_annotation|results/F1_malignancy|results/F2_scoring|results/F3_function|results/F4_communication|results/F5_bulk_marker|results/F6_immunity|results/F7_genomics_pathway|results/F8_single_gene|logs/F0_setup|logs/F1_single_cell|logs/F2_scoring|logs/F3_function|logs/F4_communication|logs/F5_bulk_marker|logs/F6_immunity|logs/F7_genomics_pathway|logs/F8_single_gene|tmp
+note=Directories were created if missing; existing inputs were not overwritten.

@@ -1,0 +1,496 @@
+Codex 会话增量上下文导出
+文件用途：before_1b_round4
+会话 ID：019f1dbc-3d37-7e71-80b3-bf6a94ca7706
+原标题/任务线索：单细胞 QC、Doublet 与 Ambient RNA SOP 多轮事实核查、修订复审及本项目适配
+源文件：C:\Users\14799\.codex\sessions\2026\07\01\rollout-2026-07-01T20-51-48-019f1dbc-3d37-7e71-80b3-bf6a94ca7706.jsonl
+指定文件名：before_1b_round4.txt
+增量基准文件：D:\服务器_胃癌线粒体亚群\codex_context\before_1b_round3.txt
+基准已有消息最大编号：223
+当前可见消息总数：248
+本次导出消息范围：[224]-[248]
+本次导出消息数：25（你 6 条，Codex 19 条）
+消息时间范围：2026-07-16 23:40:39 至 2026-07-17 12:35:24 Asia/Shanghai
+导出时间：2026-07-18 14:38:29 Asia/Shanghai
+
+整理说明：仅保留你和 Codex 在界面中可见的新增消息；已排除 AGENTS.md 指令注入、system/developer 指令、environment_context、工具调用、工具输出、隐藏 reasoning 和内部 turn_aborted 控制标记。
+
+================================================================================
+
+[224] 你 | 2026-07-16 23:40:39 Asia/Shanghai
+# Files mentioned by the user:
+
+## # 单细胞转录组QC、Doublet与Ambient RNA处理SOP ## 1. 明确分析单位 首先建立并核对三个字段： ```text patient_i…: C:\Users\14799\.codex/attachments/1f367d44-ca20-4223-9d0c-a1d7b7a12b72/pasted-text.txt
+
+## My request for Codex:
+我写了一个sop，你感觉怎么样，有无事实性错误？
+
+--------------------------------------------------------------------------------
+
+[225] Codex | 2026-07-16 23:40:53 Asia/Shanghai
+你希望我只检查这份SOP的**通用方法学事实**，还是同时按本项目GSE183904的实际输入条件，检查哪些步骤可执行、哪些必须跳过或降级？
+
+--------------------------------------------------------------------------------
+
+[226] 你 | 2026-07-16 23:42:38 Asia/Shanghai
+先检查通用方法学事实，再看能否应用到本项目
+
+--------------------------------------------------------------------------------
+
+[227] Codex | 2026-07-16 23:43:02 Asia/Shanghai
+我会分两轮审：先逐条检查通用方法学事实、算法输入和统计逻辑，再把通过的部分映射到GSE183904的公开called-cell矩阵边界。重点会区分“事实错误”“可选但需预注册”“对本项目输入不可执行”，避免把方法偏好误判成事实错误。
+
+--------------------------------------------------------------------------------
+
+[228] Codex | 2026-07-16 23:45:32 Asia/Shanghai
+初读结论是：这份SOP整体框架很强，真正的问题不在“大方向”，而在少数参数语义、循环定义和若干看似精确但尚未被数据校准的规则。我正在对照scuttle、scDblFinder、DecontX和SoupX原始文档，先把事实性错误与项目自定义规则分开。
+
+--------------------------------------------------------------------------------
+
+[229] Codex | 2026-07-16 23:50:21 Asia/Shanghai
+**前提验证**
+我完整审阅了这份1696行SOP，并对照了scuttle、scDblFinder、DecontX、SoupX、emptyDrops和CellBender原始文档。总体框架是专业且审慎的，没有基础性方法误解，但存在3个需要修正的事实/数学问题和数个执行前阻断项。
+
+**主要发现**
+1. **[阻断] confident reference与damage定义形成循环**
+
+[SOP §13.2](C:/Users/14799/.codex/attachments/1f367d44-ca20-4223-9d0c-a1d7b7a12b72/pasted-text.txt:859)要求confident reference排除`strong damage`；但[SOP §14.2](C:/Users/14799/.codex/attachments/1f367d44-ca20-4223-9d0c-a1d7b7a12b72/pasted-text.txt:1129)的strong damage又需要`lineage_identity_fail`；后者依赖由confident reference计算的P10阈值。
+
+即：
+
+```text
+confident reference
+→ lineage identity
+→ strong damage
+→ confident reference
+```
+
+这不是单纯措辞问题，而是定义无法从固定起点执行。应先用hard anomaly、低复杂度、scDblFinder和经典marker建立一次冻结的初始参考，再计算lineage identity和damage，禁止结果回流重选初始参考。
+
+2. **[阻断，事实边界] “只有filtered matrix即可运行DecontX”表述过宽**
+
+[SOP §3.2](C:/Users/14799/.codex/attachments/1f367d44-ca20-4223-9d0c-a1d7b7a12b72/pasted-text.txt:64)必须改成“只有filtered **raw count matrix**”。
+
+DecontX要求过滤后细胞的count矩阵；只有normalized、log-transformed或integrated矩阵时不能运行。raw/empty droplets只是可选background，不是DecontX必需输入。[DecontX官方说明](https://bioconductor.posit.co/packages/3.23/bioc/vignettes/decontX/inst/doc/decontX.html)
+
+3. **[阻断，数学错误] `very_low`不一定比普通low更极端**
+
+SOP把普通阈值定义为`max(k×MAD, min.diff)`，把very-low定义为`max((k+1)×MAD, min.diff)`。[SOP §7.8](C:/Users/14799/.codex/attachments/1f367d44-ca20-4223-9d0c-a1d7b7a12b72/pasted-text.txt:427)
+
+当`min.diff`同时支配两个阈值时，两者完全相同。例如MAD=0.1、min.diff=1时：
+
+```text
+max(3×0.1, 1) = 1
+max(4×0.1, 1) = 1
+```
+
+此时“very low单阳性即可定义library strong”实际上没有更强。scuttle的`min.diff`语义和log2尺度描述本身是正确的；错误在于没有处理上述阈值重合。[scuttle官方手册](https://www.bioconductor.org/packages/devel/bioc/manuals/scuttle/man/scuttle.pdf)
+
+4. **[高] DecontX corrected counts的下游权限过宽**
+
+[SOP §11.1](C:/Users/14799/.codex/attachments/1f367d44-ca20-4223-9d0c-a1d7b7a12b72/pasted-text.txt:642)允许“污染明显时”把corrected assay作为主表达矩阵，但“污染明显”没有闭合判据。
+
+DecontX corrected counts是浮点估计值，不再是原始UMI观测。它可以用于聚类、marker和评分敏感性，但不能无条件进入要求raw integer counts的DESeq2等模型。[DecontX官方说明](https://bioconductor.posit.co/packages/3.23/bioc/vignettes/decontX/inst/doc/decontX.html)
+
+5. **[高] DecontX校正后谱系验证不是独立证据**
+
+SOP用临时粗聚类辅助ambient模型，又用corrected矩阵确认谱系和lineage conflict是否消失。DecontX若使用同一粗聚类作为`z`，校正结果本身已经受该聚类条件约束，因此不能再称为对该谱系的独立确认。
+
+可以保留这种检查，但应写成“模型条件下的一致性检查”，并同时查看raw表达、无外部`z`的DecontX结果和预登记marker。
+
+6. **[高] 多处P95/P99/P10缺少最小细胞数**
+
+stress、apoptosis和lineage阈值按`capture×粗谱系`计算P95/P99/P10，但没有规定小谱系如何处理。几十个甚至几个细胞时，P99接近单个最大值，P10也很不稳定。
+
+需要规定最小参考细胞数、低于该数量时的跨可比capture汇总规则，以及无法汇总时的`not_evaluable_small_stratum`状态。
+
+7. **[中] barcode rank和CellBender分支存在内部不一致**
+
+[SOP §5.2](C:/Users/14799/.codex/attachments/1f367d44-ca20-4223-9d0c-a1d7b7a12b72/pasted-text.txt:162)无条件列出barcode-rank图，应限定为raw droplet可用时；filtered cells排序图不能叫真实knee。
+
+CellBender同时涉及cell calling与background removal，不能在CellBender校正后再默认叠加SoupX或DecontX。其正式输入是raw feature-barcode矩阵。[CellBender文档](https://cellbender.readthedocs.io/en/v0.2.0/usage/index.html)；emptyDrops同样要求cell calling前的droplet矩阵。[DropletUtils手册](https://www.bioconductor.org/packages/release/bioc/manuals/DropletUtils/man/DropletUtils.pdf)
+
+8. **[中] DoubletFinder参与决策，但没有执行规范**
+
+SOP多次使用`DoubletFinder.class`升级doublet等级，却没有规定按capture运行方式、pN、pK选择、nExp、homotypic adjustment、seed和版本。作为可执行SOP，这属于伪具体性：决策规则已写死，产生该字段的方法却未闭合。
+
+**确认无误的部分**
+以下关键事实写得正确：
+
+- patient、sample、capture三层单位不能混用。
+- doublet和ambient原则上按capture处理。
+- scuttle的`log=TRUE`确实使用log2尺度，`batch`、`subset`和`min.diff`解释正确。
+- scDblFinder random mode适合复杂异质数据，`samples`应表示capture；多sample复现需要把seed传入BPPARAM。
+- `dbr.sd=1`确实会基本取消预期doublet数量约束，由分类误差主导阈值。[scDblFinder官方说明](https://bioconductor.org/packages/release/bioc/vignettes/scDblFinder/inst/doc/scDblFinder.html)
+- SoupX通常采用channel级共同`rho`，不应拿它直接删除单个细胞。[SoupX原始论文](https://academic.oup.com/gigascience/article/9/12/giaa151/6049831)
+- 不把单一percent.mt、HB、UMAP位置或ambient比例作为一票否决是合理的。
+- 冻结三套mask、重新计算HVG/PCA/聚类、以效应方向和患者覆盖判断稳定性都很好。
+
+**应用到本项目**
+可以直接采用：输入完整性审计、逐样本QC、hard anomaly、scuttle MAD flags、scDblFinder random mode、无整合临时聚类、三套mask和敏感性分析。
+
+必须跳过并登记`not_evaluable_input_limited`：
+
+- 真实barcode knee和Cell Ranger cell calling复核；
+- emptyDrops；
+- SoupX；
+- CellBender；
+- empty-droplet ambient profile。
+
+DecontX可以运行，因为GSE183904提供的是called-cell raw integer counts，但只能使用无background模式，并把结果表述为`retained-cell contamination estimate`。
+
+还需增加四项项目约束：
+
+- `capture_id`没有公开，暂时只能把每个sample文件当作capture代理，不能声称已确认真实10x通道。
+- public与author-like `min.cells=3`两个feature空间必须分开。
+- 作者是否在公开矩阵前已经删除DoubletFinder阳性细胞仍未知，因此不能强迫scDblFinder达到标准10x预期doublet数量；`dbr.sd=1`应至少作为关键分支。
+- 本项目研究线粒体MLMOD，SOP中的“线粒体基因＋stress＋apoptosis damage_fraction”可能选择性删除目标生物学状态，不宜未经专项验证获得自动删除权限。
+
+此外，这份SOP的最终删除逻辑与当前主线不同：它允许library strong、damage strong或scDblFinder阳性单独删除，而当前主线要求hard anomaly或至少两个非重复家族。采用SOP不是小修参数，而是替换核心QC决策规则，必须修正上述问题后再由Claude Code和你重新批准。
+
+**结论**
+这是一份质量很高的研究型SOP，但目前还不能直接执行。没有大面积事实错误，主要是一个循环定义、一个DecontX输入边界错误、一个MAD数学漏洞，以及数个会影响可复现性的执行缺口。修正后，大约三分之二可以直接应用于本项目，raw-droplet相关部分跳过，其余需结合GSE183904的公开处理边界重新冻结。
+
+--------------------------------------------------------------------------------
+
+[230] 你 | 2026-07-17 01:41:03 Asia/Shanghai
+# Files mentioned by the user:
+
+## # 单细胞转录组QC、Doublet与Ambient RNA处理SOP ## 1. 明确分析单位 首先建立并核对三个字段： ```text patient_i…: C:\Users\14799\.codex/attachments/7eb280a4-cfee-410b-a950-58d2b6d34358/pasted-text.txt
+
+## My request for Codex:
+本次修改位置
+1.解除confident reference循环定义
+将其改为 lineage_reference_v1。
+选择时不再要求排除 strong damage 或 lineage_identity_fail。
+顺序固定为：参考细胞 → 谱系阈值 → 谱系身份 → damage分级。
+参考集合生成后冻结，不反向迭代。
+2.明确DecontX必须使用filtered raw count matrix
+只有normalized、log-transformed、scaled或integrated矩阵时，DecontX记为不可评估。
+3.将library complexity分级前移
+在生成MAD flags后立即定义 library_complexity_level。
+后续选择参考细胞时不再前向引用第14节。
+4.解决min.diff导致low和very-low阈值重合
+nCount/nFeature启用保护时：
+low使用 min.diff=1；
+very-low使用 min.diff=2。
+增加阈值跨mask重合的审计字段。
+5.闭合“污染明显”的判据
+新增 ambient_material_capture。
+只有同时满足定量、表达结构和模型有效性条件，corrected assay才可作为聚类、注释、marker或评分的主矩阵。
+corrected浮点counts不能默认用于DESeq2主分析。
+6.降低DecontX corrected矩阵的证据等级
+corrected矩阵只能用于条件一致性审计，不能称为独立谱系验证。
+7.增加小分层处理规则
+P10/P95要求参考细胞数至少100；
+P99要求至少500；
+不足时按可比capture汇总；
+仍不足则标记 not_evaluable_small_stratum。
+8.限定barcode-rank、EmptyDrops和CellBender输入
+真实knee图只在raw droplets可用时绘制；
+filtered cells只能画library-size rank图；
+CellBender是独立的cell calling＋background removal分支，不再默认叠加SoupX或DecontX。
+9.补齐DoubletFinder完整参数SOP
+按capture运行；
+明确预处理、pN、pK、nExp、homotypic adjustment、seed、版本和结果保存要求。
+
+--------------------------------------------------------------------------------
+
+[231] Codex | 2026-07-17 01:41:23 Asia/Shanghai
+你希望我只核对这九项修改是否正确落地并解决原问题，还是同时对修订后的整份SOP重新做一轮全局方法学审查，检查是否引入了新的冲突？
+
+--------------------------------------------------------------------------------
+
+[232] 你 | 2026-07-17 01:43:08 Asia/Shanghai
+核对这九项修改是否正确落地并解决原问题，并且同时对修订后的整份SOP重新做一轮全局审查，看有无矛盾、事实性错误、能否应用到本研究
+
+--------------------------------------------------------------------------------
+
+[233] Codex | 2026-07-17 01:43:45 Asia/Shanghai
+我会先按项目规则重新加载三份全局约定，然后把新旧SOP做逐行差异核对。审查会分成三层：九项修订落实情况、整份SOP内部闭合性、映射到GSE183904时的可执行与跳过边界。
+
+--------------------------------------------------------------------------------
+
+[234] Codex | 2026-07-17 01:44:29 Asia/Shanghai
+三份全局约定已重新加载。新SOP从1696行扩展到2052行，九项修改都能在目录结构上找到对应章节；下一步要判断它们是“标题出现了”还是判定链真正闭合，尤其关注阈值嵌套、DoubletFinder参数和corrected assay准入。
+
+--------------------------------------------------------------------------------
+
+[235] Codex | 2026-07-17 01:45:48 Asia/Shanghai
+我已经把三份项目约定重新加载，并完成了修订稿前七节的逐行核对。现在继续审查 Doublet、ambient、谱系参考与最终保留/剔除规则，重点看九项修订是否只是“写进去了”，还是逻辑上真正闭合且与本项目输入兼容。
+
+--------------------------------------------------------------------------------
+
+[236] Codex | 2026-07-17 01:46:24 Asia/Shanghai
+九项修订的主体都能在文中找到，但“出现了相应段落”并不等于完全解决。初步看到两个需要重点追查的残余问题：最终剔除逻辑与项目现行主线规则不一致，以及若干“明显、广泛、合理”等判据仍没有可复现定义；我正在把它们与前文阈值、mask 嵌套和本项目 F1 约定逐项对照。
+
+--------------------------------------------------------------------------------
+
+[237] Codex | 2026-07-17 01:49:03 Asia/Shanghai
+方法学核对到这里，九项修订中 1、2、3、4、6、8 已基本闭合，5、7、9 仍有“框架正确但执行判据未完全闭合”的部分。接下来我会用本项目已知的 40 样本、158,641 个公开细胞和输入缺失边界，判断哪些模块可直接采用、哪些必须跳过、哪些必须先改写后才能进入 F1。
+
+--------------------------------------------------------------------------------
+
+[238] Codex | 2026-07-17 02:02:33 Asia/Shanghai
+**总体结论**
+
+这版 SOP 的方法学骨架明显改善，九项修订都得到响应，但目前只能判为 **“有条件通过，尚不能直接作为本项目 F1 执行规范”**。仍有 2 个阻断问题和若干执行闭合问题。
+
+**主要发现**
+
+**[阻断] 1. `information_loss_strong` 在修订中丢失了定义**
+
+前提验证：最终剔除规则必须能由第三方逐细胞复算。
+
+定量依据：修订稿在 [1048行](C:/Users/14799/.codex/attachments/7eb280a4-cfee-410b-a950-58d2b6d34358/pasted-text.txt:1048)、[1582行](C:/Users/14799/.codex/attachments/7eb280a4-cfee-410b-a950-58d2b6d34358/pasted-text.txt:1582) 和 [1729行](C:/Users/14799/.codex/attachments/7eb280a4-cfee-410b-a950-58d2b6d34358/pasted-text.txt:1729) 使用该变量，却没有定义它。旧稿原本将其定义为低 `nCount` 与低 `nFeature` 同时阳性，或任一 very-low 阳性，但移动 complexity 分级时被删掉了。`corrected/native information_loss_strong` 更没有说明是重新计算 MAD，还是比较 raw→corrected 的保留比例。
+
+结论：这是修订引入的回归，直接导致 strong damage 和 ambient-dominated 排除无法复现。还需明确：
+
+- `raw_information_loss_strong_{loose/main/strict}`
+- `corrected_information_loss_strong_{loose/main/strict}`
+- corrected/raw 的 `nCount`、`nFeature` 保留率或绝对变化规则
+- `lineage_reference_v1` 使用哪一套固定 complexity 等级；目前 [1210行](C:/Users/14799/.codex/attachments/7eb280a4-cfee-410b-a950-58d2b6d34358/pasted-text.txt:1210) 使用单数变量，但前面实际生成三套等级。
+
+**[阻断] 2. SOP 的剔除政策与已批准主线方案冲突**
+
+前提验证：SOP 若应用于本项目，不能静默替代已经冻结的 F1 规则。
+
+定量依据：SOP 允许单个 strong family 删除细胞，主 mask 直接删除所有 `scDblFinder.class == doublet`，[见1805至1873行](C:/Users/14799/.codex/attachments/7eb280a4-cfee-410b-a950-58d2b6d34358/pasted-text.txt:1805)。现行主线则要求除 hard anomaly 外至少两个非重复证据家族，并要求 scDblFinder 阳性再有一个非 multiplet 家族支持才作为 high-confidence doublet，[见主线方案294行](D:/服务器_胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:294) 和 [296行](D:/服务器_胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:296)。
+
+此外，SOP 满足 A+B+C 后可自动把 corrected assay 升为主矩阵；主线方案要求先报告并由研究者批准。SOP 还在 QC 敏感性中检查 MLMOD 分数，[2009行](C:/Users/14799/.codex/attachments/7eb280a4-cfee-410b-a950-58d2b6d34358/pasted-text.txt:2009)，而本项目规定 F1 不用 MLMOD 结果参与 QC、聚类和注释决策。
+
+结论：这不代表 SOP 的分级删除思路一定错误，但它是一次实质性方法变更。必须由你选择“修改 SOP 适配主线”或“正式修改主线规则并重新审核”，不能直接套用。
+
+**[重要] 3. corrected assay 准入条件仍存在伪具体性**
+
+前提验证：主矩阵选择必须在看目标生物学结果前，用可复核的 QC 指标决定。
+
+定量依据：[1093至1105行](C:/Users/14799/.codex/attachments/7eb280a4-cfee-410b-a950-58d2b6d34358/pasted-text.txt:1093) 仍使用“广泛低水平”“明显下降”“大范围清除”“合理参数”“主要结论方向一致”。其中 raw→corrected 后下降本身是模型预期行为，只能算条件一致性，不能独自证明校正正确；“主要结论方向一致”若包含 MLMOD 或下游效应，会造成结果驱动的矩阵选择。
+
+结论：第5项只部分解决。需要把 B/C 转为预注册量化指标，并明确“主要结论”只能指谱系保留、经典 marker 保留、细胞比例和聚类稳定性，不能指 MLMOD、DE 或预后结果。`native_nCount` 也建议改名为 `decontX_corrected_nCount`，避免把模型估计称为真实本征表达。
+
+**[重要] 4. 小分层规则没有覆盖全 SOP**
+
+前提验证：高分位阈值必须有足够尾部观察值。
+
+定量依据：项目预审计中每样本细胞数为 186 至 13,626，中位数 3,341；9/40 个样本少于2,000个细胞，粗谱系分层还会更小，[预审计表](D:/服务器_胃癌线粒体亚群/results/F0_audit/gse183904_csv_structure_precheck.tsv:2)。新增的 `P95 n≥100`、`P99 n≥500` 相当于各保留约5个尾部观察值，是合理但非官方强制的稳定性启发式。可是 contamination 仍使用 P90、P99.5 和“约2,000”而没有相应最小样本量，[982至1013行](C:/Users/14799/.codex/attachments/7eb280a4-cfee-410b-a950-58d2b6d34358/pasted-text.txt:982)。
+
+结论：第7项部分解决。还需覆盖 P90/P99.5；跨 capture 汇总必须写成技术可比条件的交集，而不是目前容易误解的逐步合并列表，并明确无法汇总时为 `not_evaluable`。
+
+**[重要] 5. 多个证据模块仍没有可执行定义**
+
+前提验证：证据家族必须冻结基因集、评分算法和参数。
+
+定量依据：stress/apoptosis 没有基因集来源、版本、评分算法；lineage UCell 没有 `maxRank`；ambient marker 家族没有实际清单；“cluster主体”“明显边界”“前30个非伪影 marker”没有可复核算法。
+
+本项目还有一个具体问题：现有 F0 脚本用 `^HB` 识别血红蛋白基因，[脚本770行](D:/服务器_胃癌线粒体亚群/scripts/F0_setup/F0_step2_sample_info_and_audit.py:770)，已经把 `HBEGF` 错列为 HB 基因，[预审计结果](D:/服务器_胃癌线粒体亚群/results/F0_audit/gse183904_csv_structure_precheck.tsv:2)。`HBEGF` 实际是 heparin-binding EGF-like growth factor，不是血红蛋白基因，[NCBI Gene](https://www.ncbi.nlm.nih.gov/gene/1839)。
+
+结论：必须冻结真正的 HB panel、八类谱系 panel、stress/apoptosis panel、ambient marker panel及全部评分参数。`HBEGF` 误纳入是确定的项目实现错误。
+
+**[重要] 6. DoubletFinder 已补全参数，但决策尚未完全闭合**
+
+前提验证：参数不仅要保存，还要有唯一选择规则。
+
+定量依据：按 capture 运行、`pN=0.25`、BCmvn 选择 pK、nExp、homotypic adjustment、seed 和版本均已正确补入；当前函数名 `paramSweep` 也适配 Seurat v5。[DoubletFinder 官方说明](https://github.com/chris-mcginnis-ucsf/DoubletFinder)
+
+但多个相近 pK 峰时只写“比较稳定性”，没有最终 tie-break；上样细胞数未知时没有 nExp fallback；`DoubletFinder.class` 究竟固定为 adjusted 还是 unadjusted 仍用“可以”；严格 mask 是否删除全部 borderline 也仍是自由选择。
+
+结论：第9项基本解决工具参数缺失，但还没达到“另一个 agent 无需猜测即可执行”。
+
+**九项修订判定**
+
+| # | 判定 | 说明 |
+|---|---|---|
+| 1 | 基本通过 | 原循环已解除；仍需固定 reference 使用哪套 complexity mask |
+| 2 | 通过 | DecontX 已严格限定 filtered raw counts |
+| 3 | 基本通过 | complexity 已前移；三套等级与单数变量关系未闭合 |
+| 4 | 通过 | low=1、very-low=2 数学上解决保护启用时的重合，并增加审计 |
+| 5 | 部分通过 | A+B+C、浮点 counts 和 DESeq2 边界已写入；判据和 information loss 未闭合 |
+| 6 | 通过 | corrected assay 明确降为条件一致性证据 |
+| 7 | 部分通过 | P10/P95/P99 已处理；P90/P99.5及跨 capture 汇总仍缺口 |
+| 8 | 通过 | knee、EmptyDrops、CellBender 输入边界正确，CellBender 已独立成分支 |
+| 9 | 基本通过 | 参数链完整，但 pK、nExp 和最终分类选择仍有自由裁量 |
+
+上述核心工具事实与官方资料一致：`isOutlier(log=TRUE)` 使用 log2 且 `min.diff` 取与 MAD 距离的较大者，[scuttle 手册](https://bioconductor.org/packages/release/bioc/manuals/scuttle/man/scuttle.pdf)；scDblFinder 应按真实 capture 拆分并通过 BPPARAM 固定多样本随机种子，[scDblFinder vignette](https://bioconductor.org/packages/release/bioc/vignettes/scDblFinder/inst/doc/scDblFinder.html)；DecontX 可使用 filtered raw counts、raw droplets 只是可选 background，且 corrected counts 为浮点估计，[DecontX vignette](https://bioconductor.org/packages/release/bioc/vignettes/decontX/inst/doc/decontX.html)；CellBender 和 EmptyDrops 都需要未经过 cell calling 的 droplet 输入，[CellBender 文档](https://cellbender.readthedocs.io/en/latest/usage/index.html)、[DropletUtils 手册](https://bioconductor.org/packages/release/bioc/manuals/DropletUtils/man/DropletUtils.pdf)。
+
+**本项目适用性**
+
+目前可以采用其总体框架，但需要项目适配后才能执行：
+
+- GSE183904 只有 called/retained-cell raw integer counts；EmptyDrops、真实 knee、SoupX、CellBender全部跳过，DecontX只能作为 retained-cell 模型评估。
+- 必须保留 `public_full_feature_space` 与 `author_like_min_cells3_feature_space` 两套口径；本 SOP 尚未写入这一项目特异要求。
+- 正式 F0 的 `sample_info.tsv`、`data_audit.tsv`、作者处理审计和 gate 报告尚未生成，因此 `capture_id` 映射、作者已过滤程度和 doublet prior 尚未正式闭合。
+- 当前环境中 Seurat 5.5.0 已安装，但 scDblFinder、DoubletFinder 和 celda/DecontX 仍未安装，[环境基线](D:/服务器_胃癌线粒体亚群/data/metadata/software_versions.tsv:22)。
+- 三套 mask 不应机械地把 F1-F8 全部重跑三遍；本项目应按现行主线采用主 mask 完整执行，宽松/严格 mask 针对关键聚类、注释、MLMOD评分和样本级结论做敏感性分析。
+
+因此我的最终判断是：**方法学方向正确、没有新的核心工具事实错误，但仍未达到可直接执行状态。至少先修复 `information_loss_strong`、解决主线剔除政策冲突、量化 ambient gate、冻结证据模块和修正 HB panel，之后再提交一次短轮审核。**
+
+本轮仅完成审查，没有修改任何文件。
+
+--------------------------------------------------------------------------------
+
+[239] 你 | 2026-07-17 12:17:23 Asia/Shanghai
+# Files mentioned by the user:
+
+## # 单细胞转录组QC、Doublet与Ambient RNA处理SOP ## 1. 明确分析单位 首先建立并核对三个字段： ```text patient_i…: C:\Users\14799\.codex/attachments/36f6f6c5-3bcc-4478-807c-33588bf4c846/pasted-text.txt
+
+## My request for Codex:
+本次具体修改内容
+1. 补回并拆分 information_loss_strong
+
+新增并明确：
+
+raw_information_loss_strong_loose/main/strict
+decontX_corrected_information_loss_strong_loose/main/strict
+corrected矩阵必须在其自身capture内重新计算MAD，不能沿用raw阈值；
+另外保存count和feature的保留率、删除比例及绝对变化；
+lineage_reference_v1固定使用 library_complexity_main，不随三套mask改变。
+2. 将corrected assay准入标准完全量化
+
+删除或替换以下模糊表述：
+
+“广泛低水平”
+“明显下降”
+“大范围清除”
+“合理参数”
+“主要结论方向一致”
+
+新增量化指标：
+
+非来源谱系ambient marker检出率；
+校正后的绝对和相对下降幅度；
+经典谱系marker保留率；
+粗谱系注释一致率；
+raw/corrected粗聚类ARI；
+过度校正细胞比例；
+不同ambient参数分支的一致率。
+
+并明确：
+
+MLMOD、DE、预后和候选亚群结果不得参与主矩阵选择；
+native_nCount/nFeature改名为 decontX_corrected_nCount/nFeature；
+corrected浮点值不作为DESeq2主分析的原始整数counts。
+3. 将小分层规则扩展到所有经验分位数
+
+新增统一规则：
+
+P90：至少100个参考细胞；
+P95：至少100个；
+P99：至少500个；
+P99.5：至少1,000个，2,000个为优选；
+技术可比分层按多个条件的交集定义；
+汇总后仍不足则设为 not_evaluable_small_stratum；
+不可评估不能自动按阴性处理。
+4. 冻结所有panel、评分参数和临时聚类审计算法
+
+新增：
+
+HB、八大粗谱系、stress、apoptosis、ambient marker及伪影基因panel的版本文件；
+来源、版本、基因ID、缺失基因和checksum；
+UCell assay、layer、maxRank、缺失基因策略和是否平滑；
+cluster_core、cluster_boundary的kNN和中心距离定义；
+前30个非伪影marker的DE方法、阈值、排序与不足30个时的规则。
+5. 完全闭合DoubletFinder决策
+
+新增并固定：
+
+多个相近pK峰的确定性tie-break；
+未知预期doublet率时的 nExp fallback；
+DF_main_class默认采用homotypic-adjusted分类；
+无法进行homotypic adjustment时才回退到unadjusted；
+严格mask删除的borderline doublet采用固定布尔规则，不再保留“可加入”的自由选择。
+
+--------------------------------------------------------------------------------
+
+[240] Codex | 2026-07-17 12:17:51 Asia/Shanghai
+你希望我这次仍按上一轮标准：**先逐项核对这五项是否正确落地并解决原问题，再对整份 SOP 做全局复审和本项目适配审查**，对吗？
+
+--------------------------------------------------------------------------------
+
+[241] 你 | 2026-07-17 12:20:03 Asia/Shanghai
+先逐项核对这五项是否正确落地并解决原问题，再对整份 SOP 做全局复审
+
+--------------------------------------------------------------------------------
+
+[242] Codex | 2026-07-17 12:20:17 Asia/Shanghai
+确认。我会按两个层次审查：先逐项追踪这五项从“原问题 → 新定义 → 决策闭合 → 输出审计”是否真正落地，再脱离修改清单，对整份 SOP 做方法学、内部一致性和本项目适配性复核；本轮只审核，不改文件。
+
+--------------------------------------------------------------------------------
+
+[243] Codex | 2026-07-17 12:21:17 Asia/Shanghai
+项目约定已重新加载。新 SOP 共 2,105 行，较上一版增加 53 行，但文件体积反而减少，说明它不是简单追加；我会用逐段阅读和版本差异双重核对，避免只凭修改摘要判断“已经解决”。
+
+--------------------------------------------------------------------------------
+
+[244] Codex | 2026-07-17 12:21:54 Asia/Shanghai
+第一遍阅读显示，五项修订都能在正文中找到对应段落，但“出现了文字”不等于“决策已闭合”。接下来我正在检查变量依赖、三套 mask 的嵌套性、corrected assay 的准入逻辑，以及它是否与项目已批准的 F1 主线规则冲突。
+
+--------------------------------------------------------------------------------
+
+[245] Codex | 2026-07-17 12:25:30 Asia/Shanghai
+目前已经发现一个明确的“修订落地但仍未闭合”点：DoubletFinder 的 `pK` 并列规则依赖分类集合，而分类集合又依赖尚未选定的 `nExp`；在 `nExp` 不可恢复时，这条 tie-break 无法执行。另有几处需要用当前官方文档核实，我正在把“事实性错误”和“项目自定但需论证的阈值”分开。
+
+--------------------------------------------------------------------------------
+
+[246] Codex | 2026-07-17 12:29:50 Asia/Shanghai
+五项修订的文本追踪已完成。结论不是“全部通过”：第 1 项基本闭合；第 2、4、5 项仍有可执行性缺口；第 3 项的样本量表本身合理，但“覆盖所有经验分位数”的表述与正文中的 P80、P01/P05 不一致。现在进入整份 SOP 与本项目主线的冲突审查。
+
+--------------------------------------------------------------------------------
+
+[247] Codex | 2026-07-17 12:33:15 Asia/Shanghai
+全局复审已收敛：方法学骨架总体可靠，原始液滴输入限制、DecontX边界、按 capture 运行 doublet、raw integer pseudobulk 等核心事实没有大错；真正阻断落地的是决策规则尚未完全闭合，以及它与已批准主线方案存在四处实质政策冲突。我正在整理为“原问题是否解决、严重级别、项目处置”三列结论。
+
+--------------------------------------------------------------------------------
+
+[248] Codex | 2026-07-17 12:35:24 Asia/Shanghai
+**总体结论**
+
+这版 SOP 的核心方法学框架基本正确，但**尚不能作为本项目 F1-Gate1 的直接执行依据**。五项修订中，第 1 项基本解决原问题；第 2、3、5 项部分闭合；第 4 项仍未真正完成冻结。另有几处与已批准主线方案直接冲突，属于执行前阻断项。
+
+**阻断发现**
+
+1. **P0：改变了已批准的细胞删除政策**
+
+前提：当前主线规定，除 hard anomaly 外，主分析必须有至少两个非重复证据家族；scDblFinder 阳性还需一个非 multiplet 家族支持。
+
+依据：SOP 改成单个 `library_complexity strong` 即删除，并在主 mask 删除全部 scDblFinder primary doublet，[SOP 第15节](</C:/Users/14799/.codex/attachments/36f6f6c5-3bcc-4478-807c-33588bf4c846/pasted-text.txt:1872>)；这与[主线方案第294至296行](</D:/服务器_胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:294>)不一致。
+
+结论：这不是文字修订，而是研究政策变更。考虑本项目矩阵已被作者预过滤、原始回收细胞数和残余 doublet 率未知，我建议保留现行主线的保守规则，SOP 与之对齐；否则必须由你批准修改主线方案。
+
+2. **P0：corrected assay 自动晋升仍未闭合**
+
+前提：40 个样本最终需要一套统一、可解释的主表达策略。
+
+依据：SOP 按 capture 定义 `ambient_material_capture`，但没规定部分 capture 通过时，是只校正这些样本还是统一处理全部样本；前者会引入样本特异处理差异。`raw_corrected_cluster_ARI方向稳定`也不是可计算的通过标准，[SOP 第11.11至11.13节](</C:/Users/14799/.codex/attachments/36f6f6c5-3bcc-4478-807c-33588bf4c846/pasted-text.txt:1334>)。自动取得主矩阵资格还违反主线“报告后等待用户批准”的规定，[主线方案第297行](</D:/服务器_胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:297>)。
+
+结论：本项目继续保持 raw assay 为默认主矩阵；DecontX corrected assay 先做敏感性，任何晋升必须单独审批。
+
+3. **P0：仍有执行时必须猜测的变量**
+
+前提：另一个执行者应能按 SOP 得到完全相同的 mask。
+
+依据：`hard_anomaly`在删除规则中出现但没有布尔定义；何时认为 MAD“过小或阈值明显不合理”、什么叫“可信 capture”、`major lineage`范围也未定义；`high_count AND high_feature`遗漏 mask 后缀。[相关定义](</C:/Users/14799/.codex/attachments/36f6f6c5-3bcc-4478-807c-33588bf4c846/pasted-text.txt:344>)、[删除规则](</C:/Users/14799/.codex/attachments/36f6f6c5-3bcc-4478-807c-33588bf4c846/pasted-text.txt:1845>)。
+
+结论：这些必须量化后才能写脚本，尤其建议直接固定 `min.diff`，避免保留人工判断开关。
+
+**五项逐项核对**
+
+| 修订 | 判断 | 核对结果 |
+|---|---|---|
+| 1. information loss | **基本通过** | raw/corrected 三套变量已定义，corrected 阈值独立重算，保留率与绝对变化已加入，reference 固定使用 main。仍需定义 corrected `nFeature` 的检测阈值，以及冻结重算所用细胞集合，否则 tiny positive 浮点值和不同 mask 子集可能改变结果。[第11.4至11.5节](</C:/Users/14799/.codex/attachments/36f6f6c5-3bcc-4478-807c-33588bf4c846/pasted-text.txt:1067>) |
+| 2. corrected assay量化 | **部分通过** | ambient marker下降、marker保留、ARI、注释一致率和结局隔离均已写入，raw integer pseudobulk边界正确。但参数分支一致率仍未量化，主要谱系未定义，且缺少 dataset-level 晋升规则。DecontX检测阈值本身可调整，因此必须冻结 `corrected count > ?` 的定义。[DecontX官方文档](https://bioconductor.org/packages/release/bioc/vignettes/decontX/inst/doc/decontX.html) |
+| 3. 小分层规则 | **部分通过** | P10/P90/P95/P99/P99.5门槛及 `not_evaluable`逻辑基本合理。但 SOP 还使用 cluster-core P80，却没有对应最小样本量；“无法计算P99/P99.5只保留较低等级”又与 `contamination ≥50%`仍可判 extreme 存在表述冲突。[第13.3节](</C:/Users/14799/.codex/attachments/36f6f6c5-3bcc-4478-807c-33588bf4c846/pasted-text.txt:1534>) |
+| 4. panel与算法冻结 | **未完全通过** | 目前写的是“必须建立文件”，并没有真正给出八谱系、ambient、artifact和apoptosis的冻结清单、版本及SHA256。`UCell_version=冻结版本`和`w_neg=默认值`仍是占位符；`missing_genes=impute`不是 UCell 2.16 的函数参数，SmoothKNN插补的是分数，不是缺失panel基因。[UCell官方手册](https://www.bioconductor.org/packages/release/bioc/manuals/UCell/man/UCell.pdf) |
+| 5. DoubletFinder闭合 | **部分通过** | pN、候选pK、nExp分支、adjusted/unadjusted和严格mask布尔式均已出现。但pK的Jaccard tie-break依赖分类集合，而分类集合依赖尚未确定的nExp；low/mid/high fallback也没有定义 adjusted-mid 分支。官方将 adjusted与unadjusted视为可检测率的两端，而不是普适地认定 adjusted 必然为真值。[DoubletFinder官方README](https://github.com/chris-mcginnis-ucsf/DoubletFinder) |
+
+**方法学事实**
+
+以下核心事实核对无误：raw-droplet、filtered raw counts和normalized输入的能力边界；filtered cells不能重建真实knee、EmptyDrops、SoupX或CellBender；DecontX使用未归一化counts且输出浮点估计；DESeq2主分析保留raw integer pseudobulk；doublet按capture处理；CellBender不与SoupX/DecontX默认串联；`isOutlier(log=TRUE)`的`min.diff`位于log2尺度。[scuttle手册](https://bioconductor.org/packages/release/bioc/manuals/scuttle/man/scuttle.pdf)、[scDblFinder文档](https://bioconductor.org/packages/release/bioc/vignettes/scDblFinder/inst/doc/scDblFinder.html)。
+
+**本项目适配**
+
+GSE183904只有公开called/retained-cell raw counts，所以raw-droplet分支必须跳过；`capture_id=sample_id`只能在F0确认一个公开样本对应一个捕获单元后作为代理。当前40个样本中2个少于500细胞、4个少于1,000细胞，因此部分P99/P99.5确实会不可评估。
+
+此外，实际项目尚未具备执行条件：F0正式准入文件仍缺失，`scripts/F1_single_cell`只有`.gitkeep`，scDblFinder、DoubletFinder和celda仍未安装，[环境记录](</D:/服务器_胃癌线粒体亚群/data/metadata/software_versions.tsv:22>)。F0脚本的Hb正则仍把HBEGF误算为血红蛋白基因，[脚本第770行](</D:/服务器_胃癌线粒体亚群/scripts/F0_setup/F0_step2_sample_info_and_audit.py:770>)、[实际预审计结果](</D:/服务器_胃癌线粒体亚群/results/F0_audit/gse183904_csv_structure_precheck.tsv:2>)。
+
+最终审核状态：**方法学草案 PASS_WITH_MAJOR_REVISIONS；本项目执行准入 FAIL，修订后复审。** 本轮未修改任何文件。
+

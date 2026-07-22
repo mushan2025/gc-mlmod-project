@@ -63,7 +63,9 @@ STAGE_OUTPUTS = [
 # 这些正则表达式用于确认矩阵内容和命名格式，而不是进行生物学筛选。
 NONNEGATIVE_INTEGER_ROW = re.compile(r"\d+(?:,\d+)*\Z")
 GENE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*\Z")
-CELL_BARCODE = re.compile(r"[ACGTN]{16}_\d+\Z", re.IGNORECASE)
+# Merged column names occur as BARCODE_sample or retain the 10x GEM suffix as
+# BARCODE-1_sample; R may convert that hyphen to a dot (BARCODE.1_sample).
+CELL_BARCODE = re.compile(r"[ACGTN]{16}(?:[.-]\d+)?_\d+\Z", re.IGNORECASE)
 SAMPLE_ID = re.compile(r"sample\d+\Z", re.IGNORECASE)
 
 # 标准化伪影哨兵在查看新算出的细胞 nCount 前已经预登记。

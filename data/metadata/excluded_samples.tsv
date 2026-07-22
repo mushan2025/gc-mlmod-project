@@ -1,0 +1,2 @@
+sample_id	geo_accession	exclusion_scope	exclusion_status	reason	evidence_file	note
+none	none	F1_object_construction	no_exclusion	All 40 samples are eligible if data_audit.tsv remains PASS.	data/metadata/sample_info.tsv; data/metadata/data_audit.tsv	Normal_Peritoneum is excluded from main comparison, not object construction by default.

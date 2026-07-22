@@ -1,0 +1,190 @@
+Claude Code → Codex 审核反馈与修订指令
+文件用途：1b/F0 Step 2 审核后修订指令
+审核日期：2026-07-09
+审核范围：1b 产出（063770f）+ F0 执行计划/脚本（1483add）
+审核结论：带限制通过（PASS_WITH_NOTED_LIMITATIONS）
+指令状态：用户已批准以下 6 项修订，Codex 需在正式执行 F0 前完成
+
+================================================================================
+
+## 审核正面确认（不需要修改）
+
+以下关键点已通过审核：
+- dry-run 保护机制（默认不写输出，需 --execute）
+- tar 解包 path traversal 安全检查（samefile 校验）
+- csv.gz 保留不展开策略
+- 40 样本强制检查
+- precheck 复核逻辑（6 字段比较）
+- Normal_Peritoneum reference-only 处理
+- PM n=3 限制标注
+- F1 不使用 MLMOD 的约束记录
+- HB 基因口径（排除 HBS*/HBP*）
+- 17 个 F0 输出与 manifest 完全匹配
+- 资源评估选定本地笔记本（峰值 RAM <1.5GB vs 14.7GB 可用）
+- 1b 跨F闭合表 28 条依赖基本闭合
+
+## 修订指令
+
+以下 6 项修订按用户批准的优先级执行。所有修改完成后，不执行 F0，提交到 git 等待用户批准。
+
+### 修订 1：SHA256 比较统一使用 .lower()
+
+**问题**：主线方案第113行要求 SHA256 比较不区分大小写。当前脚本中 sha256_file() 返回小写（hashlib 默认），download_manifest.tsv 中存储大写。execute() 中 tar SHA 比较已有 .lower()，但 build_data_audit() 中的 precheck 字段比较、build_processed_manifest() 中的 SHA 和其他所有涉及 SHA256 的比较没有统一处理。
+
+**修改要求**：
+1. 在 build_data_audit() 的 compare_fields 循环中，对 gene_order_sha256 字段比较加 .lower()。
+2. 所有涉及从外部 TSV 读取的 SHA256 与 sha256_file() 产出的比较，统一双侧 .lower()。
+3. F0 输出的 SHA256 字段统一存储为小写，在工具函数或脚本注释中说明这个约定。
+
+### 修订 2：GSE239676 数据结构预审计补齐
+
+**问题**：GSE239676 在 results/F0_audit/ 下的两个预审计表（non_GSE183904_data_structure_precheck.tsv、predownloaded_resource_structure_audit.tsv）中完全缺失。虽然 download_manifest 和 GSE239676_download_manifest.tsv 记录了下载状态（4个文件 size_ok），但从未做过数据结构预审计——没有样本数、细胞数、基因数、矩阵格式、metadata 字段等信息。
+
+**本地已下载文件**：
+- data/public_downloads/GSE239676/GSE239676_count_matrix.mtx.gz (~985MB, gzip_read_ok)
+- data/public_downloads/GSE239676/GSE239676_barcodes.tsv.gz (~5.4MB, plain_text_read_ok_gz_suffix)
+- data/public_downloads/GSE239676/GSE239676_features.tsv.gz (~55KB, plain_text_read_ok_gz_suffix)
+- data/public_downloads/GSE239676/GSE239676_meta.tsv.gz (~5.5MB, plain_text_read_ok_gz_suffix)
+- data/public_downloads/GSE239676/GSE239676_series_matrix.txt.gz (~6KB)
+- data/public_downloads/GSE239676/GSE239676_suppl_listing.html (~890B)
+
+**修改要求**：
+1. 在 F0 执行前，写一个独立的轻量 Python 脚本（标准库 + gzip），对 GSE239676 做流式预审计：
+   - 读 barcodes.tsv.gz 数行数（细胞数）
+   - 读 features.tsv.gz 数行数（基因/特征数）和前几行内容（确认基因ID类型）
+   - 读 meta.tsv.gz 的表头和前几行，确认 metadata 字段、样本/患者分组列、是否有腹膜转移标签
+   - 读 count_matrix.mtx.gz 头部确认 MatrixMarket 格式和维度声明
+   - 读 series_matrix.txt.gz 确认 GEO 样本数和处理描述
+   - 注意：3个 .gz 文件的 gzip_status 为 plain_text_read_ok_gz_suffix，说明它们可能是纯文本文件错误使用了 .gz 后缀。预审计脚本必须先尝试 gzip.open，失败后 fallback 为普通文本读取，并在输出中记录实际压缩状态
+2. 将结果追加到 predownloaded_resource_structure_audit.tsv（遵循该表既有字段结构）
+3. 预审计脚本保存为 scripts/F0_setup/preaudit_gse239676.py
+4. 预审计只读不改原文件，不需要 --execute 保护
+5. 结合 project_overview.txt 已知信息（Gastroenterology 2024, 20例IV期胃腺癌, 含原发/肝转移/腹膜癌播散, GEO提供count_matrix.mtx与metadata），验证实际数据是否与已知描述一致，不一致处需记录
+
+### 修订 3：audit_csv_gz() 整数性检测严谨化
+
+**问题**：当前整数性检测使用 re.search(r"[^0-9,]", values) 做近似判断。虽然对 GSE183904 的已知纯整数矩阵足够，但如果数据出现浮点数（如 3.5）、科学计数法（1e5）、负数（-1）或带引号的数值，该正则的行为不够精确。F0 的整数性判断直接驱动 F1 QC 方法选择——如果这里误判，后续修复成本很高。
+
+**修改要求**：
+1. 对 values 字段逐值解析（split by comma），去引号后尝试：
+   - 先检查是否为空字符串（缺失值）
+   - 尝试 int() 转换：成功 → 整数
+   - 失败则尝试 float() 转换：成功 → 非整数（浮点/科学计数法）
+   - float 也失败 → invalid（非数值）
+2. 统计三类异常：missing_value_count、noninteger_float_count、invalid_nonnumeric_count（取代当前的 missing_value_rows、invalid_numeric_value_rows）
+3. 负整数也要单独统计为 negative_integer_count，因为 scRNA count 矩阵不应出现负值
+4. 不需要改变整体判断逻辑——只要 noninteger_float_count == 0 && invalid_nonnumeric_count == 0 && negative_integer_count == 0 && missing_value_count == 0，仍判定为 nonnegative_integer_count_like
+5. 保留 scan_seconds 和性能意识——逐值解析会比正则慢，但 F0 只扫 40 个 csv.gz（合计约 158K cells × 26K genes），在流式读取下预计仍在数十分钟以内可完成；如果对性能有顾虑，可以用采样策略（如每个文件前 1000 行全量解析 + 剩余行正则快速扫描），但必须在 data_audit.tsv 中记录采样策略
+6. 更新 data_audit.tsv 字段定义，新增字段名对齐修改后的统计变量
+7. 确保 data_audit.tsv 新字段与 precheck 表的 compare_fields 比较逻辑兼容——precheck 表中的旧字段名（missing_value_rows、invalid_numeric_value_rows）和新字段名之间需要有映射或容错
+
+### 修订 4：marker panel 内容审计加入 F0 脚本
+
+**问题**：当前 F0 脚本只检查 cell_type_marker_panel.tsv 文件是否存在（gate checklist 的 marker_panel 项），不检查内容。主线方案 F0.1 说"如发现marker冲突或缺失，只输出问题清单"。轻量内容审计放在 F0 可以早发现问题。
+
+**已知 marker panel 信息**：
+- cell_type_marker_panel.tsv：22 个 cell_type（含表头 23 行），字段为 cell_type, positive_markers, supporting_markers, negative_markers, minimum_rule, confidence, evidence_ids, note
+- cell_marker_reference_evidence.tsv：71 条证据记录（含表头 72 行）
+
+**修改要求**：
+1. 在 F0 脚本中添加一个 audit_marker_panel() 函数，检查：
+   - cell_type_marker_panel.tsv 必需字段完整：cell_type, positive_markers, minimum_rule, confidence, evidence_ids
+   - 每行 positive_markers 非空
+   - 每个 cell_type 不重复
+   - positive_markers 中的基因名是否为有效格式（大写字母开头，只含字母数字和连字符）
+   - evidence_ids 中引用的 ID 是否在 cell_marker_reference_evidence.tsv 中存在（交叉引用完整性）
+   - 报告但不修改 marker panel——发现问题只生成 results/F0_audit/marker_panel_issue_report.tsv
+2. 如果无问题，不生成 marker_panel_issue_report.tsv（条件生成，与方案一致）
+3. 如果有问题，在 gate checklist 中 marker_panel 项改为 "PASS_WITH_NOTED_ISSUES" 而不是 FAIL，因为 marker panel 问题不阻断 F0
+4. 在 analysis_log.md 中记录审计结果
+
+### 修订 5：F0 脚本拆分为多个阶段性脚本
+
+**问题**：当前 run_F0_full_audit.py 1694 行作为单体脚本，一次执行完所有 F0 任务。研究者和审核者希望能分步执行、分步审核，及时发现问题。
+
+**修改要求**：
+
+将 F0 拆分为以下阶段性脚本，每个脚本独立可执行，按顺序运行：
+
+1. **scripts/F0_setup/F0_step1_structure_and_extract.py**
+   - 创建/确认项目目录
+   - 写 project_structure_ready.txt
+   - 校验 GSE183904_RAW.tar SHA256
+   - 列出 tar 成员
+   - 提取 40 个 csv.gz 到 data/processed_input/GSE183904/
+   - 写 processed_input_manifest.tsv（含每个文件的 SHA256）
+   - 初始化 analysis_log.md
+   - 暂停条件：tar 不存在/不可读/SHA256 不匹配/成员数 ≠ 40
+   - 输出：project_structure_ready.txt, processed_input_manifest.tsv, analysis_log.md 开始
+
+2. **scripts/F0_setup/F0_step2_sample_info_and_audit.py**
+   - 依赖 step1 输出：读 processed_input_manifest.tsv 确认 40 个文件已提取
+   - 解析 GSE183904_series_matrix.txt.gz 构建 sample_info.tsv
+   - 对 40 个 csv.gz 执行全流审计（含修订3的严谨整数性检测）
+   - 与 gse183904_csv_structure_precheck.tsv 比较
+   - 写 data_audit.tsv
+   - 暂停条件：任何样本 group_analysis=Unclear / 审计与 precheck 关键字段不一致 / 存在 normalization_artifact_flag=true
+   - 输出：sample_info.tsv, data_audit.tsv
+
+3. **scripts/F0_setup/F0_step3_inventory_and_markers.py**
+   - 依赖 step1+step2 输出
+   - 构建 F0_dataset_inventory.tsv（包含 GSE239676，来自修订2的预审计结果）
+   - 构建 F0_file_manifest.tsv
+   - 构建 F0_metadata_field_inventory.tsv
+   - 构建 F0_author_processing_audit.tsv
+   - 构建 F0_external_resource_inventory.tsv
+   - 执行 marker panel 内容审计（修订4）
+   - 输出：上述 TSV + 条件性 marker_panel_issue_report.tsv
+
+4. **scripts/F0_setup/F0_step4_decisions_and_gate.py**
+   - 依赖 step1+step2+step3 输出
+   - 构建 F0_data_readiness_by_F_section.tsv
+   - 构建 F0_method_prior_decision.tsv
+   - 构建 decision_evidence_log.tsv
+   - 构建 excluded_samples.tsv
+   - 构建 F0_gate_checklist.tsv（读取所有前序输出检查齐全性）
+   - 写 F0_global_data_reconnaissance_report.md
+   - 写 F0_execution_report.md
+   - 最终化 analysis_log.md
+   - 输出：上述全部 + gate 判断
+
+**共享逻辑处理**：
+- 将 sha256_file, read_tsv, write_tsv, clean_csv_token, append_log, now_iso, rel 等工具函数提取到 scripts/F0_setup/f0_utils.py
+- 每个 step 脚本 import f0_utils
+- 每个 step 脚本都有 --project-root 参数和 --execute 保护
+- 每个 step 在执行前检查上一步的关键输出是否存在，不存在则报错退出
+- 保留原 run_F0_full_audit.py 作为 convenience wrapper，按顺序调用 step1→step2→step3→step4
+
+**注意**：
+- 拆分是结构性重构，不改变任何业务逻辑（除修订1/3/4的具体逻辑修改外）
+- F0_OUTPUTS 列表和 F0_expected_output_manifest.tsv 不变
+- 新脚本的命名和功能边界必须清晰，每个脚本的 docstring 说明依赖和输出
+
+### 修订 6：F1 准备阶段备忘
+
+**不需要现在执行**，但在 F0 执行完成后的 F1 执行计划中，Codex 需要在 F0_method_prior_decision.tsv 或 F1 专项文件中补充：
+- cell_type_marker_panel.tsv 的 method prior 条目（只读、不修改、冲突只报告）
+- cell_marker_reference_evidence.tsv 的关联审计条目
+这是一个提醒，不是本次 F0 修订的阻断项。
+
+================================================================================
+
+## 执行顺序
+
+1. 先执行修订2（GSE239676 预审计脚本 + 追加 predownloaded 表），因为后续 F0 脚本拆分需要用到这个结果
+2. 执行修订5（F0 脚本拆分 + 提取共享工具），在拆分过程中同步完成修订1（SHA256 .lower()）、修订3（整数性检测）、修订4（marker panel 审计）
+3. 修订6 只需在本次提交的 commit message 或 analysis_log 中记录为 F1 备忘
+4. 全部修改完成后，对每个新脚本做 py_compile 语法检查和 dry-run
+5. 提交到 git，commit message 建议：refactor: split F0 into staged scripts with audit improvements
+6. 不执行 F0，等待 Claude Code 审核新脚本和用户批准
+
+## 附加验证要求
+
+修改完成后，Codex 应自行完成以下验证再提交：
+- 每个新 .py 文件通过 python -m py_compile
+- 每个 step 脚本的 --help 可用
+- preaudit_gse239676.py 实际执行并确认 GSE239676 结构输出
+- step1 dry-run 通过（21 个输入齐全）
+- 确认 F0_OUTPUTS 列表未变
+- grep 确认所有 SHA256 比较处使用 .lower()
+- git diff --check 无空白错误

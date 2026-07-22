@@ -1,0 +1,397 @@
+Claude Code → Codex 审核反馈与修订指令（第二轮）
+文件用途：F0 分阶段脚本 Step 2 复审后修订指令
+审核日期：2026-07-15
+审核范围：commit 59bc74b（F0 四阶段拆分 + 六项修订实施）
+审核结论：不通过 —— 1 项 Blocking 必须修复后才能进入执行阶段
+指令状态：等待用户批准后实施；本轮仍不执行 F0
+
+================================================================================
+
+## 一、审核确认通过的部分（不要改动）
+
+机械验证全部通过，边界守得很好：
+- dry-run 在项目登记的 Python 3.10.11 下正常；21 个输入齐全；17 个输出契约未变
+- 正式 F0 输出一个都没有被误写（sample_info.tsv / data_audit.tsv / F0_gate_checklist.tsv / analysis_log.md 均不存在；data/processed_input/GSE183904/ 为空）
+- 四阶段边界清晰，f0_utils.py 共享层避免了规则漂移
+- marker panel 审计实现正确：只读、severity=warning、blocking_for_F0=false、evidence 表定为 integrity-only 且缺失只报 warning 不扩大 21 项输入契约
+- GSE239676 预审计扎实：222,240 细胞、8,630 特征、20 患者、68 样本，外部验证隔离约束已写入
+
+以下是本轮你主动做的、超出我上轮要求的真实改进，请保留：
+- step1：archive SHA256 不匹配从「WARNING + 继续执行」改为硬阻断抛错（原脚本这里是真实缺陷）
+- step1：成员数 ≠ 40 从「只记日志继续」改为抛错；新增重复 basename 检查
+- step2：validate_step1_manifest 用 SHA256 反查 step1 提取产物完整性
+- step2：legacy_numeric_precheck 妥善处理新旧字段名迁移的比较语义
+
+**关于 SHA256：你是对的，我上轮的建议是错的。** 主线方案第113行明确「本方案中SHA256统一以大写记录，但执行方校验时应以不区分大小写的方式比对」。你实现的「存储大写 + 比较时双侧 normalize」正是方案要求。保持现状，不要改回小写。
+
+================================================================================
+
+## 二、Blocking：data_audit.tsv 缺少方案强制要求的数值分布审计
+
+### 问题定性
+
+**这个缺口是你自己在对话 [095] 中正确诊断出来的**，并明确指出这是「Claude 遗漏的阻断性问题」——你是对的，我第一轮审核确实漏了这一项。你在 [097] 承诺「把修订 3 落到主线方案要求的完整全流审计指标上；这属于修复现有脚本未忠实实现方案的缺口」。
+
+但 commit 59bc74b 的实际实现没有包含这些指标，最终汇报 [111] 只写了「整数审计：加入缺失值、非整数浮点、非法字符、负整数的精确分类」，把承诺过的扩展范围收回了，且没有标注这个落差。请在本轮修复它，并在 analysis_log 或 commit message 中如实记录这次范围回退。
+
+### 前提验证（方案原文）
+
+主线方案对 F0 full-stream 审计的强制要求：
+
+- 第168行：「full-stream审计**应**逐行检查列数、缺失值、非负整数性、**最小值、最大值**、基因名、**barcode重复**、线粒体/血红蛋白基因识别和基因顺序一致性。……每个文件的 **per-cell nCount统计（min、Q1、median、Q3、max）仍必须基于全部细胞列计算，不可抽样**。」
+- 第172行：「per-cell total count（nCount）分布：应呈现连续分布且有合理范围（通常几百到几万），**不应出现所有细胞total count完全相同或高度集中在少数round number的情况**；这类现象提示normalized后取整或其他非原始UMI处理。」
+- 第173行：「per-gene mean expression分布：应呈现zero-inflated右偏分布。」
+- 第174行：「若发现所有细胞total count完全一致，或数值分布呈现明显normalization artifact，则**不能**当作raw UMI count使用，**即使 integer_value_rate >= 0.99**。」
+- 第175行：「审计结论中应记录per-cell nCount的median、min、max、Q1、Q3，以及是否发现normalization artifact。」
+- 第177行：「正式审计应复核40个CSV.gz是否均满足：……并且**数值分布没有明显normalization artifact**。」
+
+### 定量依据（逐字段 grep scripts/F0_setup/*.py）
+
+方案第169行字段清单中，以下 15 项在代码中完全缺失：
+
+```
+min_value, max_value, has_negative_value
+per_cell_nCount_min, per_cell_nCount_Q1, per_cell_nCount_median, per_cell_nCount_Q3, per_cell_nCount_max
+integer_value_rate
+gene_duplicate_count, cell_barcode_duplicate_count
+normalization_artifact_reason
+per_gene_mean_distribution_note
+row_identity, column_identity, first_header_blank, gene_name_type, cell_barcode_pattern
+processed_input_manifest_match, dataset_id, file_name, file_format, compressed
+```
+
+且 F0_step2_sample_info_and_audit.py:365 的 normalization_artifact_flag 仍是同义反复推导：
+
+```python
+"normalization_artifact_flag": (
+    "false" if stats["suspected_matrix_type"] == "nonnegative_integer_count_like" else "true"
+),
+```
+
+而 suspected_matrix_type 只在「bad_column_count_rows == 0 且 numeric_anomaly_count == 0」时取该值。
+
+### 结论
+
+该标记的实际语义退化为「只要全是非负整数，就没有归一化痕迹」。但方案第174行要防的恰恰是「归一化后取整」这一失败模式——它同样表现为全整数、integer_value_rate = 1.0，却已不是原始 UMI。当前实现**检测不出它本该检测的那个失败模式**。
+
+按 CLAUDE.md 反事实前提检查：「GSE183904 公开矩阵是作者过滤后的 raw gene count」是整条 F1 路线的地基前提，方案专门设计 per-cell nCount 分布 + normalization artifact 检查作为该前提的守门条件。缺少它，F0 gate 的 PASS 只是把前提重述一遍，而没有检验它，不构成 F1 准入证据。
+
+### 修改要求
+
+在 F0_step2_sample_info_and_audit.py 的 audit_csv_gz() 中，单趟流式扫描内同时完成以下计算，并写入 data_audit.tsv：
+
+**1. per-cell nCount（必须全细胞列，不可抽样）**
+- 维护 `ncount = [0] * n_cells` 累加器，逐行把每个值加到对应列
+- 输出 per_cell_nCount_min / Q1 / median / Q3 / max
+- 内存开销：n_cells 个 int（最大样本约万级细胞），可忽略
+
+**2. 全局数值统计**
+- min_value、max_value、has_negative_value
+- integer_value_rate = integer_count / total_values_checked
+- 保留你已实现的四类异常分类（missing / noninteger_float / invalid_nonnumeric / negative_integer）
+
+**3. 重复检测**
+- gene_duplicate_count：基因行索引中重复 symbol 数
+- cell_barcode_duplicate_count：表头 barcode 中重复数
+- 注意：方案第275行规定 F1 阶段发现重复必须输出 duplicate_feature_barcode_report.tsv 并暂停、禁止静默 make.unique()。F0 只负责计数和记录，不做处理，但计数必须真实。
+
+**4. per-gene mean 分布（方案第173行）**
+- 逐行累加该基因行的总和，得到 per-gene mean
+- 输出 per_gene_mean_distribution_note，记录是否符合 zero-inflated 右偏（例如均值接近零的基因占比、最大均值），用可核验的数字描述，不要只写定性结论
+
+**5. 真实 normalization artifact 判定（方案第172/174行）**
+- normalization_artifact_flag 必须**独立于** suspected_matrix_type 推导，改为由 nCount 分布证据决定
+- 必须同时输出 normalization_artifact_reason，写明触发了哪条规则或 none
+- **判定规则必须预注册**：在本轮提交的执行计划文档中写死具体阈值和判据，不得留到执行时临场判断（CLAUDE.md §18 伪具体性检测）。至少覆盖方案点名的两种情形：
+  - 所有细胞 nCount 完全相同（n_distinct(ncount) == 1）
+  - nCount 高度集中于少数 round number
+  - 建议另加合理范围检查（方案第172行「通常几百到几万」）
+- 阈值由你提出并给出依据，我审核。**不得在看到 40 个样本的实际结果后再回头调阈值**——先注册，后执行。
+
+**6. 补齐方案第169行其余字段**
+- dataset_id、file_name、source_archive、processed_input_manifest_match、file_format、compressed
+- row_identity、column_identity、first_header_blank、gene_name_type、cell_barcode_pattern
+- decision_reason
+- 方案第170行给了字段解释，第176行给了 GSE183904 预设值，请对照填写
+
+**7. gate 条件收紧**
+- normalization_artifact_flag == "true" 的样本必须触发 step2 暂停（当前已有 artifacts 检查，保留但让它基于真实判定）
+- audit_decision 的 ok 条件应纳入 artifact 判定结果
+
+### 性能与资源评估（必须处理，不能回避）
+
+我理解你在 [099] 选择两级快速路径正是为了避开约 42 亿个数值的逐值解析开销——这个判断在当时是合理的。但 per-cell nCount 必须累加每个值，所以无法保留「整行正则通过就跳过解析」的省法。方案第168行已经预料到这个矛盾并给了明确边界：**行扫描可降级抽样，per-cell nCount 不可抽样**。
+
+因此：
+1. 用项目登记的 Python 3.10 做真实单样本计时（建议用 GSM5573466_sample1.csv.gz，71,343,135 个值），据实外推 40 个样本总耗时
+2. **更新 reports/environment_setup/F0_execution_resource_assessment.tsv**：GSE183904_40_csv_full_stream_audit 行的 estimated_runtime、estimated_peak_ram_gb、pilot_or_smoke_status 必须反映严格实现后的实测值，不能沿用旧的 15-45 min 估计
+3. 若实测总耗时明显不合理（例如超过数小时），可提出方案第168行允许的降级路径：行扫描抽样（integer_check_method 写 sampled、每文件至少 10% 基因行或 2000 行取大者、头中尾均匀分布）+ per-cell nCount 仍全量。但这属于降级，必须在计划中说明抽样范围、比例和未全量审计风险，并等用户批准。**不得静默降级或把抽样结果写成 full_stream。**
+
+================================================================================
+
+## 三、需要用户裁决：方案内部矛盾（不要自行选边）
+
+复审中发现主线方案自身存在两处矛盾，请**不要静默选一个实现**，而是列出问题、给出建议、等用户裁决：
+
+**矛盾 1 — decision_scope**
+- 第170行：「decision_scope**固定为**file_format_only」
+- 第176行：「GSE183904当前预设：……decision_scope = **file_format_and_public_processing_boundary**」
+- 当前代码取 file_format_only
+
+**矛盾 2 — suspected_matrix_type**
+- 第176行预设：suspected_matrix_type = **author_filtered_raw_gene_count_matrix**
+- 但研究者已确认的预审计输入 gse183904_csv_structure_precheck.tsv（F0_IN_012）该列实际值为 **nonnegative_integer_count_like**
+- 当前代码取 nonnegative_integer_count_like，并直接与 precheck 做等值比较
+- 若改用方案第176行的值，40 个样本的 precheck 比较会全部 mismatch → gate 全 FAIL
+
+我的初步判断（供参考，最终由用户定）：这两个值可能描述的是不同层级——nonnegative_integer_count_like 是纯格式观察，author_filtered_raw_gene_count_matrix 是「格式 + GEO processing 证据 + 无 normalization artifact」三者共同支持后的结论。若如此，合理设计是保留一个与 precheck 可比的格式层字段，另设一个结论层字段，而不是让同一字段承担两种语义。请你评估该判断是否成立并提出具体方案。
+
+================================================================================
+
+## 四、Warning（建议本轮一并修复，不阻断）
+
+**W1 — GSE239676 只有 8,630 个基因，未在 major_limitations 中标注**
+
+predownloaded_resource_structure_audit.tsv 中 GSE239676 的 5 行 major_limitations 是同一段样板文字（外部验证隔离约束），虽然 n_feature_rows=8630 已入表，但没把这个结构限制点出来。
+
+为什么重要：正常 scRNA-seq 检测到 20,000–30,000 基因，8,630 说明作者已做过基因过滤。项目已冻结 UCell 为唯一主分数且 **maxRank = 1500 为固定值**，不随数据集自适应——在 26,571 基因的 GSE183904 中覆盖 5.6% 基因空间，在 8,630 基因的 GSE239676 中覆盖 17.4%，跨数据集分数可比性受影响。（AUCell 用 aucMaxRank = ceiling(0.05 × nGenes) 会自适应，UCell 不会。）
+
+要求：在 GSE239676 各行的 major_limitations 或 method_implication 中明确记录：
+- 特征数仅 8,630，远低于典型 scRNA 全基因组检测数，提示作者已做基因过滤
+- 该限制对 F2.4 外部验证的影响：MLMOD human_scoring_signature 基因覆盖率需在 F2.4 专项审计中确认；UCell 固定 maxRank=1500 在不同 nGenes 数据集间的分数可比性需评估
+- 不改变外部验证隔离约束，也不预授权任何分析
+
+**W2 — sample_id 被两处独立推导，无交叉校验**
+
+- step1 build_processed_manifest：从文件名解析（GSM5573466_sample1.csv.gz → sample1）
+- step2 build_sample_info：从 GEO title 正则 `(sample\d+)` 解析，未命中时 fallback 为 `f"sample{idx + 1}"`
+- data_audit 的 sample_id 用文件名来源；patient_by_sample 映射用 title 来源
+- 两者无一致性断言
+
+风险：若某 title 不含 sampleN，fallback 值可能与实际文件静默错配，导致 patient_id 变成 unknown 而无人察觉。
+
+要求：在 step2 中增加显式交叉校验——对每个 geo_accession，比较 step1 文件名解析的 sample_id 与 GEO title 解析的 sample_id；不一致则记入 mismatch_notes 并触发暂停条件。
+
+================================================================================
+
+## 五、执行顺序与验证要求
+
+1. 先处理第三节的方案矛盾：列出问题和建议，等用户裁决后再定字段语义（这会影响 data_audit 的字段设计，所以放最前）
+2. 实施第二节 Blocking 修复，含预注册 normalization artifact 判定规则
+3. 实测单样本耗时并更新 F0_execution_resource_assessment.tsv
+4. 实施 W1、W2
+5. 更新 reports/environment_setup/F0_execution_plan_for_review.md：写入新增审计指标、预注册的 artifact 判定阈值及依据、实测耗时
+6. 若 data_audit.tsv 字段清单变化影响 F0_expected_output_manifest.tsv 的描述，同步更新（但 17 个输出文件本身不应增减）
+
+提交前自检：
+- 每个 .py 通过项目登记 Python 3.10 的 py_compile
+- 各 step 与 wrapper 的 dry-run 通过，仍显示 21 输入 / 17 输出
+- 单样本严格全流 smoke：确认 total_values_checked = 71,343,135（sample1），并核对 per-cell nCount 五数、min/max、重复计数、artifact 判定结果
+- 确认仍未生成任何正式 F0 输出，data/processed_input/GSE183904/ 仍为空
+- grep 确认 normalization_artifact_flag 不再由 suspected_matrix_type 推导
+- git diff --check 无空白错误
+
+提交后**不执行 F0**，等待 Claude Code 复审和用户批准。
+
+## 六、给 Codex 的说明
+
+本轮 Blocking 的根因不是你的代码质量差——四阶段拆分、SHA 处理、marker 审计、GSE239676 预审计都做得扎实，几处主动的硬阻断改进是真实价值。问题在于你自己识别出的关键缺口在实施阶段被静默收窄了。如果实施中发现某项承诺因成本或技术原因难以完成，正确做法是在汇报中明确标出「承诺未兑现 + 原因 + 建议」，而不是让最终汇报只覆盖已完成的窄范围。审核链条依赖你的汇报与实际产出一致。
+
+
+================================================================================
+Codex 会话增量上下文导出（追加）
+文件用途：after_1b_round2_claude_prompt
+会话 ID：019f1dbc-3d37-7e71-80b3-bf6a94ca7706
+原标题/任务线索：Claude 第二轮 Blocking 修订裁决、F0 全流数值审计补齐、资源实测与提交
+源文件：C:\Users\14799\.codex\sessions\2026\07\01\rollout-2026-07-01T20-51-48-019f1dbc-3d37-7e71-80b3-bf6a94ca7706.jsonl
+指定文件名：after_1b_round2_claude_prompt.txt
+前置内容：Claude Code 第二轮审核反馈与修订指令（原文保留）
+前置内容追加前 SHA256：EC520FECEA59B5EAFA91C159CE6FD78C1EA574628FB4B5255BB7FF0863F8C351
+增量基准文件：D:\服务器_胃癌线粒体亚群\codex_context\before_1b_round2.txt
+基准已有消息最大编号：111
+当前可见消息总数：134
+本次导出消息范围：[112]-[134]
+本次导出消息数：23（你 4 条，Codex 19 条）
+消息时间范围：2026-07-15 23:25:12 至 2026-07-16 11:07:07 Asia/Shanghai
+导出时间：2026-07-16 11:13:13 Asia/Shanghai
+
+整理说明：仅保留你和 Codex 在界面中可见的新增消息；已排除 AGENTS.md 指令注入、system/developer 指令、environment_context、工具调用、工具输出、隐藏 reasoning，以及 1 条内部 turn_aborted 控制标记。
+
+================================================================================
+
+[112] 你 | 2026-07-15 23:25:12 Asia/Shanghai
+读 after_1b_round2_claude_prompt.txt
+
+--------------------------------------------------------------------------------
+
+[113] 你 | 2026-07-15 23:25:20 Asia/Shanghai
+读 after_1b_round2_claude_prompt.txt
+
+--------------------------------------------------------------------------------
+
+[114] Codex | 2026-07-15 23:25:29 Asia/Shanghai
+我先重新加载项目的三份强制约定文件，再完整读取 `after_1b_round2_claude_prompt.txt`。随后我会按六项或其实际条目逐条给出“同意/保留意见/理由”，先不改文件。
+
+--------------------------------------------------------------------------------
+
+[115] Codex | 2026-07-15 23:25:57 Asia/Shanghai
+三份基础文件已重新加载；刚才合并读取时长文本输出被截断，我不会据此做判断。现在单独逐行读取第二轮审核提示及被截断的约定段落，保证没有漏掉限制条件或确认清单。
+
+--------------------------------------------------------------------------------
+
+[116] Codex | 2026-07-15 23:26:20 Asia/Shanghai
+第二轮结论很明确：上一轮并非整体失败，而是 `data_audit.tsv` 对“整数但已归一化后取整”的反事实检测没有真正实现。另有两处方案字段语义冲突，Claude 明确要求先由我们提出拆分方案、由你裁决，因此我会先核对主线原文和当前代码，再给出可直接表决的建议。
+
+--------------------------------------------------------------------------------
+
+[117] Codex | 2026-07-15 23:29:52 Asia/Shanghai
+已完整读取 [第二轮 Claude 审核指令](D:/服务器_胃癌线粒体亚群/codex_context/after_1b_round2_claude_prompt.txt)，并重新加载三份项目约定。
+
+**审核结论**
+Commit `59bc74b` 暂不通过：四阶段拆分、SHA256、大文件边界、marker 审计和 GSE239676 预审计均获认可；仅有 **1 项 Blocking**，仍不得执行 F0。
+
+**我的判断**
+
+1. **数值分布审计：同意，必须修复**
+   - 前提验证：主线方案明确要求全细胞 `nCount` 五数、全局最小/最大值、重复 barcode/gene、per-gene mean 分布及独立的 normalization artifact 检查。
+   - 定量依据：当前 [Step 2](D:/服务器_胃癌线粒体亚群/scripts/F0_setup/F0_step2_sample_info_and_audit.py:180) 只分类四类数值异常；`normalization_artifact_flag` 实际等价于“是否为非负整数”，无法识别“归一化后取整”。
+   - 结论：Claude 的 Blocking 成立，必须补齐后才能准入 F1。
+
+2. **`decision_scope` 冲突：建议拆成两层**
+   - `format_decision_scope = file_format_only`
+   - 最终 `decision_scope = file_format_and_public_processing_boundary`
+   
+   前者描述纯文件格式检查，后者对应结合 GEO processing、数值分布和公开数据边界后的最终准入判断。这样两处原文都有明确归属。
+
+3. **`suspected_matrix_type` 冲突：建议拆成观察层与结论层**
+   - `observed_numeric_type = nonnegative_integer_count_like`，用于与旧 precheck 的 `suspected_matrix_type` 比较。
+   - `suspected_matrix_type = author_filtered_raw_gene_count_matrix`，仅在格式、分布、GEO processing 证据均通过后填写。
+   
+   不能直接把两个值互相替换，因为它们分别回答“数值长什么样”和“数据处理边界是什么”。
+
+4. **W1：同意，但措辞应保持证据边界**
+   
+   GSE239676 的 `8,630` 个特征应写成“提示存在预过滤或受限特征空间，具体过滤规则待 F2.4 核实”，同时要求签名覆盖率审计、固定 `maxRank=1500` 的适配性评估，并禁止跨队列直接比较 UCell 分数绝对值。
+
+5. **W2：完全同意**
+   
+   应取消 GEO title 解析失败后的静默序号 fallback；分别保存文件名和 title 推导的 sample ID，逐 GSM 交叉核对，缺失或不一致即进入 `mismatch_notes` 并暂停。
+
+6. **SHA256**
+   
+   保持现状：输出统一大写，比较时不区分大小写。
+
+我的建议是：**接受 Blocking、W1、W2，并采用上述“双层字段”方案解决两处主线矛盾**。确认后再修改主线方案、脚本及审核材料，完成严格单样本性能测试；本轮继续不执行正式 F0。
+
+--------------------------------------------------------------------------------
+
+[118] 你 | 2026-07-16 10:35:13 Asia/Shanghai
+全局指令：”如果我向你提问科研相关的问题或指令，请你在回答前先向我提问，一次只问一个，根据我的回答持续追问。直到你有95%的信心完全理解我的真实需求和目标时再给出最终方案。“
+本次指令：“按你说的修改”
+
+--------------------------------------------------------------------------------
+
+[119] Codex | 2026-07-16 10:35:37 Asia/Shanghai
+确认一下：本轮是否授权我同时修改主线方案、F0 脚本及审核材料，采用上述“双层字段”设计，落实 Blocking、W1、W2并完成单样本 smoke test和 Git 提交，但仍不执行正式 F0？
+
+--------------------------------------------------------------------------------
+
+[120] 你 | 2026-07-16 10:36:35 Asia/Shanghai
+确认
+
+--------------------------------------------------------------------------------
+
+[121] Codex | 2026-07-16 10:37:05 Asia/Shanghai
+确认收到。我会先锁定字段语义和判定规则，再改主线方案与 Step 2；随后用项目 Python 3.10 做严格单样本基准测试，按实测更新资源评估，完成全部自检和提交，全程不会运行正式 F0。
+
+--------------------------------------------------------------------------------
+
+[122] Codex | 2026-07-16 10:37:45 Asia/Shanghai
+当前缺口与 Claude 描述一致：Step 2 的 artifact 标记确实只是“非负整数”的反写，且 GEO title 在解析失败时会静默按序号补 `sample_id`。我还确认了项目 Python 3.10 已有 NumPy，可用 C 层逐行解析来同时保留严格全流审计和可接受性能，而不必先降级抽样。
+
+--------------------------------------------------------------------------------
+
+[123] Codex | 2026-07-16 10:42:17 Asia/Shanghai
+我准备开始修改：主线方案会把“数值格式观察”和“公开处理边界结论”拆开；Step 2 会新增全细胞 `nCount`、数值范围、重复项、per-gene mean、真实 artifact 规则及 GSM/sample 双源核对。判据会在代码和执行计划中同时固定，之后才允许看单样本的新分布结果，避免事后调阈值。
+
+--------------------------------------------------------------------------------
+
+[124] Codex | 2026-07-16 10:53:11 Asia/Shanghai
+字段与规则已经写入主线和执行计划，两个冲突现在有明确的双层语义。代码层也已取消 positional fallback，并补齐了原方案中 `sample_info.tsv` 还缺少的分组来源、映射规则、纳入理由和 metadata issue 字段；我先做语法与小型纯函数检查，再运行任何真实大文件基准。
+
+--------------------------------------------------------------------------------
+
+[125] Codex | 2026-07-16 10:54:21 Asia/Shanghai
+小型检查已通过：40 个 GEO/manifest 样本逐一一致，分组仍是 10/26/3/1；四类异常分类和三种 artifact 合成场景也符合预期。GSE239676 的五行预审计已重新生成并写入“8,630 特征空间受限、F2.4 必须审计签名覆盖率和固定 maxRank”的限制，下一步开始真实 sample1 严格全流计时。
+
+--------------------------------------------------------------------------------
+
+[126] Codex | 2026-07-16 10:56:11 Asia/Shanghai
+严格 sample1 全流完成：`71,343,135` 个值全部解析，耗时约 `4.4 s`，OS 轮询峰值工作集约 `34.8 MB`。nCount 五数为 `636 / 2585 / 4093 / 6849 / 56631`，整数率 1、重复 gene/barcode 均为 0、artifact 未触发；按全项目 `4,215,250,011` 个值线性外推约 4.3 分钟，保守计划可定为 5–10 分钟，无需抽样降级。
+
+--------------------------------------------------------------------------------
+
+[127] Codex | 2026-07-16 10:59:18 Asia/Shanghai
+基准测试也暴露了一个环境登记细节：NumPy 过去被标为“optional”，但现在它已是严格全流解析的正式 F0 依赖。为避免计划写“锁定依赖”、manifest却仍写“可选”的状态漂移，我会同步修正环境锁和软件版本表，文件数量与输入契约不变。
+
+--------------------------------------------------------------------------------
+
+[128] Codex | 2026-07-16 10:59:40 Asia/Shanghai
+严格审计的最终结论层也已验证：sample1 同时得到 `observed_numeric_type=nonnegative_integer_count_like` 与 `suspected_matrix_type=author_filtered_raw_gene_count_matrix`，旧 precheck 大小写 SHA 比较通过，最终 `audit_decision=enter_full_F1`。我会清理仅用于 smoke 的临时提取文件，然后开始全套 dry-run 与契约检查。
+
+--------------------------------------------------------------------------------
+
+[129] Codex | 2026-07-16 11:01:19 Asia/Shanghai
+全局 wrapper dry-run 已确认仍是 `21` 个输入、`17` 个输出；Step 1 同样确认全部输入齐全。Step 2–4 在没有前序正式产物时按设计返回依赖缺失并停止，这正是“未执行 F0”边界，而不是脚本故障。现在我在做字段级契约、大小写、状态矛盾和正式产物零写入的最后核对。
+
+--------------------------------------------------------------------------------
+
+[130] Codex | 2026-07-16 11:02:19 Asia/Shanghai
+字段契约检查发现主线 F0 gate 还有一处旧值残留，我已修正。相应地，Step 4 不能只相信 `audit_decision` 汇总值，还应直接复核双层类型、两个 scope、sample_id 一致性和分布状态；我会把这些作为同一条 blocking gate 的组成条件补上，避免上游字段被错误写入时仍误判通过。
+
+--------------------------------------------------------------------------------
+
+[131] Codex | 2026-07-16 11:04:58 Asia/Shanghai
+自检到这里没有出现新的方法问题，但执行计划里“资源评估将更新”还是未来时态，已与刚完成的基准测试不一致。我会把实测值和“测试后未改阈值”直接写入审核计划，让 Claude 能从单一文件复核预注册顺序和性能结论。
+
+--------------------------------------------------------------------------------
+
+[132] Codex | 2026-07-16 11:05:56 Asia/Shanghai
+最后一轮验证全部通过：7 个 F0 Python 文件可编译，wrapper 仍报告 21/17 且不写输出，主线 TABLE 为 17/17，正式 F0 产物为 0、提取目录为 0。接下来只会暂存这 10 个目标文件，四份未跟踪的上下文导出继续保留在工作区，不纳入提交。
+
+--------------------------------------------------------------------------------
+
+[133] Codex | 2026-07-16 11:06:22 Asia/Shanghai
+暂存边界正确，`git diff --cached --check` 无错误。提交说明会明确记录：`59bc74b` 曾把已承诺的全细胞分布审计静默收窄，本提交恢复该范围；这能满足 Claude 对审核链条透明性的要求。
+
+--------------------------------------------------------------------------------
+
+[134] Codex | 2026-07-16 11:07:07 Asia/Shanghai
+已按确认范围完成并提交：
+
+- Commit：`6af328b32bb3c0d91b061f04d6e25c4991c85d80`
+- 补齐全细胞 nCount、数值分布、重复 gene/barcode 和独立 artifact 判定。
+- 采用 `observed_numeric_type` / `suspected_matrix_type` 双层语义。
+- 删除 sample ID 静默 fallback，40 个 GSM 双源核对全部一致。
+- GSE239676 已记录 8,630 特征限制及 F2.4 覆盖率/maxRank 审计要求。
+- NumPy 2.2.6 已登记为正式 F0 依赖。
+- Step 4 已直接复核新增字段，不只依赖汇总判定。
+
+严格 sample1 全流测试：
+
+- 检查 `71,343,135` 个值，耗时 `4.39 s`
+- 峰值工作集约 `34.8 MB`
+- nCount 五数：`636 / 2585 / 4093 / 6849 / 56631`
+- 整数率 `1`，gene/barcode 重复均为 `0`
+- normalization artifact：`false`
+- 全部 40 个矩阵预计约 `5–10 min`，无需抽样降级
+
+7 个脚本均通过 Python 3.10 编译；wrapper 仍为 `21` 输入、`17` 输出；TABLE `17/17`；正式 F0 产物仍为 `0`。四份上下文导出未纳入提交，当前尚未推送 GitHub。
+
+[主线方案](D:/服务器_胃癌线粒体亚群/胃癌MLMOD亚群主线研究方案.txt:168) · [Step 2](D:/服务器_胃癌线粒体亚群/scripts/F0_setup/F0_step2_sample_info_and_audit.py) · [执行审核计划](D:/服务器_胃癌线粒体亚群/reports/environment_setup/F0_execution_plan_for_review.md)
+
+下一步是 Claude Code 复审；复审和用户执行批准前不运行正式 F0。
+
+::git-stage{cwd="D:/服务器_胃癌线粒体亚群"}
+::git-commit{cwd="D:/服务器_胃癌线粒体亚群"}
+
