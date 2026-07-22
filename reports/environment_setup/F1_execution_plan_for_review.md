@@ -1,7 +1,7 @@
 # F1 正式执行计划（SCTransform 主线，审核稿）
 
-更新日期：2026-07-21
-当前状态：脚本编写与静态审核；**未执行真实数据**。
+更新日期：2026-07-22
+当前状态：F0准入、F1必需依赖、总入口dry-run和脚本静态检查均已通过；**尚未执行真实数据，正式设备与资源pilot仍待批准**。
 
 ## 1. F1 要回答什么
 
@@ -25,19 +25,17 @@ F1不计算MLMOD或UCell分数，不使用预后信息，也不根据后续结�
 - `environment/F1/required_packages.tsv`中的本阶段必需包均可用；
 - 用户已批准本次运行设备和范围。
 
-F0已正式执行并得到`PASS_WITH_NOTED_LIMITATIONS`，不存在blocking FAIL；但`scDblFinder`、`celda`、`DoubletFinder`、`glmGamPoi`和`leidenbase`仍缺失，因此正式F1现在仍会主动停止。SCTransform v2没有`glmGamPoi`也能回退运行，但对本数据规模明显更慢，正式流程将其列为必需依赖以固定实现并控制时间。
+F0已正式执行并得到`PASS_WITH_NOTED_LIMITATIONS`，不存在blocking FAIL。2026-07-22已在固定R 4.4.3/Bioconductor 3.20环境补齐全部F1必需依赖：`scDblFinder 1.20.2`、`celda 1.22.1`、`DoubletFinder 2.0.6`、`glmGamPoi 1.18.0`和`leidenbase 0.1.36`；逐包`loadNamespace()`、关键函数检查、总入口只读模式和静态契约均通过。`DoubletFinder`固定记录Git commit `1B244D8F0D54B4B1CB4365639931BBB16F01E1CD`。
 
-依赖安装不在本轮执行。审核批准后，在固定R 4.4.3环境中使用与Bioconductor 3.20兼容的版本：
+本次环境补齐采用以下等价安装路线；版本以实际加载结果为准，不以安装命令返回代替验证：
 
 ```r
-if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 BiocManager::install(c("scDblFinder", "celda", "glmGamPoi"), ask = FALSE, update = FALSE)
-install.packages("leidenbase")
-if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes")
-remotes::install_github("chris-mcginnis-ucsf/DoubletFinder")
+install.packages(c("leidenbase", "fields"), type = "binary")
+# DoubletFinder按上方记录的commit浅克隆后使用R CMD INSTALL安装。
 ```
 
-安装后重新运行总入口的只读模式，实测版本写入`F1_parameters_and_versions.tsv`；不能只凭安装命令假定依赖成功。
+启动前实测可用内存仅3.89 GB，低于F1.1预计8-20 GB及后续阶段需求，因此当前只判定“软件环境就绪”，不判定“本机可立即正式运行”。正式执行前需释放内存并重测，再对最大样本做资源pilot；正式运行时仍将实际版本和sessionInfo写入`F1_parameters_and_versions.tsv`。
 
 ## 3. 六个连续步骤
 
