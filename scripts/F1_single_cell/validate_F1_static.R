@@ -23,6 +23,7 @@ combined <- paste(vapply(file.path(script_dir, scripts), read_all, character(1))
 required_patterns <- c(
   "vst.flavor = config\\$sct\\$vst_flavor",
   "vars.to.regress = config\\$sct\\$vars_to_regress",
+  "features = pca_features",
   "group.by.vars = config\\$sct\\$harmony_group",
   "RNA_raw_counts",
   "nfeature_min_inclusive = 500L",
@@ -35,6 +36,7 @@ required_patterns <- c(
   "no_ncount_sensitivity_extra_vs_main",
   "intersect\\(c\\(\"BCmetric\", \"BCmvn\"\\)",
   "reuse.pANN = NULL",
+  "vapply\\(config\\$sct\\$resolutions",
   "minimum_reliable_lineages = 2L",
   "z = coarse_labels",
   "completed_with_researcher_approved_coarse_labels",

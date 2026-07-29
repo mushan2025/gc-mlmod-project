@@ -55,6 +55,7 @@ hvg <- SeuratObject::VariableFeatures(object[["SCT"]])
 technical_hvg <- grepl("^MT-|^RPL|^RPS", toupper(hvg)) |
   toupper(hvg) %in% config$qc$globin_panel
 pca <- Seurat::Embeddings(object, reduction = "pca")
+pca_input_features_n <- nrow(Seurat::Loadings(object, reduction = "pca"))
 qc_fields <- intersect(c("nCount_RNA", "nFeature_RNA", "mt_percent", "HB_percent"), colnames(object[[]]))
 qc_cor <- vapply(qc_fields, function(field) {
   max(abs(stats::cor(pca, object[[field, drop = TRUE]], use = "pairwise.complete.obs")))
@@ -63,14 +64,16 @@ qc_cor <- vapply(qc_fields, function(field) {
 diagnostics <- data.frame(
   item = c(
     "normalization", "SCTransform_vst_flavor", "SCTransform_vars_to_regress",
-    "variable_features_n", "technical_HVG_fraction", "PCA_npcs", "Harmony_group_by",
+    "variable_features_n", "technical_HVG_fraction", "PCA_npcs", "PCA_input_features_n",
+    "Harmony_group_by",
     "main_dims", "Leiden_algorithm", "default_resolution",
     paste0("max_abs_PCA_correlation_", names(qc_cor)),
     "unintegrated_reference", "main_embedding", "normalization_sensitivity"
   ),
   value = c(
     "per_sample_SCTransform_v2", config$sct$vst_flavor, "NULL",
-    length(hvg), mean(technical_hvg), config$sct$pca_npcs, config$sct$harmony_group,
+    length(hvg), mean(technical_hvg), config$sct$pca_npcs, pca_input_features_n,
+    config$sct$harmony_group,
     paste(range(config$sct$main_dims), collapse = ":"), config$sct$leiden_algorithm,
     config$sct$default_resolution, as.character(qc_cor),
     "SCT_PCA_and_umap.sct_pca_retained", "Harmony_sample_id_UMAP_Leiden",
@@ -78,7 +81,8 @@ diagnostics <- data.frame(
   ),
   interpretation = c(
     "主归一化", "固定v2方差稳定化", "不回归mt/nCount/细胞周期",
-    "SCT高变基因数", "只作技术基因富集提示，不自动删基因", "PCA维数", "仅校正样本低维坐标",
+    "SCT候选高变基因数", "只作技术基因富集提示，不自动删基因", "PCA维数",
+    "各样本SCT共同保留且实际进入PCA的已缩放高变基因数", "仅校正样本低维坐标",
     "预登记主维数", "Seurat algorithm 4", "marker审核前默认值",
     rep("用于发现QC变量是否明显主导PC；不据此反向改QC阈值", length(qc_cor)),
     "用于识别Harmony是否抹除患者特异肿瘤结构", "主要细胞大类聚类空间",
@@ -88,10 +92,9 @@ diagnostics <- data.frame(
 )
 f1_write_tsv(diagnostics, file.path(config$paths$annotation_dir, "integration_diagnostics.tsv"))
 
-resolution_columns <- paste0(
-  "SCT_harmony_res.",
-  format(config$sct$resolutions, trim = TRUE, scientific = FALSE)
-)
+resolution_columns <- vapply(config$sct$resolutions, function(resolution) {
+  paste0("SCT_harmony_res.", format(resolution, trim = TRUE, scientific = FALSE))
+}, character(1))
 resolution_counts <- do.call(rbind, lapply(resolution_columns, function(column) {
   tab <- table(object[[column, drop = TRUE]])
   data.frame(

@@ -274,9 +274,19 @@ f1_run_sct_harmony <- function(object, config, stage_label) {
   )
 
   SeuratObject::DefaultAssay(object) <- "SCT"
+  # 多样本SCT对象的3000个候选HVG中，只有各样本共同保留在scale.data里的基因
+  # 能进入PCA。显式取交集，避免Seurat静默丢弃未缩放基因。
+  pca_features <- intersect(
+    SeuratObject::VariableFeatures(object[["SCT"]]),
+    rownames(SeuratObject::LayerData(object, assay = "SCT", layer = "scale.data"))
+  )
+  if (length(pca_features) < 500L) {
+    stop(stage_label, "可用于PCA的SCT已缩放高变基因少于500个，需检查逐样本SCT结果。")
+  }
   object <- Seurat::RunPCA(
     object,
     assay = "SCT",
+    features = pca_features,
     npcs = config$sct$pca_npcs,
     reduction.name = "pca",
     seed.use = config$seed,
@@ -315,6 +325,9 @@ f1_run_sct_harmony <- function(object, config, stage_label) {
     graph.name = c("SCT_harmony_nn", "SCT_harmony_snn"),
     verbose = TRUE
   )
+  # Leiden本身已显式固定random.seed；切回顺序future，避免其内部并行封装
+  # 对已固定随机数产生误报。耗时主体SCT和UMAP此前仍按服务器并行。
+  future::plan(future::sequential)
   for (resolution in config$sct$resolutions) {
     cluster_name <- paste0("SCT_harmony_res.", format(resolution, trim = TRUE, scientific = FALSE))
     object <- Seurat::FindClusters(
