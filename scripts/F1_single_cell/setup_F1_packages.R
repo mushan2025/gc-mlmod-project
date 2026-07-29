@@ -46,7 +46,11 @@ Sys.setenv(MAKEFLAGS = paste0("-j", max(1L, floor(48L / ncpus))))
 
 install_if_missing <- function(package) {
   if (!requireNamespace(package, quietly = TRUE)) {
-    install.packages(package, dependencies = TRUE, Ncpus = ncpus)
+    install.packages(
+      package,
+      dependencies = c("Depends", "Imports", "LinkingTo"),
+      Ncpus = ncpus
+    )
   }
 }
 
@@ -97,7 +101,7 @@ for (package in names(cran_versions)) {
     remotes::install_version(
       package,
       version = wanted,
-      dependencies = TRUE,
+      dependencies = c("Depends", "Imports", "LinkingTo"),
       upgrade = "never",
       Ncpus = ncpus
     )
@@ -120,7 +124,7 @@ for (package in names(github_specs)) {
   if (!identical(installed, github_versions[[package]])) {
     remotes::install_github(
       github_specs[[package]],
-      dependencies = TRUE,
+      dependencies = c("Depends", "Imports", "LinkingTo"),
       upgrade = "never",
       Ncpus = ncpus
     )
