@@ -58,6 +58,26 @@ install_if_missing("BiocManager")
 install_if_missing("remotes")
 BiocManager::install(version = "3.20", ask = FALSE, update = FALSE)
 
+# glmGamPoi 1.18.0仍按C++11构建；15.4系列RcppArmadillo已要求C++14。
+# 固定到本地已验证的15.2.4.1，避免在Linux源码编译时出现标准不兼容。
+rcpp_armadillo_version <- "15.2.4.1"
+installed_rcpp_armadillo <- if (
+  requireNamespace("RcppArmadillo", quietly = TRUE)
+) {
+  as.character(utils::packageVersion("RcppArmadillo"))
+} else {
+  ""
+}
+if (!identical(installed_rcpp_armadillo, rcpp_armadillo_version)) {
+  remotes::install_version(
+    "RcppArmadillo",
+    version = rcpp_armadillo_version,
+    dependencies = c("Depends", "Imports", "LinkingTo"),
+    upgrade = "never",
+    Ncpus = ncpus
+  )
+}
+
 bioc_packages <- c(
   "glmGamPoi", "SingleCellExperiment", "SummarizedExperiment",
   "BiocParallel", "scDblFinder", "celda", "infercnv"
