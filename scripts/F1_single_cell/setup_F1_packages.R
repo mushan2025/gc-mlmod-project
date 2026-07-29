@@ -34,7 +34,7 @@ cran_repo <- Sys.getenv(
 )
 bioc_mirror <- Sys.getenv(
   "F1_BIOC_MIRROR",
-  "https://mirrors.tuna.tsinghua.edu.cn/bioconductor"
+  "https://bioconductor.org"
 )
 options(
   repos = c(CRAN = cran_repo),

@@ -44,7 +44,7 @@ apt-get install -y --no-install-recommends \
   libgit2-dev libglpk-dev libgsl-dev libfftw3-dev libhdf5-dev \
   libudunits2-dev libgeos-dev libproj-dev libgdal-dev libmagick++-dev \
   libprotobuf-dev protobuf-compiler libjq-dev libzmq3-dev libnlopt-dev \
-  libgmp3-dev libmpfr-dev libtbb-dev libsqlite3-dev
+  libgmp3-dev libmpfr-dev libtbb-dev libsqlite3-dev libuv1-dev
 
 if [[ ! -x "${R_PREFIX}/bin/Rscript" ]]; then
   mkdir -p /opt/src
