@@ -33,6 +33,7 @@ required_patterns <- c(
   "no_ncount_sensitivity_enabled = TRUE",
   "fixed_qc_pass_no_ncount_sensitivity",
   "no_ncount_sensitivity_extra_vs_main",
+  "intersect\\(c\\(\"BCmetric\", \"BCmvn\"\\)",
   "minimum_reliable_lineages = 2L",
   "z = coarse_labels",
   "completed_with_researcher_approved_coarse_labels",

@@ -85,11 +85,18 @@ run_doubletfinder_sensitivity <- function(counts, sample_id, config) {
     sweep <- param_sweep(x, PCs = pcs, sct = FALSE)
     sweep_stats <- summarize_sweep(sweep, GT = FALSE)
     pk_table <- find_pk(sweep_stats)
+    bc_column <- intersect(c("BCmetric", "BCmvn"), colnames(pk_table))
+    if (!length(bc_column)) {
+      stop(
+        "DoubletFinder pK表缺少BCmetric/BCmvn；实际字段为：",
+        paste(colnames(pk_table), collapse = ", ")
+      )
+    }
     pk_numeric <- suppressWarnings(as.numeric(as.character(pk_table$pK)))
-    bcmvn <- suppressWarnings(as.numeric(as.character(pk_table$BCmvn)))
-    valid <- is.finite(pk_numeric) & is.finite(bcmvn)
-    if (!any(valid)) stop("BCmvn表没有可用pK。")
-    best <- which(valid & bcmvn == max(bcmvn[valid]))
+    bc_metric <- suppressWarnings(as.numeric(as.character(pk_table[[bc_column[[1]]]])))
+    valid <- is.finite(pk_numeric) & is.finite(bc_metric)
+    if (!any(valid)) stop("DoubletFinder BCmetric表没有可用pK。")
+    best <- which(valid & bc_metric == max(bc_metric[valid]))
     selected_pk <- min(pk_numeric[best])
 
     # 上样/回收信息未公开，使用与scDblFinder自动估计相同量级的10x经验率。
