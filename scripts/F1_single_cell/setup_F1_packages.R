@@ -28,8 +28,17 @@ ncpus <- suppressWarnings(as.integer(Sys.getenv("F1_INSTALL_NCPUS", "12")))
 if (is.na(ncpus) || ncpus < 1L || ncpus > 24L) {
   stop("F1_INSTALL_NCPUS必须为1到24之间的整数。")
 }
+cran_repo <- Sys.getenv(
+  "F1_CRAN_REPO",
+  "https://mirrors.tuna.tsinghua.edu.cn/CRAN"
+)
+bioc_mirror <- Sys.getenv(
+  "F1_BIOC_MIRROR",
+  "https://mirrors.tuna.tsinghua.edu.cn/bioconductor"
+)
 options(
-  repos = c(CRAN = "https://cloud.r-project.org"),
+  repos = c(CRAN = cran_repo),
+  BioC_mirror = bioc_mirror,
   Ncpus = ncpus,
   timeout = 3600
 )
