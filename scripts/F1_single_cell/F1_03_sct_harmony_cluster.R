@@ -17,7 +17,8 @@ stage <- "F1.3"
 outputs <- c(
   config$paths$object_03a,
   file.path(config$paths$annotation_dir, "integration_diagnostics.tsv"),
-  file.path(config$paths$annotation_dir, "resolution_cluster_counts.tsv")
+  file.path(config$paths$annotation_dir, "resolution_cluster_counts.tsv"),
+  file.path(config$paths$annotation_dir, "F1_all_cells_embedding_source_data.tsv.gz")
 )
 
 if (!args$execute) {
@@ -105,6 +106,31 @@ resolution_counts <- do.call(rbind, lapply(resolution_columns, function(column) 
   )
 }))
 f1_write_tsv(resolution_counts, file.path(config$paths$annotation_dir, "resolution_cluster_counts.tsv"))
+
+umap_harmony <- Seurat::Embeddings(object, reduction = "umap")
+umap_sct_pca <- Seurat::Embeddings(object, reduction = "umap.sct_pca")
+embedding_source <- data.frame(
+  cell_id = colnames(object),
+  sample_id = object$sample_id,
+  group_analysis = object$group_analysis,
+  seurat_clusters = object$seurat_clusters,
+  harmony_UMAP_1 = umap_harmony[, 1],
+  harmony_UMAP_2 = umap_harmony[, 2],
+  unintegrated_SCT_PCA_UMAP_1 = umap_sct_pca[, 1],
+  unintegrated_SCT_PCA_UMAP_2 = umap_sct_pca[, 2],
+  nCount_RNA = object$nCount_RNA,
+  nFeature_RNA = object$nFeature_RNA,
+  mt_percent = object$mt_percent,
+  HB_percent = object$HB_percent,
+  stringsAsFactors = FALSE
+)
+data.table::fwrite(
+  embedding_source,
+  file.path(config$paths$annotation_dir, "F1_all_cells_embedding_source_data.tsv.gz"),
+  sep = "\t",
+  quote = FALSE,
+  compress = "gzip"
+)
 
 p_cluster <- Seurat::DimPlot(object, reduction = "umap", group.by = "seurat_clusters", label = TRUE, repel = TRUE) +
   ggplot2::ggtitle("Harmony UMAP: Leiden clusters (resolution 0.6)")

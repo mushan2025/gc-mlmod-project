@@ -159,7 +159,7 @@ f1_build_config <- function(project_root) {
       ),
       F1.3 = c(
         "Seurat", "SeuratObject", "sctransform", "glmGamPoi", "harmony",
-        "leidenbase", "future", "ggplot2", "patchwork"
+        "leidenbase", "future", "ggplot2", "patchwork", "data.table"
       ),
       F1.4 = c(
         "Seurat", "SeuratObject", "Matrix", "SingleCellExperiment",
