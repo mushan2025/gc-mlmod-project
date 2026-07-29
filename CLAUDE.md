@@ -208,7 +208,7 @@ Codex、Claude或其他agent的意见只能作为reasoning，不是evidence。
 * **interaction/Torin不过滤基因**：interaction与Torin rescue只作annotation字段，不决定主signature准入；不得恢复Tier A/B或人为基因数上限
 * **正常上皮不混入06a**：拟时序若需正常上皮起点，必须另建epithelial_continuum_object
 * **拟时序root独立于MLMOD结果**：root按早期/normal-like谱系、较低CNV和样本覆盖预注册；MLMOD只在root冻结后叠加观察
-* **CNV方法分开报告**：inferCNV按sample_id × epithelial_cluster解释，CopyKAT逐样本运行；两者同源于RNA矩阵，一致只算方法稳健性
+* **CNV方法分开报告**：inferCNV按sample_id × inferCNV subcluster解释并保留父级epithelial cluster；subcluster只表示CNV模式组，不称真实克隆。CopyKAT逐样本运行且不得借用外部正常reference；两者同源于RNA矩阵，一致只算方法稳健性
 * **F4证据层级**：样本感知的配对pseudobulk LR表达支持为主；CellChat为网络背景，LIANA为同矩阵方法敏感性
 * **外部验证隔离**：最终验证队列不得参与signature、参数、阈值、候选或排序规则选择；同矩阵重分析不算新增独立证据
 * **SCENIC执行**：资源不足时租服务器完成全量；保留纯技术smoke test检查输入和数据库兼容，不用其作生物学筛选或MLMOD平衡抽样；正式GRNBoost2至少10个seed并按共识稳定性解释

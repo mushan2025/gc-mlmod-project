@@ -13,7 +13,7 @@ config <- f1_build_config(args$project_root)
 stage_order <- c("F1.1", "F1.2", "F1.3", "F1.4", "F1.5", "F1.6")
 script_map <- c(
   F1.1 = "F1_01_import.R",
-  F1.2 = "F1_02_qc_doublet_ambient.R",
+  F1.2 = "F1_02_qc_doublet.R",
   F1.3 = "F1_03_sct_harmony_cluster.R",
   F1.4 = "F1_04_annotation.R",
   F1.5 = "F1_05_epithelial_recluster.R",
@@ -21,9 +21,9 @@ script_map <- c(
 )
 description <- c(
   F1.1 = "导入F0批准的gene-by-cell raw count矩阵",
-  F1.2 = "固定QC、scDblFinder、DoubletFinder与DecontX",
+  F1.2 = "固定QC、scDblFinder与DoubletFinder",
   F1.3 = "逐样本SCTransform v2、PCA、Harmony和Leiden",
-  F1.4 = "cluster marker与研究者批准的主要谱系注释",
+  F1.4 = "主要谱系注释后逐样本DecontX评估",
   F1.5 = "上皮提取、SCTransform v2二次聚类",
   F1.6 = "raw-count inferCNV/CopyKAT与联合恶性判定"
 )

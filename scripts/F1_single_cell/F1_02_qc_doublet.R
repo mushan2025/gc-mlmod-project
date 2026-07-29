@@ -1,10 +1,10 @@
-# F1.2 固定QC、doublet与ambient RNA ----------------------------------------
+# F1.2 固定QC与doublet ------------------------------------------------------
 #
 # 生物学目的：排除明显低质量细胞和主算法预测双细胞，同时保留每个公开细胞的
-# 决策轨迹。DecontX只评估retained cells之间的污染风险，不替代raw-droplet背景模型。
+# 决策轨迹。环境RNA评估要等F1.4获得可靠粗谱系标签后再按样本运行DecontX。
 #
 # 主要输入：01_all_cells_raw_or_initial.rds。
-# 主要输出：02_all_cells_qc_filtered.rds、逐细胞/逐样本QC、doublet和ambient摘要。
+# 主要输出：02_all_cells_qc_filtered.rds、逐细胞/逐样本QC和doublet摘要。
 
 file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
 script_dir <- dirname(normalizePath(sub("^--file=", "", file_arg[[1]]), winslash = "/"))
@@ -18,14 +18,13 @@ outputs <- c(
   config$paths$object_02,
   file.path(config$paths$qc_dir, "qc_cell_decision_audit.tsv"),
   file.path(config$paths$qc_dir, "sample_qc_summary.tsv"),
-  file.path(config$paths$qc_dir, "doublet_summary_by_sample.tsv"),
-  file.path(config$paths$qc_dir, "ambient_rna_summary_by_sample.tsv")
+  file.path(config$paths$qc_dir, "doublet_summary_by_sample.tsv")
 )
 
 if (!args$execute) {
   f1_stage_dry_run(
     stage,
-    "逐样本执行冻结QC、scDblFinder主判定、DoubletFinder敏感性和DecontX评估",
+    "逐样本执行冻结QC、scDblFinder主判定、DoubletFinder敏感性，并写出仅去nCount下界的预注册QC敏感性mask",
     c(config$paths$object_01),
     outputs,
     config$packages[[stage]]
@@ -38,7 +37,10 @@ f1_check_f0_ready(config)
 if (!file.exists(config$paths$object_01)) stop("请先完成F1.1：", config$paths$object_01)
 f1_prepare_directories(config)
 set.seed(config$seed)
-f1_append_log(config, stage, "开始逐样本固定QC、doublet和retained-cell ambient评估")
+if (!isTRUE(config$qc$no_ncount_sensitivity_enabled)) {
+  stop("预注册的no-nCount QC敏感性mask被关闭；请先恢复F1_config.R中的冻结设置。")
+}
+f1_append_log(config, stage, "开始逐样本固定QC和doublet识别")
 
 get_df_function <- function(candidates) {
   ns <- asNamespace("DoubletFinder")
@@ -125,34 +127,6 @@ run_doubletfinder_sensitivity <- function(counts, sample_id, config) {
   })
 }
 
-run_decontx_assessment <- function(counts, sample_id, config) {
-  tryCatch({
-    set.seed(config$seed)
-    sce <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = counts))
-    result <- celda::decontX(sce, seed = config$seed)
-    cell_data <- as.data.frame(SummarizedExperiment::colData(result))
-    if (!"decontX_contamination" %in% colnames(cell_data)) {
-      stop("DecontX结果缺少decontX_contamination。")
-    }
-    corrected <- celda::decontXcounts(result)
-    rownames(corrected) <- rownames(counts)
-    colnames(corrected) <- colnames(counts)
-    list(
-      status = "completed_retained_cell_estimate",
-      contamination = setNames(as.numeric(cell_data$decontX_contamination), rownames(cell_data)),
-      corrected = corrected,
-      error = NA_character_
-    )
-  }, error = function(e) {
-    list(
-      status = "not_evaluable_sample_limited_or_model_failure",
-      contamination = setNames(rep(NA_real_, ncol(counts)), colnames(counts)),
-      corrected = NULL,
-      error = conditionMessage(e)
-    )
-  })
-}
-
 plot_sample_qc <- function(decision, sample_id, out_dir) {
   long <- rbind(
     data.frame(cell_id = decision$cell_id_final, metric = "nCount_RNA", value = decision$nCount_RNA, fixed_qc_pass = decision$fixed_qc_pass),
@@ -195,9 +169,6 @@ decision_rows <- vector("list", length(sample_ids))
 threshold_rows <- vector("list", length(sample_ids))
 summary_rows <- vector("list", length(sample_ids))
 doublet_rows <- vector("list", length(sample_ids))
-ambient_rows <- vector("list", length(sample_ids))
-corrected_dir <- file.path(config$paths$object_dir, "decontX_corrected_by_sample")
-dir.create(corrected_dir, recursive = TRUE, showWarnings = FALSE)
 
 for (i in seq_along(sample_ids)) {
   sample_id <- sample_ids[[i]]
@@ -225,6 +196,13 @@ for (i in seq_along(sample_ids)) {
   pass_mt <- mt_percent <= config$qc$mt_max_inclusive
   pass_hb <- hb_percent < config$qc$hb_max_exclusive
   fixed_pass <- pass_nfeature_low & pass_nfeature_high & pass_ncount & pass_mt & pass_hb
+  # 预注册敏感性只去掉nCount>1000；其他四条QC规则保持完全相同。
+  # 这里只产出mask，后续平行分析必须在该mask上重新运行doublet及其余步骤。
+  no_ncount_sensitivity_pass <-
+    pass_nfeature_low & pass_nfeature_high & pass_mt & pass_hb
+  if (any(fixed_pass & !no_ncount_sensitivity_pass, na.rm = TRUE)) {
+    stop(sample_id, "的主QC通过细胞不是no-nCount敏感性mask的子集。")
+  }
   if (!any(fixed_pass, na.rm = TRUE)) stop(sample_id, "应用冻结QC后没有剩余细胞，需人工复核。")
 
   fixed_cells <- cells[fixed_pass]
@@ -253,14 +231,6 @@ for (i in seq_along(sample_ids)) {
   df_result <- run_doubletfinder_sensitivity(algorithm_counts, sample_id, config)
   retained_cells <- names(sc_class)[tolower(sc_class) == "singlet"]
   retained_counts <- fixed_counts[, retained_cells, drop = FALSE]
-  decontx_counts <- algorithm_counts[, retained_cells, drop = FALSE]
-  decontx_counts <- decontx_counts[Matrix::rowSums(decontx_counts) > 0, , drop = FALSE]
-  decontx <- run_decontx_assessment(decontx_counts, sample_id, config)
-  corrected_path <- NA_character_
-  if (!is.null(decontx$corrected)) {
-    corrected_path <- file.path(corrected_dir, paste0(sample_id, "_decontX_corrected_counts.rds"))
-    f1_save_rds_atomic(decontx$corrected, corrected_path, compress = FALSE)
-  }
 
   meta <- initial[[]][retained_cells, , drop = FALSE]
   meta$nCount_RNA <- as.numeric(ncount[retained_cells])
@@ -271,7 +241,6 @@ for (i in seq_along(sample_ids)) {
   meta$scDblFinder_class <- sc_class[retained_cells]
   meta$DoubletFinder_pANN <- df_result$pANN[retained_cells]
   meta$DoubletFinder_class <- df_result$class[retained_cells]
-  meta$retained_cell_ambient_contamination_estimate <- decontx$contamination[retained_cells]
   sample_objects[[sample_id]] <- Seurat::CreateSeuratObject(
     counts = retained_counts,
     assay = "RNA",
@@ -285,12 +254,10 @@ for (i in seq_along(sample_ids)) {
   sc_class_all <- setNames(rep(NA_character_, length(cells)), cells)
   df_pann_all <- setNames(rep(NA_real_, length(cells)), cells)
   df_class_all <- setNames(rep(NA_character_, length(cells)), cells)
-  ambient_all <- setNames(rep(NA_real_, length(cells)), cells)
   sc_score_all[names(sc_score)] <- sc_score
   sc_class_all[names(sc_class)] <- sc_class
   df_pann_all[names(df_result$pANN)] <- df_result$pANN
   df_class_all[names(df_result$class)] <- df_result$class
-  ambient_all[names(decontx$contamination)] <- decontx$contamination
   failure_reasons <- f1_collapse_reasons(
     nFeature_RNA_below_500 = as.list(pass_nfeature_low),
     nFeature_RNA_at_least_6000 = as.list(pass_nfeature_high),
@@ -318,12 +285,12 @@ for (i in seq_along(sample_ids)) {
     pass_mt_percent_max = pass_mt,
     pass_HB_percent_max = pass_hb,
     fixed_qc_pass = fixed_pass,
+    fixed_qc_pass_no_ncount_sensitivity = no_ncount_sensitivity_pass,
     fixed_qc_failure_reasons = failure_reasons,
     scDblFinder_score = as.numeric(sc_score_all[cells]),
     scDblFinder_class = as.character(sc_class_all[cells]),
     DoubletFinder_pANN = as.numeric(df_pann_all[cells]),
     DoubletFinder_class = as.character(df_class_all[cells]),
-    retained_cell_ambient_contamination_estimate = as.numeric(ambient_all[cells]),
     final_main_include = final_include,
     final_exclusion_reason = final_reason,
     stringsAsFactors = FALSE
@@ -339,6 +306,7 @@ for (i in seq_along(sample_ids)) {
       globin_panel_present = paste(globin_present, collapse = "|"),
       globin_panel_missing = paste(setdiff(config$qc$globin_panel, globin_present), collapse = "|"),
       rule = "nFeature>=500 & nFeature<6000 & nCount>1000 & mt<=20 & HB<5",
+      no_ncount_sensitivity_rule = "nFeature>=500 & nFeature<6000 & mt<=20 & HB<5",
       stringsAsFactors = FALSE
     ),
     as.data.frame(c(
@@ -358,6 +326,9 @@ for (i in seq_along(sample_ids)) {
     fail_HB_max = sum(!pass_hb),
     fixed_qc_union_excluded = sum(!fixed_pass),
     fixed_qc_passed = sum(fixed_pass),
+    no_ncount_sensitivity_qc_passed = sum(no_ncount_sensitivity_pass, na.rm = TRUE),
+    no_ncount_sensitivity_extra_vs_main =
+      sum(no_ncount_sensitivity_pass & !fixed_pass, na.rm = TRUE),
     scDblFinder_doublets = sum(tolower(sc_class) == "doublet"),
     final_retained = length(retained_cells),
     final_retained_fraction = length(retained_cells) / length(cells),
@@ -384,32 +355,7 @@ for (i in seq_along(sample_ids)) {
     seed = config$seed,
     stringsAsFactors = FALSE
   )
-  contamination_values <- decontx$contamination[is.finite(decontx$contamination)]
-  contamination_stats <- if (length(contamination_values)) {
-    f1_summary_stats(contamination_values, "contamination")
-  } else {
-    setNames(as.list(rep(NA_real_, 5)), paste0("contamination", c("_min", "_Q1", "_median", "_Q3", "_max")))
-  }
-  ambient_rows[[sample_id]] <- cbind(
-    data.frame(
-      sample_id = sample_id,
-      input_cells = length(retained_cells),
-      input_matrix = "fixed_QC_and_scDblFinder_singlet_raw_integer_counts",
-      method = "DecontX",
-      celda_version = as.character(utils::packageVersion("celda")),
-      status = decontx$status,
-      corrected_counts_path = corrected_path,
-      raw_counts_remain_main = TRUE,
-      deletion_based_on_contamination = FALSE,
-      interpretation = "retained_cell_ambient_contamination_estimate_only",
-      error = decontx$error,
-      seed = config$seed,
-      stringsAsFactors = FALSE
-    ),
-    as.data.frame(contamination_stats, check.names = FALSE)
-  )
-
-  rm(raw, working, fixed_counts, algorithm_counts, retained_counts, decontx_counts, sce, sc_meta)
+  rm(raw, working, fixed_counts, algorithm_counts, retained_counts, sce, sc_meta)
   gc(verbose = FALSE)
 }
 
@@ -431,7 +377,6 @@ f1_write_tsv(decisions, file.path(config$paths$qc_dir, "qc_cell_decision_audit.t
 f1_write_tsv(do.call(rbind, threshold_rows), file.path(config$paths$qc_dir, "qc_thresholds_by_sample.tsv"))
 f1_write_tsv(do.call(rbind, summary_rows), file.path(config$paths$qc_dir, "sample_qc_summary.tsv"))
 f1_write_tsv(do.call(rbind, doublet_rows), file.path(config$paths$qc_dir, "doublet_summary_by_sample.tsv"))
-f1_write_tsv(do.call(rbind, ambient_rows), file.path(config$paths$qc_dir, "ambient_rna_summary_by_sample.tsv"))
 
 limitations <- data.frame(
   assessment_item = c("barcode_rank_knee", "Cell_Ranger_cell_calling", "emptyDrops", "SoupX", "CellBender"),
@@ -439,7 +384,7 @@ limitations <- data.frame(
   input_available = FALSE,
   status = "not_evaluable_input_limited",
   reason = "GSE183904_public_input_contains_called_or_retained_cell_count_matrices_only",
-  permitted_substitute = c("library_size_rank_only", "none", "none", "DecontX_retained_cell_estimate", "none"),
+  permitted_substitute = c("library_size_rank_only", "none", "none", "DecontX_after_coarse_annotation", "none"),
   substitute_interpretation_limit = c(
     "not_a_true_barcode_knee", "cannot_reconstruct_cell_calling", "cannot_test_empty_droplets",
     "does_not_model_empty_droplet_background", "cannot_run_cell_calling_background_branch"
@@ -449,7 +394,7 @@ limitations <- data.frame(
 f1_write_tsv(limitations, file.path(config$paths$qc_dir, "qc_input_limitation_audit.tsv"))
 f1_save_rds_atomic(initial, config$paths$object_01, compress = FALSE)
 f1_save_rds_atomic(filtered, config$paths$object_02, compress = FALSE)
-f1_save_session_info(config, "F1_02_qc_doublet_ambient")
+f1_save_session_info(config, "F1_02_qc_doublet")
 f1_append_log(
   config,
   stage,

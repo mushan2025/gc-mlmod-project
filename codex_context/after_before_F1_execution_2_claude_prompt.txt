@@ -1,0 +1,83 @@
+Claude Code → Codex 指令：主线方案 DecontX 时点修复（F1.2→F1.4）+ 四检查点时点理顺
+审核日期：2026-07-29
+背景：Claude 审 before_F1_execution_2 时发现方案-代码不一致
+范围：只改主线方案（+ 必要时 F1 执行计划文档），不改 F1 脚本、不执行 F1
+
+================================================================================
+
+## 问题定性
+
+代码已把 DecontX 从 F1.2 移到 F1.4（`F1_04_annotation.R`，粗谱系注释批准后带 `z=coarse_labels` 逐样本运行）——**这是正确的科学改进**：用批准的生物学谱系标签当 z，比 F1.2 时 z=NULL 让 DecontX 自己内部估簇更可靠（后者的校正是模型自洽结果、不是独立估计）。
+
+但主线方案**没有跟着改**，现在方案说 DecontX 在 F1.2、代码在 F1.4，两者冲突：
+
+- 270 行：「ambient RNA评估在主scDblFinder阳性细胞删除后、**样本合并前**按sample_id运行DecontX」——F1.2 语境
+- 272 行：「**DecontX只在F1.2按sample/capture运行一次**」——明确写 F1.2
+- 278 行（F1.2 QC 内部检查要点）：「doublet和DecontX按sample/capture运行」
+- 且 272 行的四检查点框架，检查点①写「固定QC和doublet删除后建立逐样本ambient基线」（F1.2 时点），但 DecontX 现在要到 F1.4 才有输出——**检查点①时点自相矛盾**
+- 跨引用：F1.6（317 行）「按F1.2第三个检查点」、F2（430 行）「按F1.2第四个检查点」都指向"F1.2 检查点"，需一并更新
+
+## 修改要求（只改文档，代码已正确）
+
+1. **把主线方案里 DecontX 的位置从 F1.2 改到 F1.4**：
+   - 270 行：改为 DecontX 在 F1.4 主要谱系注释**批准后**按 sample_id 运行，输入仍是该样本固定 QC + doublet 删除后的 raw integer counts，并**以批准的粗谱系标签作为 z**。F1.2 现在只含固定 QC + doublet，不含 DecontX。其余边界（raw counts 为主、corrected 不覆盖、不作删细胞规则、not_evaluable 处理）保留。
+   - 272 行：「DecontX只在F1.2按sample/capture运行一次」→「DecontX只在F1.4主要谱系注释批准后按sample/capture运行一次」。
+   - 278 行（F1.2 QC 内部要点）：从 F1.2 列表移除 DecontX，只保留 doublet 按 sample/capture 运行。
+
+2. **理顺四检查点时点**，使其与"DecontX 只在 F1.4 之后可用"一致：
+   - 检查点① 现写「固定QC和doublet删除后建立逐样本ambient基线」（F1.2 时点）→ 改为在 **F1.4 注释批准后首次运行 DecontX 时**建立全细胞 ambient 基线。
+   - 明确四个检查点的时点都在 F1.4 DecontX 产出之后：① F1.4 注释后全细胞 ambient 基线；② 上皮候选/二次聚类复核；③ inferCNV/CopyKAT 前 reference 与观察细胞复核；④ F2 评分/关键 DE/F4 通讯前。核心约束：**没有任何检查点可以在 F1.4 之前消费 DecontX 输出**。
+
+3. **更新所有跨引用**：
+   - F1.6（317 行）「F1.2第三个检查点」→ 对应更新（现在是 F1.4 框架下的第三检查点）。
+   - F2（430 行）「F1.2第四个检查点」→ 对应更新。
+   - grep 全文「F1.2第」「F1.2的第」「F1.2 检查点」等所有指向检查点框架的表述，逐处改对。
+
+4. **加一句科学理由**（放在 DecontX 段）：DecontX 之所以放在 F1.4，是为了用已批准的粗谱系标签作为 z，得到比 z=NULL 内部估簇更可靠的跨谱系污染估计。
+
+5. **不改 F1 脚本**（代码已是 F1.4，正确）。**不执行 F1。**
+
+================================================================================
+
+## 第二部分：F1 QC 科学性补充（用户 2026-07-29 决定，Claude 科学性审核后确认）
+
+以下三项来自 Claude 对 F1 的科学性审核 + 用户裁决。同样只改方案文档（第 6 项需要少量 F1 脚本支持，见说明），不执行 F1。
+
+### 6. 预注册 nCount>1000 敏感性分析（必做）
+
+**背景**：固定 QC 里 `nCount_RNA > 1000` 是最大排除项（F0 实测在 158,641 细胞中删掉约 4,876 个）。它是单细胞常用 QC 阈值，但**原研究没有这一条**，且删除量较大。用户决定做敏感性分析检验它是否影响结论。
+
+**要求**：
+- 在主线方案 F1.2（或 F1 敏感性相关位置）**预注册**一个 nCount 敏感性分析：**其他所有步骤和参数完全不变，仅去掉 `nCount_RNA > 1000` 这一条规则**（即 QC mask 变为 `nFeature_RNA >= 500 & nFeature_RNA < 6000 & mt_percent <= 20 & HB_percent < 5`），重跑得到一个平行对象。
+- 预注册"结论是否稳健"的比较口径（看结果前定义，防 p-hacking）：主要谱系构成与注释、恶性上皮群与 06a 纳入、（到 F2 时）MLMOD-high/low 定义与主要方向，在"有 nCount>1000"与"无 nCount>1000"两套下是否一致；仅细胞数变化和少量边界细胞改变不算结论改变。
+- 明确它是**敏感性臂，主分析仍用含 nCount>1000 的固定 mask**；不根据哪套结果更好看来选主结果。
+- 结果与判断汇总到已有的 QC/敏感性报告（如 sample_qc_summary 或 F1 报告），不新建独立 gate。
+- **代码支持**：F1 QC 脚本应能在不改其他参数的前提下产出这个"去 nCount"敏感性 mask（通过 config 开关或明确的敏感性运行路径即可，保持最小改动）。本轮只需把方案预注册好 + 让脚本具备产出该 mask 的能力；**不执行、不跑真实数据**（F1 上服务器时再跑）。
+
+### 7. CNV 定义恶性群的局限（只加一句 limitations，不做 rescue）
+
+**背景与决定**：inferCNV/CopyKAT 靠拷贝数异常判恶性，会漏掉近二倍体恶性细胞（如胃癌 GS/基因组稳定亚型）。用户决定**不**为"CNV 双阴 + 肿瘤程序"单独建 rescue 类别——理由正确：没有基因组数据时近二倍体恶性本来难判，强行标记只会引入低置信假阳性，且高质量研究普遍如此处理。
+
+**要求**：**不新增任何恶性判定类别或规则**。只在 F1.6 的 claim_boundary / 解释边界（或论文局限相关位置）**补一句限制性表述**：本项目恶性上皮群由 inferCNV/CopyKAT 的 CNV 证据定义，可能低估近二倍体恶性细胞；MLMOD 相关结论适用于 CNV 可检测的恶性上皮，不排除近二倍体恶性亚群存在但未被纳入。不改判定逻辑、不改 06a/06b 组成。
+
+### 8. HB globin panel（不改，仅记录）
+
+用户决定 HB globin panel **不改动**（含 HBE1/HBG1/HBG2/HBZ 等胎儿/胚胎球蛋白，成人胃组织不表达、≈0，不影响 HB_percent 结果）。**本项不需要任何修改**，此处仅为记录该决定，避免以后被误当成遗漏。
+
+================================================================================
+
+## 验证要求（覆盖第一、二部分）
+
+- grep 确认：全文无残留「DecontX…F1.2」运行表述、无残留「F1.2第X检查点」跨引用与 F1.4 placement 冲突
+- 主线方案 F1.2 段不再列 DecontX；F1.4 段包含 DecontX（带 z=粗谱系标签）
+- F1 执行计划文档（reports/environment_setup/F1_execution_plan_for_review.md）与 F1.4 placement 一致（trace 显示已部分同步，确认完整）
+- nCount 敏感性分析已预注册，且明确"仅去 nCount>1000、其他不变、主分析仍含该规则"；脚本能产出该敏感性 mask（不执行）
+- F1.6 已补 CNV 近二倍体局限一句，且**未**新增恶性判定类别/规则、06a/06b 组成未变
+- HB panel 未被改动
+- TABLE 标签 13/13，F0–F8 编号完整
+- `git diff --check` 无空白错误
+- 确认工作区里已有的其他未提交改动（F1 脚本、marker panel、F2 段落、decision_evidence_log、docs/reference_materials）不被本次改动破坏
+
+提交信息建议：relocate DecontX to F1.4 to match code + reconcile four-checkpoint timing; preregister nCount>1000 QC sensitivity arm; add CNV near-diploid limitation note; based on Claude scientific review + user decisions.
+
+提交后交 Claude Code 复审。

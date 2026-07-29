@@ -1,6 +1,6 @@
 project: gc_mlmod_project
 stage: F1_execution_script_preparation
-updated_at: "2026-07-21"
+updated_at: "2026-07-29"
 execution_policy:
   priority_order:
     - laptop_thinkbook16p
@@ -29,7 +29,7 @@ F1:
   execution_unit: continuous_F1_with_recoverable_milestones
   scripts:
     - F1_01_import.R
-    - F1_02_qc_doublet_ambient.R
+    - F1_02_qc_doublet.R
     - F1_03_sct_harmony_cluster.R
     - F1_04_annotation.R
     - F1_05_epithelial_recluster.R
@@ -55,6 +55,35 @@ F1:
     main_dims: "1:30"
     leiden_resolutions_for_review: [0.2, 0.4, 0.6, 0.8, 1.0]
     default_resolution_before_marker_review: 0.6
+  ambient_rna:
+    method: DecontX
+    timing: after_researcher_approved_coarse_lineage_annotation
+    run_unit: sample_id
+    cluster_labels: cell_type_major
+    minimum_reliable_lineages: 2
+    background: null
+    raw_counts_remain_main: true
+  infercnv:
+    run_unit: sample_id
+    analysis_mode: subclusters
+    internal_subclustering: true
+    tumor_subcluster_partition_method: leiden
+    k_nn: 20
+    leiden_resolution: auto
+    leiden_method: PCA
+    leiden_function: CPM
+    inspect_subclusters: true
+    HMM: false
+    observation_unit: sample_id_by_infercnv_subcluster
+    reference_scope: same_sample_then_same_patient_normal_gastric_then_balanced_other_patient_normal_gastric_immune
+    reference_pairing_rule: exact_patient_id_and_normal_gastric_group_only
+    minimum_reference_cells: 50
+    maximum_reference_cells: 500
+    subcluster_interpretation: cnv_pattern_group_not_true_clone
+    output_format: pdf
+    copykat_input_scope: all_QC_singlet_cells_from_current_sample_only
+    copykat_known_normal_rule: same_sample_T_NK_then_B_Plasma_if_at_least_50_else_automatic_within_sample
+    copykat_external_reference: prohibited
   matrix_routing:
     RNA_counts: "QC, doublet, DecontX input, inferCNV, CopyKAT, pseudobulk and F2 UCell"
     SCT_scale_data: "HVG, PCA, Harmony, UMAP and clustering only"

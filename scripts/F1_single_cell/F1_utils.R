@@ -346,13 +346,29 @@ f1_write_parameter_versions <- function(config, extra = NULL) {
     parameter = c(
       "seed", "SCTransform_vst_flavor", "SCTransform_variable_features_n",
       "SCTransform_vars_to_regress", "PCA_npcs", "Harmony_group_by",
-      "main_dims", "default_resolution", "UCell_F2_input"
+      "main_dims", "default_resolution", "UCell_F2_input",
+      "DecontX_timing", "DecontX_cluster_label_source",
+      "DecontX_minimum_reliable_lineages", "DecontX_background",
+      "inferCNV_analysis_mode", "inferCNV_internal_subclustering",
+      "inferCNV_HMM", "inferCNV_output_format",
+      "CopyKAT_input_scope", "CopyKAT_known_normal_rule"
     ),
     value = c(
       config$seed, config$sct$vst_flavor, config$sct$variable_features_n,
       "NULL", config$sct$pca_npcs, config$sct$harmony_group,
       paste(range(config$sct$main_dims), collapse = ":"), config$sct$default_resolution,
-      "RNA_raw_counts"
+      "RNA_raw_counts",
+      "after_researcher_approved_coarse_lineage_annotation",
+      "cell_type_major", config$ambient$minimum_reliable_lineages, "NULL",
+      config$cnv$infercnv_analysis_mode,
+      identical(config$cnv$infercnv_analysis_mode, "subclusters"),
+      config$cnv$infercnv_hmm, config$cnv$infercnv_output_format,
+      "all_QC_singlet_cells_from_current_sample_only",
+      paste0(
+        "same_sample_T_NK_then_B_Plasma_if_at_least_",
+        config$cnv$minimum_reference_cells,
+        "_else_automatic_within_sample"
+      )
     ),
     stringsAsFactors = FALSE
   )

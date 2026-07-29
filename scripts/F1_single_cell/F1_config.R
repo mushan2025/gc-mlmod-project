@@ -34,6 +34,9 @@ f1_build_config <- function(project_root) {
       object_05 = file.path(root, "objects", "F1_single_cell", "05_malignant_epithelial.rds"),
       object_06a = file.path(root, "objects", "F1_single_cell", "06a_malignant_epithelial_main.rds"),
       object_06b = file.path(root, "objects", "F1_single_cell", "06b_malignant_epithelial_high_confidence_only.rds"),
+      decontx_corrected_dir = file.path(root, "objects", "F1_single_cell", "decontX_corrected_by_sample"),
+      ambient_cell_estimates = file.path(root, "results", "F1_qc", "ambient_rna_cell_estimates.tsv"),
+      ambient_summary = file.path(root, "results", "F1_qc", "ambient_rna_summary_by_sample.tsv"),
       annotation_template = file.path(root, "results", "F1_annotation", "F1_cluster_annotation_template.tsv"),
       annotation_approved = file.path(root, "data", "metadata", "F1_cluster_annotation_approved.tsv"),
       epithelial_review_template = file.path(root, "results", "F1_annotation", "F1_epithelial_cluster_review_template.tsv"),
@@ -49,6 +52,7 @@ f1_build_config <- function(project_root) {
       ncount_min_exclusive = 1000L,
       mt_max_inclusive = 20,
       hb_max_exclusive = 5,
+      no_ncount_sensitivity_enabled = TRUE,
       globin_panel = c(
         "HBA1", "HBA2", "HBB", "HBD", "HBE1",
         "HBG1", "HBG2", "HBM", "HBQ1", "HBZ"
@@ -59,6 +63,10 @@ f1_build_config <- function(project_root) {
       doubletfinder_pN = 0.25,
       doubletfinder_pcs = 1:20,
       minimum_cells_for_doubletfinder = 200L
+    ),
+    ambient = list(
+      minimum_reliable_lineages = 2L,
+      non_lineage_labels = c("Uncertain", "Mixed_or_doublet_suspect")
     ),
     sct = list(
       vst_flavor = "v2",
@@ -80,10 +88,20 @@ f1_build_config <- function(project_root) {
     ),
     cnv = list(
       minimum_reference_cells = 50L,
+      maximum_reference_cells = 500L,
       infercnv_cutoff = 0.1,
       infercnv_threads = 4L,
       infercnv_hmm = FALSE,
       infercnv_denoise = TRUE,
+      infercnv_analysis_mode = "subclusters",
+      infercnv_tumor_subcluster_partition_method = "leiden",
+      infercnv_k_nn = 20L,
+      infercnv_leiden_resolution = "auto",
+      infercnv_leiden_method = "PCA",
+      infercnv_leiden_function = "CPM",
+      infercnv_inspect_subclusters = TRUE,
+      infercnv_output_format = "pdf",
+      infercnv_resume_mode = FALSE,
       copykat_ngene_chr = 5L,
       copykat_win_size = 25L,
       copykat_ks_cut = 0.1,
@@ -95,13 +113,16 @@ f1_build_config <- function(project_root) {
       F1.2 = c(
         "Seurat", "SeuratObject", "Matrix", "ggplot2", "patchwork",
         "SingleCellExperiment", "SummarizedExperiment", "BiocParallel",
-        "scDblFinder", "celda", "DoubletFinder"
+        "scDblFinder", "DoubletFinder"
       ),
       F1.3 = c(
         "Seurat", "SeuratObject", "sctransform", "glmGamPoi", "harmony",
         "leidenbase", "ggplot2", "patchwork"
       ),
-      F1.4 = c("Seurat", "SeuratObject", "ggplot2", "patchwork", "data.table"),
+      F1.4 = c(
+        "Seurat", "SeuratObject", "Matrix", "SingleCellExperiment",
+        "SummarizedExperiment", "celda", "ggplot2", "patchwork", "data.table"
+      ),
       F1.5 = c(
         "Seurat", "SeuratObject", "sctransform", "glmGamPoi", "harmony", "leidenbase",
         "ggplot2", "patchwork", "data.table"

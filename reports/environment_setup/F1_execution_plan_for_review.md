@@ -1,6 +1,6 @@
 # F1 正式执行计划（SCTransform 主线，审核稿）
 
-更新日期：2026-07-22
+更新日期：2026-07-29
 当前状态：F0准入、F1必需依赖、总入口dry-run和脚本静态检查均已通过；**尚未执行真实数据，正式设备与资源pilot仍待批准**。
 
 ## 1. F1 要回答什么
@@ -48,38 +48,40 @@ install.packages(c("leidenbase", "fields"), type = "binary")
 - 细胞名改为`sample_id__original_barcode`，同时保留原barcode、GEO号、patient和组织分组。
 - 完整26,571行feature和全部公开细胞的RNA raw counts保存到`01_all_cells_raw_or_initial.rds`。
 
-### F1.2 固定QC、doublet与ambient RNA
+### F1.2 固定QC与doublet
 
-脚本：`scripts/F1_single_cell/F1_02_qc_doublet_ambient.R`
+脚本：`scripts/F1_single_cell/F1_02_qc_doublet.R`
 
 - 每个样本先保留至少在3个细胞中检出的feature，再只计算一套`nCount_RNA`、`nFeature_RNA`、`mt_percent`和`HB_percent`。
 - 唯一主规则：`nFeature_RNA >= 500`、`nFeature_RNA < 6000`、`nCount_RNA > 1000`、`mt_percent <= 20`、`HB_percent < 5`。
 - scDblFinder按sample/capture运行并作为主删除依据；DoubletFinder按同一输入运行，只作敏感性标记，不机械取并集删除。
-- 删除scDblFinder阳性后按样本运行DecontX。corrected counts逐样本独立保存，不自动合并为主对象assay；raw counts仍是主矩阵，污染分数不用于删细胞。
-- DecontX只运行一次，后续复用其score和corrected矩阵，在四处检查：F1保留细胞基线、主要谱系/上皮候选、CNV reference与上皮观察细胞、F2评分/关键DE及F4通讯对象。
-- 每处只看四类信息：对象内contamination中位数/P90、异谱系marker泄漏变化、本谱系marker保留、raw/corrected目标结果是否实质改变。污染分数无跨样本统一硬阈值，也不单独触发删除或校正。
-- 输出逐细胞决定、逐样本过滤影响、doublet与ambient摘要，并建立唯一跨阶段汇总表`ambient_decision_summary.tsv`；保存`02_all_cells_qc_filtered.rds`。
+- 输出逐细胞决定、逐样本过滤影响和doublet摘要，保存`02_all_cells_qc_filtered.rds`。本节不运行DecontX，因为此时尚无经过marker审核的可靠粗谱系标签。
+- 同时在逐细胞审计表中输出预注册的`fixed_qc_pass_no_ncount_sensitivity`：只去掉`nCount_RNA > 1000`，其余四条QC规则完全不变。该列不改变主对象，也不复用主mask上的doublet结果冒充平行分析。
+- 正式敏感性臂由该mask重跑其余相同步骤和参数，比较主要谱系及注释、恶性上皮群与06a纳入，以及进入F2后的MLMOD-high/low成员和主要方向。主分析始终使用含`nCount_RNA > 1000`的mask，不按哪套结果更好看选择；仅细胞数和少量边界细胞变化不算核心结论改变，结果并入现有QC/F1/F2报告，不增设gate。
 
 ### F1.3 SCTransform、Harmony与全细胞聚类
 
 脚本：`scripts/F1_single_cell/F1_03_sct_harmony_cluster.R`
 
-- 在相同QC后细胞上按`sample_id`建立SCTransform v2模型。
+- 以相同QC后RNA raw counts为起点，按`sample_id`建立SCTransform v2模型，形成供大谱系注释的第一轮粗聚类。
 - 固定`vars.to.regress=NULL`，不回归`mt_percent`、`nCount_RNA`或细胞周期；HVG数为3,000。
 - 在SCT assay上运行50个PC，在PCA上仅按`sample_id`运行Harmony。
 - 主dims为1:30；Leiden预生成0.2、0.4、0.6、0.8、1.0供marker审核，执行前默认0.6。
 - 保存未整合SCT-PCA UMAP和Harmony UMAP。RNA assay另建LogNormalize `data`层，仅用于marker和表达图。
 - 输出`03a_all_cells_sct_harmony_clustered.rds`、参数表和整合诊断。
 
-### F1.4 主要细胞类型注释
+### F1.4 主要细胞类型注释与DecontX评估
 
 脚本：`scripts/F1_single_cell/F1_04_annotation.R`
 
 - 用RNA LogNormalize `data`层计算cluster marker，并结合冻结marker panel制作DotPlot/FeaturePlot。
 - 第一次运行生成`F1_cluster_annotation_template.tsv`后停止；研究者审核并形成`F1_cluster_annotation_approved.tsv`。
-- 再次运行时校验每个cluster均有唯一批准标签，才写入major/minor/state/confidence并保存`03_all_cells_integrated_annotated.rds`。
-- 对marker冲突、稀有、边界cluster和上皮候选复核raw/corrected谱系证据；主要谱系标签一致率低于95%只触发人工复核，身份改变或主要marker依据消失才视为实质变化。
-- 这是必要的生物学判断点，不把自动打分当作最终细胞身份。
+- 再次运行时先校验每个cluster均有唯一批准标签并写入major/minor/state/confidence；这些粗谱系标签在DecontX前冻结，不由校正结果反向迭代。
+- 随后在每个sample/capture内，对固定QC且scDblFinder为singlet的raw integer counts运行一次DecontX，以批准的`cell_type_major`作为`z`。不使用精细上皮亚型、恶性标签、MLMOD或预后信息。
+- 只有样本内至少存在两个可靠粗谱系时才把DecontX记为可评价；否则记为`not_evaluable_fewer_than_two_reliable_lineages`。由于无raw droplets，`background=NULL`，不能把结果解释为空液滴支持的污染真值。
+- corrected counts逐样本独立保存，contamination score写入metadata；raw counts仍为主矩阵，污染分数不用于删细胞，也不自动改写注释。
+- DecontX只运行一次。四个检查点均在F1.4产出之后：本次运行先建立注释后全细胞ambient基线；随后复核上皮候选和F1.5二次聚类；F1.6前复核CNV reference与观察细胞；F2评分/关键DE及F4通讯前复核相应对象。每处只看对象内contamination中位数/P90、异谱系marker泄漏、本谱系marker保留及raw/corrected目标结果是否实质改变。
+- 输出`ambient_rna_cell_estimates.tsv`、`ambient_rna_summary_by_sample.tsv`和逐样本corrected矩阵，并保存`03_all_cells_integrated_annotated.rds`。这是必要的生物学判断点，不把自动打分当作最终细胞身份。
 
 ### F1.5 上皮提取与二次聚类
 
@@ -95,12 +97,21 @@ install.packages(c("leidenbase", "fields"), type = "binary")
 脚本：`scripts/F1_single_cell/F1_06_malignancy_inference.R`
 
 - inferCNV和CopyKAT主分析均使用RNA raw counts，按样本运行；SCT residual和Harmony坐标不作输入。DecontX corrected counts不作默认输入，只允许按下述条件用于inferCNV敏感性。
-- inferCNV优先使用同一样本高置信T/NK，必要时加入B/Plasma；不足时才登记使用pooled同谱系reference。运行前检查reference和上皮观察细胞ambient风险，少数污染reference优先删除或替换，无合格reference则该样本记为不可评估。
-- 仅当污染可信且可能改变CNV结论时运行一次corrected inferCNV敏感性，reference与观察细胞必须同时使用同一corrected矩阵；禁止只校正reference。大片段支持等级或06a纳入改变时暂停裁决，否则raw结果保持主结果。CopyKAT不默认接受corrected输入。
-- inferCNV辅助cell burden定义为每个细胞相对于reference逐基因中心值的平均绝对偏差，并记录reference细胞burden的P95；该数值只帮助定位，不自动判恶性。最终inferCNV支持等级由sample × epithelial cluster热图中的连续大片段模式人工审核。
+- inferCNV reference按固定顺序选择，且不混合不同层级：先用当前样本高/中置信T/NK，必要时在同层加入B/Plasma；不足50个时，改用`patient_id`完全一致的配对`Normal_Gastric`样本免疫细胞；仍不足时，使用其他患者`Normal_Gastric`样本的免疫细胞。配对只依据F0核对后的精确`patient_id`和`group_analysis`，不根据样本名猜测。reference最多500个；候选超过500个时在来源样本间轮流均衡抽取，三层均不足50个时该样本inferCNV记为`not_evaluable`，继续其他样本及CopyKAT。
+- 运行前分别检查reference和上皮观察细胞的ambient风险，少数污染reference优先删除或替换。使用外部正常胃reference时保留每个reference细胞的来源样本、患者、谱系和置信度；这属于同一数据集内的条件性基线，不消除跨样本技术差异。
+- inferCNV显式使用`analysis_mode="subclusters"`、`tumor_subcluster_partition_method="leiden"`、`k_nn=20`、`leiden_resolution="auto"`、`leiden_method="PCA"`、`leiden_function="CPM"`、`inspect_subclusters=TRUE`、`HMM=FALSE`和`cluster_by_groups=TRUE`。Leiden在已审核的sample内、原上皮cluster内形成CNV模式子组，脚本保存每个细胞的子聚类归属；最终大片段支持按sample × inferCNV subcluster审核并回填到细胞。
+- inferCNV subcluster只是帮助从热图中定位具有相似CNV模式的细胞，不称为真实肿瘤亚克隆。主参数先用官方`auto`分辨率；若热图显示明显过度拆分且拆分组没有可区分的连续大片段模式，只允许有依据地降低一次分辨率并记录原因，不进行参数扫描或按结果有利程度选择。
+- CopyKAT每次仅输入当前样本的全部QC后singlet，不混入其他样本，也不只截取候选上皮。CopyKAT的已知正常细胞另行从当前样本高/中置信T/NK（必要时加B/Plasma）选择；达到50个才传入，否则由CopyKAT在当前样本内自行估计基线。inferCNV使用的配对正常胃或其他患者reference绝不传给CopyKAT。
+- 仅当审核表确认污染可信且可能改变CNV结论时运行一次corrected inferCNV敏感性；脚本强制reference与观察细胞同时来自各自保存的DecontX corrected矩阵，禁止只校正一方。大片段支持等级、最终恶性标签或06a纳入任一改变时写出比较表并暂停裁决，否则raw结果保持主结果。CopyKAT不默认接受corrected输入。
+- inferCNV辅助cell burden定义为每个细胞相对于reference逐基因中心值的平均绝对偏差，并记录reference细胞burden的P95；该数值只帮助定位，不自动判恶性。最终inferCNV支持等级由sample × inferCNV subcluster热图中的连续大片段模式人工审核，原`epithelial_cluster_id`同时保留为父级注释背景。
+- 每个样本保留完整inferCNV输出目录、最终RDS、输入annotation、gene order、最终热图细胞顺序、细胞—subcluster对应表和作图来源manifest；最终RDS中的`expr.data`作为后续发表级热图重绘的数值来源，不依赖默认图片反推数据。
 - CopyKAT的aneuploid支持恶性，diploid不能排除近二倍体肿瘤，uncalled按未知。
 - 两种方法都来自RNA表达，只是互补方法稳健性，不是独立DNA证据。
-- 先生成`F1_malignancy_cluster_review_template.tsv`供人工审阅；批准后按主线规则形成`05`、`06a`和`06b`对象。
+- 结论边界固定为：CNV定义可能低估近二倍体恶性细胞，包括潜在的基因组稳定型胃癌细胞；后续MLMOD结论适用于本流程可由CNV证据识别的恶性上皮，不能排除未纳入的近二倍体恶性亚群。该限制不新增恶性类别，也不改变06a/06b组成。
+- 先生成`F1_malignancy_cluster_review_template.tsv`供人工审阅。`epithelial_subtype`使用marker panel中的固定名称：`Pit_mucous_epithelial`、`Mucous_neck_epithelial`、`Chief_epithelial`、`Parietal_epithelial`、`Enteroendocrine_epithelial`或`Intestinal_like_epithelial`；暂时不能归类时填`epithelial_uncertain`。模板列出父级上皮cluster marker、候选sample × inferCNV subcluster与同谱系`Normal_Gastric`的marker检出比例、正常参照细胞数及样本数、组织/样本构成和DecontX摘要；不能映射或没有同谱系正常参照时明确记为不可评估，不自动按阴性处理。
+- 谱系marker只说明细胞像哪类胃上皮，不能直接证明非恶性。`normal_program_support`要求整体接近同谱系`Normal_Gastric`；`tumor_program_support`要求相对同谱系正常细胞出现成套异常变化，不采用单个“癌marker”硬判。增殖、高MT、缺氧、应激、凋亡、intestinal-like状态、ambient或肿瘤组织来源均不能单独形成肿瘤样支持；也不使用MLMOD或预后信息。
+- 两个程序字段允许同时为TRUE或同时为FALSE；冲突或均不明确时保持`epithelial_uncertain`，不为追求纳入量强行裁决。
+- 标签实现与主线一致：`malignant_probable_infercnv`和`malignant_probable_copykat`均要求无强正常样程序；`non_malignant_epithelial`要求无肿瘤样程序。批准后形成`05`、`06a`和`06b`对象。
 
 ## 4. 表达矩阵用途
 
@@ -131,4 +142,4 @@ F0、依赖、环境和审核文件均就绪后，才允许显式执行：
 
 SCTransform全细胞步骤和inferCNV/CopyKAT最可能成为内存瓶颈。正式执行前先以最大样本或批准的代表样本做资源pilot；出现明显换页、峰值内存超过设备安全范围或运行失败时，只切换相应阶段到台式机/服务器。
 
-只有以下情况暂停请用户决定：F0输入事实不一致、固定QC造成无法解释的样本极端损失、主doublet算法失败、SCTransform/Harmony明显破坏主要谱系结构、主要谱系无法可靠注释、CNV reference不可用、恶性证据大范围冲突，或可信ambient污染使目标科学结论在raw/corrected间发生实质变化。普通格式和可恢复运行问题修复后继续，不新增多层gate。
+只有以下情况暂停请用户决定：F0输入事实不一致、固定QC造成无法解释的样本极端损失、主doublet算法失败、SCTransform/Harmony明显破坏主要谱系结构、主要谱系无法可靠注释、CNV reference在多数或关键样本中不可用、恶性证据大范围冲突，或可信ambient污染使目标科学结论在raw/corrected间发生实质变化。单一样本reference不足只记为不可评估，不阻断其他样本。普通格式和可恢复运行问题修复后继续，不新增多层gate。
