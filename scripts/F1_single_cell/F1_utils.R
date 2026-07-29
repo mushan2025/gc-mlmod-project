@@ -239,6 +239,24 @@ f1_run_sct_harmony <- function(object, config, stage_label) {
   object <- f1_join_assay(object, "RNA")
   before <- f1_counts_signature(SeuratObject::LayerData(object, assay = "RNA", layer = "counts"))
 
+  old_future_plan <- future::plan("list")
+  old_future_max_size <- getOption("future.globals.maxSize")
+  on.exit(future::plan(old_future_plan), add = TRUE)
+  on.exit(options(future.globals.maxSize = old_future_max_size), add = TRUE)
+  options(
+    future.globals.maxSize =
+      config$execution$future_globals_max_gb * 1024^3
+  )
+  if (.Platform$OS.type != "windows" && config$execution$future_workers > 1L) {
+    # Linux使用fork并行，主要加速Seurat可由future拆分的步骤；seed仍由各算法固定。
+    future::plan(
+      future::multicore,
+      workers = config$execution$future_workers
+    )
+  } else {
+    future::plan(future::sequential)
+  }
+
   # Seurat v5按sample_id拆分RNA counts层后，SCTransform会为各样本分别拟合模型。
   object[["RNA"]] <- split(object[["RNA"]], f = factor(object$sample_id))
   SeuratObject::DefaultAssay(object) <- "RNA"
@@ -347,10 +365,13 @@ f1_write_parameter_versions <- function(config, extra = NULL) {
       "seed", "SCTransform_vst_flavor", "SCTransform_variable_features_n",
       "SCTransform_vars_to_regress", "PCA_npcs", "Harmony_group_by",
       "main_dims", "default_resolution", "UCell_F2_input",
+      "SCTransform_and_UMAP_future_workers", "future_globals_max_GB",
+      "scDblFinder_workers",
       "DecontX_timing", "DecontX_cluster_label_source",
       "DecontX_minimum_reliable_lineages", "DecontX_background",
       "inferCNV_analysis_mode", "inferCNV_internal_subclustering",
-      "inferCNV_HMM", "inferCNV_output_format",
+      "inferCNV_HMM", "inferCNV_output_format", "inferCNV_threads",
+      "CopyKAT_cores",
       "CopyKAT_input_scope", "CopyKAT_known_normal_rule"
     ),
     value = c(
@@ -358,11 +379,14 @@ f1_write_parameter_versions <- function(config, extra = NULL) {
       "NULL", config$sct$pca_npcs, config$sct$harmony_group,
       paste(range(config$sct$main_dims), collapse = ":"), config$sct$default_resolution,
       "RNA_raw_counts",
+      config$execution$future_workers, config$execution$future_globals_max_gb,
+      config$doublet$scdblfinder_workers,
       "after_researcher_approved_coarse_lineage_annotation",
       "cell_type_major", config$ambient$minimum_reliable_lineages, "NULL",
       config$cnv$infercnv_analysis_mode,
       identical(config$cnv$infercnv_analysis_mode, "subclusters"),
       config$cnv$infercnv_hmm, config$cnv$infercnv_output_format,
+      config$cnv$infercnv_threads, config$cnv$copykat_cores,
       "all_QC_singlet_cells_from_current_sample_only",
       paste0(
         "same_sample_T_NK_then_B_Plasma_if_at_least_",

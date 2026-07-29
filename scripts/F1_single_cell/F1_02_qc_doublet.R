@@ -211,11 +211,24 @@ for (i in seq_along(sample_ids)) {
   algorithm_counts <- fixed_counts[Matrix::rowSums(fixed_counts) > 0, , drop = FALSE]
   sce <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = algorithm_counts))
   set.seed(config$seed)
+  bp_param <- if (
+    .Platform$OS.type != "windows" &&
+      config$doublet$scdblfinder_workers > 1L
+  ) {
+    # 每个样本使用独立的可复现随机流；Windows仍回退到SerialParam。
+    BiocParallel::MulticoreParam(
+      workers = config$doublet$scdblfinder_workers,
+      RNGseed = config$seed + i,
+      progressbar = TRUE
+    )
+  } else {
+    BiocParallel::SerialParam(progressbar = TRUE)
+  }
   sce <- scDblFinder::scDblFinder(
     sce,
     dbr = NULL,
     dbr.per1k = config$doublet$scdblfinder_dbr_per_1k,
-    BPPARAM = BiocParallel::SerialParam(),
+    BPPARAM = bp_param,
     verbose = TRUE
   )
   sc_meta <- as.data.frame(SummarizedExperiment::colData(sce))
@@ -338,6 +351,7 @@ for (i in seq_along(sample_ids)) {
     sample_id = sample_id,
     input_cells = length(fixed_cells),
     scDblFinder_version = as.character(utils::packageVersion("scDblFinder")),
+    scDblFinder_workers = config$doublet$scdblfinder_workers,
     scDblFinder_expected_rate_source = "automatic_10x_rate_dbr_per1k_0.008",
     scDblFinder_doublets = sum(tolower(sc_class) == "doublet"),
     DoubletFinder_version = as.character(utils::packageVersion("DoubletFinder")),

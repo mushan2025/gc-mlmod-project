@@ -19,4 +19,4 @@ DoubletFinder	GitHub_chris-mcginnis-ucsf_DoubletFinder	F1.2	required	2.0.6	avail
 leidenbase	CRAN	F1.3,F1.5	required	0.1.36	available	Leiden clustering used by Seurat algorithm 4.
 infercnv	Bioconductor_3.20	F1.6	required	1.22.0	available	Large-scale CNV pattern inference from raw counts.
 copykat	GitHub_navinlabcode_copykat	F1.6	required	1.1.0	available	Per-sample aneuploid/diploid sensitivity call.
-future	CRAN	F1.3,F1.5	optional	1.70.0	available	Execution control; scripts default to sequential processing for predictable memory use.
+future	CRAN	F1.3,F1.5	required	1.70.0	available	Execution control; scripts default to sequential processing and allow explicitly bounded Linux multicore execution.

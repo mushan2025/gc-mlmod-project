@@ -3,6 +3,32 @@
 # 目的：让六个脚本使用同一套QC边界、SCTransform设置、随机种子和文件路径。
 # 这里登记的是执行前已经确认的规则；正式分析时不要根据MLMOD分数或结果好坏修改。
 
+f1_env_integer <- function(name, default, minimum = 1L, maximum = 48L) {
+  value <- Sys.getenv(name, unset = "")
+  if (!nzchar(value)) return(as.integer(default))
+  parsed <- suppressWarnings(as.integer(value))
+  if (is.na(parsed) || parsed < minimum || parsed > maximum) {
+    stop(
+      name, "必须是", minimum, "到", maximum,
+      "之间的整数；当前值为：", value
+    )
+  }
+  parsed
+}
+
+f1_env_numeric <- function(name, default, minimum, maximum) {
+  value <- Sys.getenv(name, unset = "")
+  if (!nzchar(value)) return(as.numeric(default))
+  parsed <- suppressWarnings(as.numeric(value))
+  if (!is.finite(parsed) || parsed < minimum || parsed > maximum) {
+    stop(
+      name, "必须是", minimum, "到", maximum,
+      "之间的数值；当前值为：", value
+    )
+  }
+  parsed
+}
+
 f1_build_config <- function(project_root) {
   root <- normalizePath(project_root, winslash = "/", mustWork = TRUE)
 
@@ -60,6 +86,9 @@ f1_build_config <- function(project_root) {
     ),
     doublet = list(
       scdblfinder_dbr_per_1k = 0.008,
+      scdblfinder_workers = f1_env_integer(
+        "F1_SCDBLFINDER_WORKERS", 1L, minimum = 1L, maximum = 16L
+      ),
       doubletfinder_pN = 0.25,
       doubletfinder_pcs = 1:20,
       minimum_cells_for_doubletfinder = 200L
@@ -80,6 +109,15 @@ f1_build_config <- function(project_root) {
       leiden_algorithm = 4L,
       harmony_group = "sample_id"
     ),
+    execution = list(
+      # 默认保持单进程；服务器启动脚本显式提高并行度，并把实际值写入参数表。
+      future_workers = f1_env_integer(
+        "F1_FUTURE_WORKERS", 1L, minimum = 1L, maximum = 12L
+      ),
+      future_globals_max_gb = f1_env_numeric(
+        "F1_FUTURE_GLOBALS_MAX_GB", 32, minimum = 4, maximum = 80
+      )
+    ),
     markers = list(
       min_pct = 0.25,
       logfc_threshold = 0.25,
@@ -90,7 +128,9 @@ f1_build_config <- function(project_root) {
       minimum_reference_cells = 50L,
       maximum_reference_cells = 500L,
       infercnv_cutoff = 0.1,
-      infercnv_threads = 4L,
+      infercnv_threads = f1_env_integer(
+        "F1_INFERCNV_THREADS", 4L, minimum = 1L, maximum = 32L
+      ),
       infercnv_hmm = FALSE,
       infercnv_denoise = TRUE,
       infercnv_analysis_mode = "subclusters",
@@ -105,7 +145,9 @@ f1_build_config <- function(project_root) {
       copykat_ngene_chr = 5L,
       copykat_win_size = 25L,
       copykat_ks_cut = 0.1,
-      copykat_cores = 4L,
+      copykat_cores = f1_env_integer(
+        "F1_COPYKAT_CORES", 4L, minimum = 1L, maximum = 32L
+      ),
       require_explicit_execution_approval = TRUE
     ),
     packages = list(
@@ -117,14 +159,15 @@ f1_build_config <- function(project_root) {
       ),
       F1.3 = c(
         "Seurat", "SeuratObject", "sctransform", "glmGamPoi", "harmony",
-        "leidenbase", "ggplot2", "patchwork"
+        "leidenbase", "future", "ggplot2", "patchwork"
       ),
       F1.4 = c(
         "Seurat", "SeuratObject", "Matrix", "SingleCellExperiment",
         "SummarizedExperiment", "celda", "ggplot2", "patchwork", "data.table"
       ),
       F1.5 = c(
-        "Seurat", "SeuratObject", "sctransform", "glmGamPoi", "harmony", "leidenbase",
+        "Seurat", "SeuratObject", "sctransform", "glmGamPoi", "harmony",
+        "leidenbase", "future",
         "ggplot2", "patchwork", "data.table"
       ),
       F1.6 = c(
