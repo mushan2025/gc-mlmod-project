@@ -122,6 +122,10 @@ embedding_source <- data.frame(
   nFeature_RNA = object$nFeature_RNA,
   mt_percent = object$mt_percent,
   HB_percent = object$HB_percent,
+  scDblFinder_score = object$scDblFinder_score,
+  scDblFinder_class = object$scDblFinder_class,
+  DoubletFinder_pANN = object$DoubletFinder_pANN,
+  DoubletFinder_class = object$DoubletFinder_class,
   stringsAsFactors = FALSE
 )
 data.table::fwrite(
