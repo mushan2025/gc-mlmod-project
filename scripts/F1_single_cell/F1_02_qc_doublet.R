@@ -108,7 +108,8 @@ run_doubletfinder_sensitivity <- function(counts, sample_id, config) {
       pN = config$doublet$doubletfinder_pN,
       pK = selected_pk,
       nExp = n_exp,
-      reuse.pANN = FALSE,
+      # DoubletFinder 2.0.6以NULL表示首次计算；FALSE会被误作元数据列索引。
+      reuse.pANN = NULL,
       sct = FALSE
     )
     meta <- x[[]]
