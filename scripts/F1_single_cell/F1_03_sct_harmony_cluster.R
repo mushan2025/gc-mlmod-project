@@ -107,13 +107,13 @@ resolution_counts <- do.call(rbind, lapply(resolution_columns, function(column) 
 f1_write_tsv(resolution_counts, file.path(config$paths$annotation_dir, "resolution_cluster_counts.tsv"))
 
 p_cluster <- Seurat::DimPlot(object, reduction = "umap", group.by = "seurat_clusters", label = TRUE, repel = TRUE) +
-  ggplot2::ggtitle("Harmony UMAP：默认Leiden聚类")
+  ggplot2::ggtitle("Harmony UMAP: Leiden clusters (resolution 0.6)")
 p_sample <- Seurat::DimPlot(object, reduction = "umap", group.by = "sample_id") +
-  ggplot2::ggtitle("Harmony UMAP：sample_id")
+  ggplot2::ggtitle("Harmony UMAP: sample")
 p_group <- Seurat::DimPlot(object, reduction = "umap", group.by = "group_analysis") +
-  ggplot2::ggtitle("Harmony UMAP：组织分组")
+  ggplot2::ggtitle("Harmony UMAP: tissue group")
 p_unintegrated <- Seurat::DimPlot(object, reduction = "umap.sct_pca", group.by = "sample_id") +
-  ggplot2::ggtitle("未整合SCT-PCA UMAP：sample_id")
+  ggplot2::ggtitle("Unintegrated SCT-PCA UMAP: sample")
 ggplot2::ggsave(
   file.path(config$paths$annotation_dir, "F1_all_cells_embedding_review.pdf"),
   patchwork::wrap_plots(p_cluster, p_sample, p_group, p_unintegrated, ncol = 2),

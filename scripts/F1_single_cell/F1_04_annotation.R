@@ -158,7 +158,7 @@ broad_features <- intersect(trimws(broad_features), rownames(object))
 if (length(broad_features)) {
   dot <- Seurat::DotPlot(object, features = broad_features, assay = "RNA", group.by = "seurat_clusters") +
     ggplot2::coord_flip() +
-    ggplot2::labs(title = "主要谱系marker（供人工注释审核）", x = NULL, y = "cluster") +
+    ggplot2::labs(title = "Broad-lineage marker review", x = NULL, y = "cluster") +
     ggplot2::theme_bw(base_size = 9)
   ggplot2::ggsave(
     file.path(config$paths$annotation_dir, "F1_broad_lineage_marker_dotplot.pdf"),
@@ -232,9 +232,9 @@ cluster_quality <- do.call(rbind, lapply(clusters, function(cluster_id) {
 f1_write_tsv(cluster_quality, file.path(config$paths$annotation_dir, "cluster_quality_summary.tsv"))
 
 p1 <- Seurat::DimPlot(object, reduction = "umap", group.by = "cell_type_major", label = TRUE, repel = TRUE) +
-  ggplot2::ggtitle("F1主要细胞类型")
+  ggplot2::ggtitle("F1 major cell lineages")
 p2 <- Seurat::DimPlot(object, reduction = "umap", group.by = "sample_id") +
-  ggplot2::ggtitle("F1主要细胞类型图谱：样本来源")
+  ggplot2::ggtitle("F1 major cell lineages: sample source")
 ggplot2::ggsave(
   file.path(config$paths$annotation_dir, "F1_all_cells_annotated_umap.pdf"),
   patchwork::wrap_plots(p1, p2, ncol = 2),

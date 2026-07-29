@@ -132,11 +132,11 @@ summary <- data.frame(
 f1_write_tsv(summary, file.path(config$paths$annotation_dir, "epithelial_recluster_summary.tsv"))
 
 p1 <- Seurat::DimPlot(epithelial, reduction = "umap", group.by = "epithelial_cluster_id", label = TRUE, repel = TRUE) +
-  ggplot2::ggtitle("上皮细胞二次聚类")
+  ggplot2::ggtitle("Epithelial-cell reclustering")
 p2 <- Seurat::DimPlot(epithelial, reduction = "umap", group.by = "group_analysis") +
-  ggplot2::ggtitle("上皮细胞：组织来源")
+  ggplot2::ggtitle("Epithelial cells: tissue group")
 p3 <- Seurat::DimPlot(epithelial, reduction = "umap", group.by = "sample_id") +
-  ggplot2::ggtitle("上皮细胞：样本来源")
+  ggplot2::ggtitle("Epithelial cells: sample")
 ggplot2::ggsave(
   file.path(config$paths$annotation_dir, "F1_epithelial_recluster_umap.pdf"),
   patchwork::wrap_plots(p1, p2, p3, ncol = 2),

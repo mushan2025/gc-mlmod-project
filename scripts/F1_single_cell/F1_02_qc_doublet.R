@@ -145,7 +145,11 @@ plot_sample_qc <- function(decision, sample_id, out_dir) {
   p1 <- ggplot2::ggplot(long, ggplot2::aes(x = fixed_qc_pass, y = value, fill = fixed_qc_pass)) +
     ggplot2::geom_violin(scale = "width", trim = TRUE) +
     ggplot2::facet_wrap(~metric, scales = "free_y", ncol = 2) +
-    ggplot2::labs(title = paste0(sample_id, "：固定QC前后"), x = "通过固定QC", y = NULL) +
+    ggplot2::labs(
+      title = paste0(sample_id, ": before and after fixed QC"),
+      x = "Pass fixed QC",
+      y = NULL
+    ) +
     ggplot2::theme_bw(base_size = 10) +
     ggplot2::theme(legend.position = "none")
   p2 <- ggplot2::ggplot(
@@ -154,7 +158,10 @@ plot_sample_qc <- function(decision, sample_id, out_dir) {
   ) +
     ggplot2::geom_point(size = 0.35, alpha = 0.55) +
     ggplot2::scale_color_viridis_c() +
-    ggplot2::labs(title = paste0(sample_id, "：复杂度与线粒体比例"), color = "mt_percent") +
+    ggplot2::labs(
+      title = paste0(sample_id, ": library complexity and mitochondrial fraction"),
+      color = "mt_percent"
+    ) +
     ggplot2::theme_bw(base_size = 10)
   ggplot2::ggsave(
     file.path(out_dir, paste0(sample_id, "_QC_review.pdf")),
