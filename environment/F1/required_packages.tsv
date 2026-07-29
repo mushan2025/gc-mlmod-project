@@ -16,6 +16,7 @@ BiocParallel	Bioconductor_3.20	F1.2	required	1.40.2	available	Controlled serial 
 scDblFinder	Bioconductor_3.20	F1.2	required	1.20.2	available	Primary doublet call by sample/capture.
 celda	Bioconductor_3.20	F1.4	required	1.22.1	available	Per-sample DecontX retained-cell ambient RNA estimate after approved coarse annotation.
 DoubletFinder	GitHub_chris-mcginnis-ucsf_DoubletFinder	F1.2	required	2.0.6	available	Sensitivity method linked to the source study; installed from commit 1B244D8F0D54B4B1CB4365639931BBB16F01E1CD.
+presto	GitHub_immunogenomics_presto	F1.4	required	1.0.0	available	Fast sparse Wilcoxon backend automatically used by Seurat FindAllMarkers; installed from commit A24772A135C7895A8183B007376050556C60A05B, source archive SHA256 2AF4D2076F0C57D4E0335499B93480393052C2422C33C3090761A092FAE1EE57.
 leidenbase	CRAN	F1.3,F1.5	required	0.1.36	available	Leiden clustering used by Seurat algorithm 4.
 infercnv	Bioconductor_3.20	F1.6	required	1.22.0	available	Large-scale CNV pattern inference from raw counts.
 copykat	GitHub_navinlabcode_copykat	F1.6	required	1.1.0	available	Per-sample aneuploid/diploid sensitivity call.

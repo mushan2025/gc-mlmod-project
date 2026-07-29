@@ -131,10 +131,12 @@ for (package in names(cran_versions)) {
 github_specs <- c(
   DoubletFinder =
     "chris-mcginnis-ucsf/DoubletFinder@1B244D8F0D54B4B1CB4365639931BBB16F01E1CD",
+  presto =
+    "immunogenomics/presto@A24772A135C7895A8183B007376050556C60A05B",
   copykat =
     "navinlabcode/copykat@12B7C7E15D42596296E46819C64ACA347BFDE2E5"
 )
-github_versions <- c(DoubletFinder = "2.0.6", copykat = "1.1.0")
+github_versions <- c(DoubletFinder = "2.0.6", presto = "1.0.0", copykat = "1.1.0")
 for (package in names(github_specs)) {
   installed <- if (requireNamespace(package, quietly = TRUE)) {
     as.character(utils::packageVersion(package))
