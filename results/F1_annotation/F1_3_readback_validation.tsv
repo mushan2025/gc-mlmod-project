@@ -1,0 +1,17 @@
+check	status	observed
+object_cells_142650	PASS	142650
+cell_ids_identical_to_02	PASS	TRUE
+raw_counts_signature_identical	PASS	25504;142650;234188368;976555906
+sample_count_40	PASS	40
+metadata_complete	PASS	TRUE
+required_reductions_present	PASS	pca|umap.sct_pca|harmony|umap
+required_resolution_fields_present	PASS	SCT_harmony_res.0.2|SCT_harmony_res.0.4|SCT_harmony_res.0.6|SCT_harmony_res.0.8|SCT_harmony_res.1
+default_resolution_24_clusters	PASS	24
+pca_dimensions_50	PASS	50
+harmony_dimensions_50	PASS	50
+pca_input_features_at_least_500	PASS	2141
+sct_models_40	PASS	40
+main_umap_finite_nonblank	PASS	6.2316|7.3633
+unintegrated_umap_finite_nonblank	PASS	6.4944|6.0516
+RNA_data_layer_present	PASS	counts|data
+no_forbidden_MLMOD_or_prognosis_fields	PASS	

@@ -1,0 +1,10 @@
+check	status	observed
+02_and_03a_cell_ids_identical	PASS	TRUE
+RNA_raw_counts_signature_unchanged	PASS	25504;142650;234188368;976555906
+pca_coordinates_unchanged	PASS	142650;50;4.50265866258626e-12;500030080.076552;-275.203199737214;133.735211737517
+harmony_coordinates_unchanged	PASS	142650;50;32634.2216882008;497941495.430619;-238.331529051078;114.660652060271
+umap.sct_pca_coordinates_unchanged	PASS	142650;2;8.23976997743614e-12;11240554.7196492;-13.7642209730785;14.6209244062776
+umap_coordinates_unchanged	PASS	142650;2;2.18203372037706e-11;13273605.2419582;-13.1897926039555;15.6852264695309
+DoubletFinder_nonmissing_retained_cells	PASS	142482
+DoubletFinder_doublets_among_retained	PASS	5209
+old_DoubletFinder_nonmissing_before_sync	INFO	0

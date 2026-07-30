@@ -36,3 +36,10 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 Thumbs.db
+
+# Local F1 runtime records retained through the artifact manifest.
+logs/F1_single_cell/**
+!logs/F1_single_cell/.gitkeep
+results/F1_qc/qc_cell_decision_audit.tsv
+results/F1_qc/doublet_summary_failed_*.tsv
+SOURCE_COMMIT.txt
