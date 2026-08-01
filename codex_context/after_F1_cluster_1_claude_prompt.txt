@@ -1,0 +1,96 @@
+Claude Code → Codex 指令：F1 第一轮 Step 6 审核结论 + F1.4 注释前必办事项
+审核日期：2026-07-30
+审核范围：commit d4557f7（F1 第一轮 QC + SCTransform/Harmony + 24 cluster，停在 F1.4 注释审核点）
+审核结论：F1 第一轮通过，可进入 F1.4 人工注释；以下 5 项在注释定稿前处理
+边界：本轮不跑 F1.5/F1.6，不改已冻结的 QC 规则和已产出的对象数值
+
+================================================================================
+
+## 〇、审核确认通过（不要改动）
+
+我独立核对了真实产出文件，不采信汇报，以下全部通过：
+
+- 细胞数链条自洽：158,641 → 固定QC 153,320 → scDblFinder 删 10,670 → 最终 142,650；逐样本求和与报告一致
+- **与 F0 完全吻合**：F0 测量的固定QC后 153,320 与 F1 实际一致，说明 F0/F1 同一套规则、无漂移
+- 规则重叠正确处理：各规则失败和 5,344 > union 5,321（23 个细胞多规则失败），没有相加冒充总删除数
+- nCount 敏感性 mask 已产出（+4,871 细胞，与 F0 的 4,876 同量级）
+- doublet 总体 6.96%（逐样本 1.05%–11.94%），随细胞数缩放，符合 scDblFinder dbr 机制与 10x 合理区间
+- technical_HVG_fraction = 0.93%，HVG 未被 MT/RPL/RPS/globin 主导
+- 24 个 cluster 主要谱系齐全、canonical marker 干净可解释，无明显单样本主导
+- 服务器→本地回收：两个 RDS 原始 SHA256 一致、119 项清单通过，回收纪律良好
+
+## 一、c18 应激伪影簇：注释时不得写成细胞类型（必办）
+
+c18（2,369 细胞、跨全部 40 样本）marker 全为 `HSPA6, JUN, HSPA1B, FOS, DUSP1, FOSB, DNAJB1, NR4A1, HSPA1A`，是典型组织解离诱导的热激/应激反应，跨样本跨谱系出现，符合技术伪影特征。
+
+要求：
+- 在 `F1_cluster_annotation_template.tsv` / `celltype_annotation_summary.tsv` 中把 c18 标为**技术状态**（如 dissociation_stress_state / low_confidence_technical），**不得**赋予任何具体细胞类型身份，`cell_state` 明确写应激。
+- 在 `cluster_quality_summary.tsv` 记录它由应激程序驱动、跨全部样本这一事实。
+- 明确其下游处置：是否进入 F1.5 上皮提取、是否允许进入 06a，必须有显式决定并记录理由；**默认不得**因为它含少量上皮 marker 就并入上皮主对象。
+- 本项目额外理由：F2 把 stress_score 作为混杂参照；若这批应激细胞留在恶性对象中，可能抬高类似 MLMOD 的信号。
+
+## 二、c19 金属硫蛋白：本项目特异的混淆风险（必办 + 登记到 F2.3）
+
+c19（2,117 细胞）= 主细胞程序（`PGA5, PGA4, PGC, LIPF`）+ 高金属硫蛋白（`MT1H, MT1G, MT1M, MT1X, MT1F, MT2A`）。
+
+**关键事实澄清**：`MT1x/MT2A` 是**金属硫蛋白**（金属结合、氧化应激应答），**不是线粒体基因**；线粒体基因是带连字符的 `MT-CO1/MT-ND1` 等。现有代码用 `^MT-`（带连字符）匹配，已**正确排除** MT1G/MT2A，mt_percent 计算无误——这一点不需要改代码。
+
+要求：
+1. 在 c19 的注释理由中明确写出：高 `MT1x/MT2A` 是金属硫蛋白/氧化应激应答，**不等于线粒体转录本比例升高**，不得据此推断线粒体状态。
+2. **登记到 F2.3 特异性检查清单**（写入主线方案 F2.3 或对应参照/混杂列表）：把"金属硫蛋白程序（MT1x/MT2A）"作为**非线粒体的泛氧化应激**参照观察项；若 MLMOD-high 富集于金属硫蛋白高的细胞，应优先考虑泛氧化应激解释而非线粒体损伤特异性。这只是新增一个观察/参照项，**不改** MLMOD 主分数定义、不新增硬 gate、不改 F2 既有五个核心参照的地位。
+3. 在方案/注释文档里留一句防混淆说明，避免后续 agent 或审稿人把 MT1G 误当线粒体基因。
+
+## 三、c3 是正常/肿瘤混合上皮簇：不得注释为"正常 pit 上皮"（必办）
+
+c3 是最大上皮簇（13,819 细胞、40 样本），marker 同时含：
+- 正常 pit/表面黏液：`GKN1, GKN2, TFF1`
+- 方案自己点名的肿瘤候选 + 肠型：`S100P, AKR1B10, CEACAM5, REG4, GPX2`
+
+说明 resolution 0.6 下正常与恶性上皮可能被合并在同一簇。
+
+要求：
+- c3 注释必须明确标为**混合/待 CNV 判定的上皮簇**（如 epithelial_mixed_normal_and_tumor_candidate），**不得**写成"正常 pit 上皮"，也不得写成"肿瘤上皮"。
+- 在注释理由中写明依据（同时存在正常 pit 与肿瘤候选/肠型 marker）。
+- 下游影响必须显式记录两点：① F1.6 判 `normal_program_support` / `tumor_program_support` 时，c3 作为父级背景是混合的，不能当正常参照；② **c3 及其细胞不得作为 inferCNV/CopyKAT 的正常 reference 来源**（reference 仍按方案用免疫细胞层级）。
+- 是否需要在 F1.5 上皮二次聚类中拆分 c3，由 F1.5 结果决定；本轮只要求正确标注、不强行改 resolution。
+
+## 四、depth 相关性阈值：把"明确深度驱动"定量（必办·小改）
+
+实测 `max_abs_PCA_correlation_nCount_RNA = 0.476`。方案预注册的 LogNormalize 敏感性触发条件写的是"出现明确深度驱动聚类"，但**没有数值阈值**，属于伪具体（§18）。
+
+要求：
+- 在主线方案该触发条件处**补一个明确的数值线**并说明依据，例如 |r| > 0.7 视为深度驱动、0.5–0.7 记为需人工复核、<0.5 不触发（具体数值你可提出更合适的，但必须写死且给理由）。
+- 按该阈值对本轮 0.476 给出明确结论并记录（我的判断是**不触发**：0.476 为中度、非主导，技术 HVG 仅 0.93%，且 SCTransform 本身即为校正深度设计）。
+- 不得在看到下游 MLMOD/预后结果之后再调这个阈值。
+
+## 五、补每簇 dominant_sample / dominant_patient 占比（必办·注释前）
+
+当前注释模板只有 `cluster / cell_count / sample_count / top_markers`，缺少样本与患者主导度。因此**无法判断**是否存在过度整合。
+
+为什么重要：方案（F1.3 整合检查、F1.6）明确关心"恶性上皮是否按患者分离"——那是真实肿瘤生物学而非整合失败。但现在所有 cluster 都跨 35–40 样本（含最大上皮簇 c3），**表面上与该预期相反**，存在 Harmony 把患者特异肿瘤克隆抹平的可能。`sample_count` 只是"有≥1细胞的样本数"，一个簇可以跨 40 样本却被少数样本主导，所以**不能只凭 sample_count 下任何结论**。
+
+要求：
+- 在 `F1_cluster_annotation_template.tsv`（或 cluster_quality_summary.tsv）为每个 cluster 补：`dominant_sample_id`、`dominant_sample_fraction`、`dominant_patient_id`、`dominant_patient_fraction`、`n_patients`，并按 group_analysis 给出细胞组成。数据都在 03a 对象 metadata 里，成本很低。
+- 补齐后在 `integration_diagnostics.tsv` 给出**分谱系**结论：非恶性谱系（T/NK、B/Plasma、Myeloid、Fibroblast、Endothelial）是否合理混合；上皮簇是否高度混合。
+- **若上皮簇确实高度混合（患者主导度很低）**，必须在 integration_diagnostics 和 F1 报告中显式提出"是否过度整合上皮/是否影响 F1.6 CNV subcluster 判读"的评估结论，并等研究者裁决；**不得**默认它没问题就继续。
+- 本轮不要求重跑 Harmony 或改整合参数，只要求把证据补齐并给出判断。
+
+## 六、编码（低优先）
+
+`results/F1_annotation/integration_diagnostics.tsv` 的中文 interpretation 列按 UTF-8 读出为乱码，疑为服务器上以非 UTF-8 写出。数值不受影响。建议统一为 UTF-8 以便复核（与此前"图表英文标题可移植性"修正同一类问题）。
+
+================================================================================
+
+## 验证与提交要求
+
+- c18 / c19 / c3 的注释标注与理由已按上述写入注释模板及 cluster_quality_summary
+- 金属硫蛋白观察项已登记到主线方案 F2.3（未改 MLMOD 主分数定义、未新增硬 gate）
+- 深度驱动阈值已写死并给出本轮 0.476 的明确结论
+- 每簇 dominant_sample/patient 占比已补齐，integration_diagnostics 给出分谱系整合结论
+- 已产出的 QC 数值、142,650 细胞主对象、03a 对象内容不得被本轮改动
+- 不执行 F1.5 / F1.6；DecontX 仍按方案在 F1.4 注释批准后运行
+- TABLE 标签配平、F0–F8 完整、`git diff --check` 通过
+
+提交信息建议：annotate stress/metallothionein/mixed-epithelial clusters per review; quantify depth-driven trigger; add per-cluster sample/patient dominance for integration assessment; register metallothionein reference in F2.3.
+
+提交后交 Claude Code 复审；F1.4 注释定稿与 F1.5/F1.6 执行仍需用户批准。

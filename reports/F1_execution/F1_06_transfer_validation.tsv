@@ -1,0 +1,3 @@
+artifact	local_path	archive_size_bytes	archive_sha256	content_files	content_bytes	archive_sha_match	content_bad_files	status
+review_bundle	C:\Users\14799\gc-mlmod-server-artifacts\F1_06_20260730\repository_outputs\server_downloads\F1_06_20260730\F1_06_review_bundle.tar.gz	140766974	9DC00A6CFC2EF4F323E1A45910BBFC98033C01D6257DC9810DD794DBBD6C6218	749	NA	TRUE	0	PASS
+replot_objects	C:\Users\14799\gc-mlmod-server-artifacts\F1_06_20260730\F1_06_replot_objects.tar.gz.part-aa	1254209905	3CA95ADD2F3040E6A90DB212F60E9E7395882904444491609EED8E64046C24BB	79	13989564741	TRUE	0	PASS

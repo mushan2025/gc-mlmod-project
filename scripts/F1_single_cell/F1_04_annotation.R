@@ -1,8 +1,9 @@
 # F1.4 主要细胞类型注释与DecontX评估 ---------------------------------------
 #
 # 生物学目的：依据cluster marker、冻结marker panel和样本覆盖，为每个cluster
-# 赋予可解释的主要谱系；批准粗谱系后，再按样本用这些标签辅助DecontX估计
-# retained-cell环境RNA污染。最终标签必须经研究者审核，DecontX不反向改写标签。
+# 赋予可解释的主要谱系；批准粗谱系后，再按样本使用已经审核和注释的
+# Seurat cluster作为DecontX模型分组，估计retained-cell环境RNA污染。
+# 粗谱系只用于结果汇总，最终标签必须经研究者审核，DecontX不反向改写标签。
 #
 # 第一次正式运行会生成注释模板并停止；填好批准表后再次运行才执行DecontX并
 # 保存正式注释对象。raw counts始终是主矩阵，corrected counts只供敏感性检查。
@@ -21,14 +22,21 @@ outputs <- c(
   marker_path,
   config$paths$object_03,
   file.path(config$paths$annotation_dir, "celltype_annotation_summary.tsv"),
+  file.path(config$paths$annotation_dir, "cluster_quality_summary.tsv"),
   config$paths$ambient_cell_estimates,
-  config$paths$ambient_summary
+  config$paths$ambient_summary,
+  config$paths$ambient_lineage_summary,
+  config$paths$ambient_cluster_summary,
+  config$paths$ambient_corrected_count_summary
 )
 
 if (!args$execute) {
   f1_stage_dry_run(
     stage,
-    "完成主要谱系人工注释后，按样本以批准的粗谱系标签运行DecontX",
+    paste0(
+      "完成主要谱系人工注释后，按样本以已审核Seurat cluster作为模型分组",
+      "运行DecontX；粗谱系只用于汇总解释"
+    ),
     c(config$paths$object_03a, config$paths$marker_panel, config$paths$annotation_approved),
     outputs,
     config$packages[[stage]]
@@ -43,14 +51,14 @@ f1_prepare_directories(config)
 set.seed(config$seed)
 f1_append_log(config, stage, "开始cluster marker计算、主要谱系注释与注释后DecontX评估")
 
-run_decontx_after_annotation <- function(counts, coarse_labels, sample_id, config) {
-  reliable_lineages <- setdiff(unique(coarse_labels), config$ambient$non_lineage_labels)
-  if (length(reliable_lineages) < config$ambient$minimum_reliable_lineages) {
+run_decontx_after_annotation <- function(counts, model_clusters, sample_id, config) {
+  reliable_model_clusters <- unique(model_clusters)
+  if (length(reliable_model_clusters) < config$ambient$minimum_reliable_lineages) {
     return(list(
-      status = "not_evaluable_fewer_than_two_reliable_lineages",
+      status = "not_evaluable_fewer_than_two_model_clusters",
       contamination = setNames(rep(NA_real_, ncol(counts)), colnames(counts)),
       corrected = NULL,
-      reliable_lineages = reliable_lineages,
+      reliable_model_clusters = reliable_model_clusters,
       error = NA_character_
     ))
   }
@@ -60,7 +68,7 @@ run_decontx_after_annotation <- function(counts, coarse_labels, sample_id, confi
     sce <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = counts))
     result <- celda::decontX(
       sce,
-      z = coarse_labels,
+      z = model_clusters,
       background = NULL,
       seed = config$seed
     )
@@ -75,13 +83,13 @@ run_decontx_after_annotation <- function(counts, coarse_labels, sample_id, confi
     rownames(corrected) <- rownames(counts)
     colnames(corrected) <- colnames(counts)
     list(
-      status = "completed_with_researcher_approved_coarse_labels",
+      status = "completed_with_researcher_approved_seurat_clusters",
       contamination = setNames(
         as.numeric(cell_data[colnames(counts), "decontX_contamination"]),
         colnames(counts)
       ),
       corrected = corrected,
-      reliable_lineages = reliable_lineages,
+      reliable_model_clusters = reliable_model_clusters,
       error = NA_character_
     )
   }, error = function(e) {
@@ -89,7 +97,7 @@ run_decontx_after_annotation <- function(counts, coarse_labels, sample_id, confi
       status = "not_evaluable_model_failure",
       contamination = setNames(rep(NA_real_, ncol(counts)), colnames(counts)),
       corrected = NULL,
-      reliable_lineages = reliable_lineages,
+      reliable_model_clusters = reliable_model_clusters,
       error = conditionMessage(e)
     )
   })
@@ -98,7 +106,11 @@ run_decontx_after_annotation <- function(counts, coarse_labels, sample_id, confi
 object <- readRDS(config$paths$object_03a)
 f1_require_columns(
   object[[]],
-  c("sample_id", "group_analysis", "seurat_clusters", "nCount_RNA", "nFeature_RNA", "mt_percent", "HB_percent"),
+  c(
+    "sample_id", "patient_id", "group_analysis", "seurat_clusters",
+    "nCount_RNA", "nFeature_RNA", "mt_percent", "HB_percent",
+    "DoubletFinder_class", "scDblFinder_class"
+  ),
   "F1.3 clustered object metadata"
 )
 object <- f1_join_assay(object, "RNA")
@@ -130,21 +142,22 @@ if (!reuse_markers) {
 }
 
 top <- f1_top_markers(markers, n = config$markers$top_n_per_cluster)
-cluster_counts <- as.data.frame(table(cluster = as.character(object$seurat_clusters)), stringsAsFactors = FALSE)
-colnames(cluster_counts)[2] <- "cell_count"
-sample_counts <- aggregate(
-  sample_id ~ seurat_clusters,
-  data = unique(object[[]][, c("sample_id", "seurat_clusters")]),
-  FUN = length
-)
-colnames(sample_counts) <- c("cluster", "sample_count")
-template <- merge(cluster_counts, sample_counts, by = "cluster", all.x = TRUE, sort = TRUE)
+composition <- f1_cluster_composition(object[[]])
+template <- composition
 template <- merge(template, top, by = "cluster", all.x = TRUE, sort = TRUE)
-template$cell_type_major <- ""
-template$cell_type_minor <- ""
-template$cell_state <- ""
-template$annotation_confidence <- ""
-template$annotation_reason <- ""
+template$cell_type_major <- NA_character_
+template$cell_type_minor <- NA_character_
+template$cell_state <- NA_character_
+template$annotation_confidence <- NA_character_
+template$annotation_reason <- NA_character_
+template$annotation_review_status <- "pending_full_F1.4_review"
+template$downstream_handling_before_full_approval <- NA_character_
+template <- f1_apply_f1_annotation_draft(template)
+template <- template[
+  match(f1_sort_cluster_ids(template$cluster), as.character(template$cluster)),
+  ,
+  drop = FALSE
+]
 f1_write_tsv(template, config$paths$annotation_template)
 
 panel <- f1_read_tsv(config$paths$marker_panel)
@@ -187,9 +200,20 @@ f1_require_columns(approved, required_fields, "F1_cluster_annotation_approved.ts
 if (anyDuplicated(as.character(approved$cluster)) || !setequal(as.character(approved$cluster), clusters)) {
   stop("批准注释表必须与当前cluster一对一完整对应。")
 }
+text_fields <- setdiff(required_fields, "cluster")
+incomplete <- vapply(text_fields, function(field) {
+  any(is.na(approved[[field]]) | !nzchar(trimws(as.character(approved[[field]]))))
+}, logical(1))
+if (any(incomplete)) {
+  stop(
+    "批准注释表仍有未填写字段：",
+    paste(text_fields[incomplete], collapse = ", ")
+  )
+}
 allowed_major <- c(
   "Epithelial", "T/NK", "B/Plasma", "Myeloid", "Fibroblast/CAF",
-  "Endothelial/Pericyte", "Mast", "Uncertain", "Mixed_or_doublet_suspect"
+  "Endothelial/Pericyte", "Mast", "Mesothelial",
+  "Uncertain", "Mixed_or_doublet_suspect"
 )
 if (any(!approved$cell_type_major %in% allowed_major)) {
   stop("批准表含未登记的cell_type_major：", paste(unique(approved$cell_type_major[!approved$cell_type_major %in% allowed_major]), collapse = ", "))
@@ -197,38 +221,58 @@ if (any(!approved$cell_type_major %in% allowed_major)) {
 if (any(!approved$annotation_confidence %in% c("high", "medium", "low"))) {
   stop("annotation_confidence只允许high、medium或low。")
 }
+approved_annotations <- approved[, required_fields, drop = FALSE]
 
-map_index <- match(as.character(object$seurat_clusters), as.character(approved$cluster))
+map_index <- match(as.character(object$seurat_clusters), as.character(approved_annotations$cluster))
 for (field in setdiff(required_fields, "cluster")) {
-  object[[field]] <- as.character(approved[[field]][map_index])
+  object[[field]] <- as.character(approved_annotations[[field]][map_index])
 }
 
-annotation_summary <- merge(template[, c("cluster", "cell_count", "sample_count", "top_markers")], approved, by = "cluster", sort = TRUE)
+template_context <- template[
+  ,
+  setdiff(
+    colnames(template),
+    c(
+      "cell_type_major", "cell_type_minor", "cell_state",
+      "annotation_confidence", "annotation_reason"
+    )
+  ),
+  drop = FALSE
+]
+annotation_summary <- merge(
+  template_context,
+  approved_annotations,
+  by = "cluster",
+  sort = TRUE
+)
+annotation_summary$annotation_review_status <- "researcher_approved_annotation"
+annotation_summary <- annotation_summary[
+  match(
+    f1_sort_cluster_ids(annotation_summary$cluster),
+    as.character(annotation_summary$cluster)
+  ),
+  ,
+  drop = FALSE
+]
 f1_write_tsv(annotation_summary, file.path(config$paths$annotation_dir, "celltype_annotation_summary.tsv"))
 
 meta <- object[[]]
-cluster_quality <- do.call(rbind, lapply(clusters, function(cluster_id) {
-  x <- meta[as.character(meta$seurat_clusters) == cluster_id, , drop = FALSE]
-  marker_row <- top[top$cluster == cluster_id, , drop = FALSE]
-  data.frame(
-    cluster = cluster_id,
-    cell_count = nrow(x),
-    sample_count = length(unique(x$sample_id)),
-    top_markers = marker_row$top_markers %||% "",
-    median_nCount_RNA = stats::median(x$nCount_RNA, na.rm = TRUE),
-    median_nFeature_RNA = stats::median(x$nFeature_RNA, na.rm = TRUE),
-    median_mt_percent = stats::median(x$mt_percent, na.rm = TRUE),
-    median_HB_percent = stats::median(x$HB_percent, na.rm = TRUE),
-    DoubletFinder_only_fraction = mean(
-      tolower(x$DoubletFinder_class) == "doublet" & tolower(x$scDblFinder_class) == "singlet",
-      na.rm = TRUE
-    ),
-    cell_type_major = unique(x$cell_type_major)[[1]],
-    annotation_confidence = unique(x$annotation_confidence)[[1]],
-    review_status = "researcher_approved_annotation",
-    stringsAsFactors = FALSE
-  )
-}))
+cluster_qc <- f1_cluster_qc_metrics(meta)
+cluster_quality <- merge(composition, top, by = "cluster", all.x = TRUE, sort = TRUE)
+cluster_quality <- merge(cluster_quality, cluster_qc, by = "cluster", all.x = TRUE, sort = TRUE)
+cluster_quality <- merge(
+  cluster_quality,
+  approved_annotations,
+  by = "cluster",
+  all.x = TRUE,
+  sort = TRUE
+)
+cluster_quality$review_status <- "researcher_approved_annotation"
+cluster_quality <- cluster_quality[
+  match(f1_sort_cluster_ids(cluster_quality$cluster), as.character(cluster_quality$cluster)),
+  ,
+  drop = FALSE
+]
 f1_write_tsv(cluster_quality, file.path(config$paths$annotation_dir, "cluster_quality_summary.tsv"))
 
 p1 <- Seurat::DimPlot(object, reduction = "umap", group.by = "cell_type_major", label = TRUE, repel = TRUE) +
@@ -243,8 +287,9 @@ ggplot2::ggsave(
   limitsize = FALSE
 )
 
-# DecontX依赖细胞群标签。这里先冻结研究者批准的大谱系，再在每个sample内独立
-# 估计污染；不使用上皮亚型、恶性标签、MLMOD或任何下游结果。
+# DecontX依赖细胞群标签。8个粗谱系会把普通B细胞和多种浆细胞状态合并，
+# 在本数据中造成明显的伪高污染，因此模型z固定使用24个已审核Seurat cluster。
+# 粗谱系只用于汇总；不使用恶性标签、MLMOD或任何下游结果。
 raw_counts <- SeuratObject::LayerData(object, assay = "RNA", layer = "counts")
 f1_assert_integer_counts(raw_counts, "F1.4 DecontX raw RNA counts")
 sample_ids <- sort(unique(as.character(object$sample_id)))
@@ -263,15 +308,25 @@ for (sample_id in sample_ids) {
     as.character(object$cell_type_major[match(sample_cells, colnames(object))]),
     sample_cells
   )
+  model_clusters <- setNames(
+    as.character(object$seurat_clusters[match(sample_cells, colnames(object))]),
+    sample_cells
+  )
   if (anyNA(coarse_labels) || any(!nzchar(coarse_labels))) {
     stop(sample_id, "存在缺失粗谱系标签，不能运行DecontX。")
+  }
+  if (anyNA(model_clusters) || any(!nzchar(model_clusters))) {
+    stop(sample_id, "存在缺失Seurat cluster标签，不能运行DecontX。")
+  }
+  if (!all(unique(model_clusters) %in% as.character(approved_annotations$cluster))) {
+    stop(sample_id, "包含未通过研究者注释审核的Seurat cluster。")
   }
 
   sample_counts <- raw_counts[, sample_cells, drop = FALSE]
   sample_counts <- sample_counts[Matrix::rowSums(sample_counts) > 0, , drop = FALSE]
   result <- run_decontx_after_annotation(
     counts = sample_counts,
-    coarse_labels = coarse_labels,
+    model_clusters = model_clusters,
     sample_id = sample_id,
     config = config
   )
@@ -297,18 +352,42 @@ for (sample_id in sample_ids) {
         na.rm = TRUE,
         names = FALSE,
         type = 7
+      )),
+      contamination_P95 = as.numeric(stats::quantile(
+        finite_contamination,
+        probs = 0.95,
+        na.rm = TRUE,
+        names = FALSE,
+        type = 7
       ))
     )
   } else {
     setNames(
-      as.list(rep(NA_real_, 6)),
+      as.list(rep(NA_real_, 7)),
       c(
         "contamination_min", "contamination_Q1", "contamination_median",
-        "contamination_Q3", "contamination_max", "contamination_P90"
+        "contamination_Q3", "contamination_max", "contamination_P90",
+        "contamination_P95"
       )
     )
   }
   coarse_counts <- table(coarse_labels)
+  model_cluster_counts <- table(model_clusters)
+  raw_total_counts <- sum(sample_counts)
+  corrected_values <- if (!is.null(result$corrected)) {
+    if (inherits(result$corrected, "sparseMatrix")) {
+      result$corrected@x
+    } else {
+      as.vector(result$corrected)
+    }
+  } else {
+    numeric()
+  }
+  corrected_total_counts <- if (length(corrected_values)) {
+    sum(corrected_values)
+  } else {
+    NA_real_
+  }
   ambient_summary_rows[[sample_id]] <- cbind(
     data.frame(
       sample_id = sample_id,
@@ -318,13 +397,41 @@ for (sample_id in sample_ids) {
       method = "DecontX",
       celda_version = as.character(utils::packageVersion("celda")),
       status = result$status,
-      cluster_label_source = "researcher_approved_coarse_cell_type_major",
+      cluster_label_source = "researcher_approved_seurat_cluster_partition",
+      model_cluster_counts = paste0(
+        names(model_cluster_counts), "=", as.integer(model_cluster_counts),
+        collapse = "|"
+      ),
       coarse_label_counts = paste0(
         names(coarse_counts), "=", as.integer(coarse_counts), collapse = "|"
       ),
-      reliable_lineages = paste(sort(result$reliable_lineages), collapse = "|"),
+      reliable_model_clusters = paste(
+        f1_sort_cluster_ids(result$reliable_model_clusters),
+        collapse = "|"
+      ),
       background_input = "not_available_public_filtered_cells",
       corrected_counts_path = corrected_path,
+      corrected_matrix_class = if (!is.null(result$corrected)) {
+        paste(class(result$corrected), collapse = "|")
+      } else {
+        NA_character_
+      },
+      raw_total_counts = as.numeric(raw_total_counts),
+      corrected_total_counts = as.numeric(corrected_total_counts),
+      removed_count_fraction = if (
+        is.finite(corrected_total_counts) && raw_total_counts > 0
+      ) {
+        as.numeric(
+          (raw_total_counts - corrected_total_counts) / raw_total_counts
+        )
+      } else {
+        NA_real_
+      },
+      corrected_noninteger_fraction = if (length(corrected_values)) {
+        mean(abs(corrected_values - round(corrected_values)) > 1e-8)
+      } else {
+        NA_real_
+      },
       raw_counts_remain_main = TRUE,
       deletion_based_on_contamination = FALSE,
       interpretation = "retained_cell_ambient_estimate_and_conditional_sensitivity_only",
@@ -342,14 +449,22 @@ for (sample_id in sample_ids) {
     cell_id_final = sample_cells,
     sample_id = sample_id,
     seurat_cluster = as.character(object$seurat_clusters[match(sample_cells, colnames(object))]),
+    decontX_model_cluster = unname(model_clusters),
     coarse_lineage_label = unname(coarse_labels),
+    cell_type_minor = as.character(
+      object$cell_type_minor[match(sample_cells, colnames(object))]
+    ),
+    cell_state = as.character(
+      object$cell_state[match(sample_cells, colnames(object))]
+    ),
+    model_label_source = "researcher_approved_seurat_cluster_partition",
     decontX_status = result$status,
     retained_cell_ambient_contamination_estimate =
       as.numeric(result$contamination[sample_cells]),
     stringsAsFactors = FALSE
   )
 
-  rm(sample_counts, result)
+  rm(sample_counts, result, corrected_values)
   gc(verbose = FALSE)
 }
 
@@ -368,6 +483,92 @@ object <- Seurat::AddMetaData(
 f1_write_tsv(ambient_cells, config$paths$ambient_cell_estimates)
 f1_write_tsv(ambient_summary, config$paths$ambient_summary)
 
+ambient_dt <- data.table::as.data.table(ambient_cells)
+lineage_summary <- ambient_dt[
+  is.finite(retained_cell_ambient_contamination_estimate),
+  .(
+    n_cells = .N,
+    n_samples = data.table::uniqueN(sample_id),
+    contamination_mean = mean(
+      retained_cell_ambient_contamination_estimate
+    ),
+    contamination_median = stats::median(
+      retained_cell_ambient_contamination_estimate
+    ),
+    contamination_P90 = as.numeric(stats::quantile(
+      retained_cell_ambient_contamination_estimate,
+      probs = 0.90,
+      names = FALSE,
+      type = 7
+    )),
+    contamination_P95 = as.numeric(stats::quantile(
+      retained_cell_ambient_contamination_estimate,
+      probs = 0.95,
+      names = FALSE,
+      type = 7
+    )),
+    fraction_ge_0_10 = mean(
+      retained_cell_ambient_contamination_estimate >= 0.10
+    ),
+    fraction_ge_0_20 = mean(
+      retained_cell_ambient_contamination_estimate >= 0.20
+    )
+  ),
+  by = coarse_lineage_label
+][order(-n_cells)]
+f1_write_tsv(lineage_summary, config$paths$ambient_lineage_summary)
+
+cluster_summary <- ambient_dt[
+  is.finite(retained_cell_ambient_contamination_estimate),
+  .(
+    n_cells = .N,
+    n_samples = data.table::uniqueN(sample_id),
+    contamination_mean = mean(
+      retained_cell_ambient_contamination_estimate
+    ),
+    contamination_median = stats::median(
+      retained_cell_ambient_contamination_estimate
+    ),
+    contamination_P90 = as.numeric(stats::quantile(
+      retained_cell_ambient_contamination_estimate,
+      probs = 0.90,
+      names = FALSE,
+      type = 7
+    )),
+    contamination_P95 = as.numeric(stats::quantile(
+      retained_cell_ambient_contamination_estimate,
+      probs = 0.95,
+      names = FALSE,
+      type = 7
+    )),
+    fraction_ge_0_10 = mean(
+      retained_cell_ambient_contamination_estimate >= 0.10
+    ),
+    fraction_ge_0_20 = mean(
+      retained_cell_ambient_contamination_estimate >= 0.20
+    )
+  ),
+  by = .(
+    seurat_cluster, coarse_lineage_label, cell_type_minor, cell_state
+  )
+][order(as.integer(seurat_cluster))]
+f1_write_tsv(cluster_summary, config$paths$ambient_cluster_summary)
+
+corrected_count_summary <- ambient_summary[
+  ,
+  c(
+    "sample_id", "input_cells", "input_genes", "status",
+    "corrected_counts_path", "corrected_matrix_class",
+    "raw_total_counts", "corrected_total_counts",
+    "removed_count_fraction", "corrected_noninteger_fraction"
+  ),
+  drop = FALSE
+]
+f1_write_tsv(
+  corrected_count_summary,
+  config$paths$ambient_corrected_count_summary
+)
+
 plot_data <- ambient_cells[
   is.finite(ambient_cells$retained_cell_ambient_contamination_estimate),
   ,
@@ -384,7 +585,7 @@ if (nrow(plot_data)) {
     ggplot2::geom_boxplot(outlier.size = 0.2, linewidth = 0.25) +
     ggplot2::coord_flip() +
     ggplot2::labs(
-      title = "逐样本DecontX污染估计（粗谱系标签辅助）",
+      title = "逐样本DecontX污染估计（已审核cluster作为模型分组）",
       x = "sample_id",
       y = "DecontX contamination"
     ) +
@@ -404,7 +605,10 @@ f1_append_log(
   config,
   stage,
   sprintf(
-    "完成研究者批准的主要谱系注释（%d个cluster）及逐样本DecontX；raw counts保持主矩阵",
+    paste0(
+      "完成研究者批准的主要谱系注释（%d个cluster）及逐样本DecontX；",
+      "DecontX z使用已审核Seurat cluster，raw counts保持主矩阵"
+    ),
     length(clusters)
   )
 )

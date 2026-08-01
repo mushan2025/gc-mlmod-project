@@ -1,0 +1,6 @@
+resolution	metadata_field	n_clusters	is_main
+0.2	SCT_harmony_res.0.2	10	FALSE
+0.4	SCT_harmony_res.0.4	15	FALSE
+0.6	SCT_harmony_res.0.6	19	TRUE
+0.8	SCT_harmony_res.0.8	20	FALSE
+1	SCT_harmony_res.1	24	FALSE

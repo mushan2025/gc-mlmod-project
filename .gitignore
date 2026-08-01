@@ -3,6 +3,7 @@ data/public_downloads/**
 data/processed_input/**
 objects/**
 tmp/**
+server_downloads/**
 !data/public_downloads/.gitkeep
 !data/processed_input/.gitkeep
 !objects/.gitkeep
@@ -42,4 +43,6 @@ logs/F1_single_cell/**
 !logs/F1_single_cell/.gitkeep
 results/F1_qc/qc_cell_decision_audit.tsv
 results/F1_qc/doublet_summary_failed_*.tsv
+results/F1_qc/ambient_rna_cell_estimates.tsv
+results/F1_qc/broad_lineage_invalid_diagnostic_*/
 SOURCE_COMMIT.txt

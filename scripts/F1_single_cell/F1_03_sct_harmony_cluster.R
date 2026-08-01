@@ -46,7 +46,10 @@ if (length(forbidden)) {
 }
 f1_require_columns(
   object[[]],
-  c("sample_id", "group_analysis", "nCount_RNA", "nFeature_RNA", "mt_percent", "HB_percent"),
+  c(
+    "sample_id", "patient_id", "group_analysis",
+    "nCount_RNA", "nFeature_RNA", "mt_percent", "HB_percent"
+  ),
   "F1.2 object metadata"
 )
 
@@ -78,7 +81,7 @@ diagnostics <- data.frame(
     paste(range(config$sct$main_dims), collapse = ":"), config$sct$leiden_algorithm,
     config$sct$default_resolution, as.character(qc_cor),
     "SCT_PCA_and_umap.sct_pca_retained", "Harmony_sample_id_UMAP_Leiden",
-    "LogNormalize_not_triggered_no_specific_concern"
+    "pending_cluster_marker_and_embedding_review"
   ),
   interpretation = c(
     "主归一化", "固定v2方差稳定化", "不回归mt/nCount/细胞周期",
@@ -87,7 +90,10 @@ diagnostics <- data.frame(
     "预登记主维数", "Seurat algorithm 4", "marker审核前默认值",
     rep("用于发现QC变量是否明显主导PC；不据此反向改QC阈值", length(qc_cor)),
     "用于识别Harmony是否抹除患者特异肿瘤结构", "主要细胞大类聚类空间",
-    "只有明确深度驱动或审稿质疑时才运行LogNormalize敏感性"
+    paste0(
+      "结合PC-QC相关、technical HVG、UMAP/cluster梯度和marker共同判断；",
+      "不使用单一通用相关阈值"
+    )
   ),
   stringsAsFactors = FALSE
 )
@@ -112,6 +118,7 @@ umap_sct_pca <- Seurat::Embeddings(object, reduction = "umap.sct_pca")
 embedding_source <- data.frame(
   cell_id = colnames(object),
   sample_id = object$sample_id,
+  patient_id = object$patient_id,
   group_analysis = object$group_analysis,
   seurat_clusters = object$seurat_clusters,
   harmony_UMAP_1 = umap_harmony[, 1],

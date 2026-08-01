@@ -1,0 +1,12 @@
+check	status	observed
+cell_count_matches_approved_input	PASS	26821/26821
+sample_count_matches_approved_input	PASS	39/39
+excluded_cells_absent_from_F1_5	PASS	7
+source_all_cell_cluster_complete	PASS	16|19|21|3|9
+RNA_raw_counts_nonnegative_integer	PASS	25504 features; 26821 cells
+required_reductions_present	PASS	pca|umap.sct_pca|harmony|umap
+required_embeddings_finite_nonblank	PASS	TRUE
+required_resolution_fields_present	PASS	SCT_harmony_res.0.2|SCT_harmony_res.0.4|SCT_harmony_res.0.6|SCT_harmony_res.0.8|SCT_harmony_res.1
+PCA_features_at_least_500	PASS	1666
+SCT_models_match_included_samples	PASS	39/39
+no_MLMOD_or_prognosis_fields	PASS	

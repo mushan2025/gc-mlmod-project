@@ -19,17 +19,21 @@ if [[ ! -x "${R_SCRIPT}" ]]; then
   exit 3
 fi
 
-# 96 GiB / 48 vCPU服务器的保守并行配置：可并行处加速，同时避免嵌套线程超过48。
-export F1_FUTURE_WORKERS="${F1_FUTURE_WORKERS:-12}"
+# 96 GiB / 48 vCPU服务器：Seurat步骤最多使用24个外层进程。
+# F1.6实测4个样本同时进入CopyKAT时会耗尽内存，因此固定为2个样本并行。
+# 每个样本内的CopyKAT A/B/C适用分支顺序运行；inferCNV/CopyKAT最多10核，
+# BLAS/OpenMP保持单线程以免额外嵌套。
+export F1_FUTURE_WORKERS="${F1_FUTURE_WORKERS:-24}"
 export F1_FUTURE_GLOBALS_MAX_GB="${F1_FUTURE_GLOBALS_MAX_GB:-72}"
 export F1_SCDBLFINDER_WORKERS="${F1_SCDBLFINDER_WORKERS:-8}"
-export F1_INFERCNV_THREADS="${F1_INFERCNV_THREADS:-16}"
-export F1_COPYKAT_CORES="${F1_COPYKAT_CORES:-16}"
-export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
-export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-4}"
-export MKL_NUM_THREADS="${MKL_NUM_THREADS:-4}"
-export VECLIB_MAXIMUM_THREADS="${VECLIB_MAXIMUM_THREADS:-4}"
-export NUMEXPR_NUM_THREADS="${NUMEXPR_NUM_THREADS:-4}"
+export F1_CNV_SAMPLE_WORKERS="${F1_CNV_SAMPLE_WORKERS:-2}"
+export F1_INFERCNV_THREADS="${F1_INFERCNV_THREADS:-10}"
+export F1_COPYKAT_CORES="${F1_COPYKAT_CORES:-10}"
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
+export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-1}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-1}"
+export VECLIB_MAXIMUM_THREADS="${VECLIB_MAXIMUM_THREADS:-1}"
+export NUMEXPR_NUM_THREADS="${NUMEXPR_NUM_THREADS:-1}"
 
 ulimit -n 65535
 mkdir -p "${PROJECT_ROOT}/logs/F1_single_cell"
@@ -57,6 +61,7 @@ fi
   echo "to=${TO_STAGE}"
   echo "future_workers=${F1_FUTURE_WORKERS}"
   echo "scDblFinder_workers=${F1_SCDBLFINDER_WORKERS}"
+  echo "CNV_sample_workers=${F1_CNV_SAMPLE_WORKERS}"
   echo "inferCNV_threads=${F1_INFERCNV_THREADS}"
   echo "CopyKAT_cores=${F1_COPYKAT_CORES}"
   echo "BLAS_threads=${OPENBLAS_NUM_THREADS}"

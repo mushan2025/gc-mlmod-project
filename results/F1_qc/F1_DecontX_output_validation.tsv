@@ -1,0 +1,10 @@
+check	status	value
+samples_completed	PASS	40
+cells_with_finite_estimate	PASS	142650
+corrected_matrices	PASS	40
+raw_counts_signature_preserved	PASS	n_features=25504;n_cells=142650;nonzero=234188368;total_counts=976555906
+cell_order_preserved	PASS	142650
+reductions_preserved	PASS	pca|umap.sct_pca|harmony|umap
+annotation_and_estimate_metadata_match	PASS	142650
+corrected_values_nonnegative	PASS	40
+corrected_totals_match_summary	PASS	40

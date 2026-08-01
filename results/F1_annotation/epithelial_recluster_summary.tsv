@@ -1,0 +1,15 @@
+item	value
+initial_epithelial_cells	26828
+technical_excluded_cells	7
+technical_excluded_samples	sample37
+SCT_min_cells_per_gene	5
+minimum_SCT_usable_features_per_sample	500
+input_epithelial_cells	26821
+input_samples	39
+normalization	per_sample_SCTransform_v2
+vars_to_regress	NULL
+Harmony_group_by	sample_id
+main_dims	1:30
+default_resolution	0.6
+epithelial_clusters	19
+malignancy_status	not_assigned_in_F1.5

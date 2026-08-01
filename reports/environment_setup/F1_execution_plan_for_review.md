@@ -1,6 +1,6 @@
 # F1 正式执行计划（SCTransform 主线，审核稿）
 
-更新日期：2026-07-29
+更新日期：2026-08-01
 当前状态：F0准入、F1必需依赖、总入口dry-run和脚本静态检查均已通过；**尚未执行真实数据，正式设备与资源pilot仍待批准**。
 
 ## 1. F1 要回答什么
@@ -99,19 +99,19 @@ install.packages(c("leidenbase", "fields"), type = "binary")
 - inferCNV和CopyKAT主分析均使用RNA raw counts，按样本运行；SCT residual和Harmony坐标不作输入。DecontX corrected counts不作默认输入，只允许按下述条件用于inferCNV敏感性。
 - inferCNV reference按固定顺序选择，且不混合不同层级：先用当前样本高/中置信T/NK，必要时在同层加入B/Plasma；不足50个时，改用`patient_id`完全一致的配对`Normal_Gastric`样本免疫细胞；仍不足时，使用其他患者`Normal_Gastric`样本的免疫细胞。配对只依据F0核对后的精确`patient_id`和`group_analysis`，不根据样本名猜测。reference最多500个；候选超过500个时在来源样本间轮流均衡抽取，三层均不足50个时该样本inferCNV记为`not_evaluable`，继续其他样本及CopyKAT。
 - 运行前分别检查reference和上皮观察细胞的ambient风险，少数污染reference优先删除或替换。使用外部正常胃reference时保留每个reference细胞的来源样本、患者、谱系和置信度；这属于同一数据集内的条件性基线，不消除跨样本技术差异。
-- inferCNV显式使用`analysis_mode="subclusters"`、`tumor_subcluster_partition_method="leiden"`、`k_nn=20`、`leiden_resolution="auto"`、`leiden_method="PCA"`、`leiden_function="CPM"`、`inspect_subclusters=TRUE`、`HMM=FALSE`和`cluster_by_groups=TRUE`。Leiden在已审核的sample内、原上皮cluster内形成CNV模式子组，脚本保存每个细胞的子聚类归属；最终大片段支持按sample × inferCNV subcluster审核并回填到细胞。
-- inferCNV subcluster只是帮助从热图中定位具有相似CNV模式的细胞，不称为真实肿瘤亚克隆。主参数先用官方`auto`分辨率；若热图显示明显过度拆分且拆分组没有可区分的连续大片段模式，只允许有依据地降低一次分辨率并记录原因，不进行参数扫描或按结果有利程度选择。
-- CopyKAT每次仅输入当前样本的全部QC后singlet，不混入其他样本，也不只截取候选上皮。CopyKAT的已知正常细胞另行从当前样本高/中置信T/NK（必要时加B/Plasma）选择；达到50个才传入，否则由CopyKAT在当前样本内自行估计基线。inferCNV使用的配对正常胃或其他患者reference绝不传给CopyKAT。
+- inferCNV显式使用`analysis_mode="subclusters"`、`tumor_subcluster_partition_method="leiden"`、`k_nn=20`、`leiden_resolution="auto"`、`leiden_method="PCA"`、`leiden_function="CPM"`、`inspect_subclusters=TRUE`和`cluster_by_groups=TRUE`。每个sample的全部候选上皮只设一个`observations`组；原上皮cluster仅保留为cell-level注释与subcluster组成背景。快速分组检查可用`HMM=FALSE`；正式运行固定`HMM=TRUE`、`HMM_type="i6"`、`HMM_report_by="subcluster"`、`BayesMaxPNormal=0.5`和`reassignCNVs=TRUE`。
+- inferCNV subcluster只是帮助从热图中定位具有相似CNV模式的细胞，不称为真实肿瘤亚克隆，也不预设目标数量。少数小组记为不可单独评价；只有广泛过度拆分且组间没有可区分大片段模式时才比较一个相邻更低分辨率，不进行参数扫描或按恶性细胞产量选择。正式恶性证据以热图及同谱系Normal_Gastric比较为主，HMM和burden只作辅助。
+- CopyKAT每次仅输入当前样本的全部QC后singlet，不混入其他样本，也不只截取候选上皮。A主臂不传`norm.cell.names`；若预测diploid群中候选上皮超过50%，保留原始call但标记`not_evaluable_baseline_suspect`。B敏感性臂只使用同样本高/中置信T/NK（必要时加B/Plasma，至少50个）作known normal。C敏感性臂只在Normal_Gastric中用同样本免疫细胞加一半正常胃上皮作known normal、评价另一半，两折交换并固定seed=42；不跨样本借reference。
 - 仅当审核表确认污染可信且可能改变CNV结论时运行一次corrected inferCNV敏感性；脚本强制reference与观察细胞同时来自各自保存的DecontX corrected矩阵，禁止只校正一方。大片段支持等级、最终恶性标签或06a纳入任一改变时写出比较表并暂停裁决，否则raw结果保持主结果。CopyKAT不默认接受corrected输入。
-- inferCNV辅助cell burden定义为每个细胞相对于reference逐基因中心值的平均绝对偏差，并记录reference细胞burden的P95；该数值只帮助定位，不自动判恶性。最终inferCNV支持等级由sample × inferCNV subcluster热图中的连续大片段模式人工审核，原`epithelial_cluster_id`同时保留为父级注释背景。
-- 每个样本保留完整inferCNV输出目录、最终RDS、输入annotation、gene order、最终热图细胞顺序、细胞—subcluster对应表和作图来源manifest；最终RDS中的`expr.data`作为后续发表级热图重绘的数值来源，不依赖默认图片反推数据。
+- inferCNV辅助cell burden定义为每个细胞相对于reference逐基因中心值的平均绝对偏差，并记录reference细胞burden的P95；该数值只帮助定位，不自动判恶性。最终inferCNV支持等级由sample × inferCNV subcluster热图中的连续大片段模式人工审核，原`epithelial_cluster_id`以组成比例形式保留为注释背景。
+- 每个样本保留完整inferCNV输出目录、最终RDS、写出的热图表达矩阵、输入annotation、gene order、最终热图细胞顺序、细胞—subcluster对应表和作图来源manifest；最终RDS中的`expr.data`作为后续发表级热图重绘的数值来源，不依赖默认图片反推数据。服务器结果用`package_F1_06_results.sh`压成`tar.zst`并生成大写SHA256后再下载。
 - CopyKAT的aneuploid支持恶性，diploid不能排除近二倍体肿瘤，uncalled按未知。
 - 两种方法都来自RNA表达，只是互补方法稳健性，不是独立DNA证据。
 - 结论边界固定为：CNV定义可能低估近二倍体恶性细胞，包括潜在的基因组稳定型胃癌细胞；后续MLMOD结论适用于本流程可由CNV证据识别的恶性上皮，不能排除未纳入的近二倍体恶性亚群。该限制不新增恶性类别，也不改变06a/06b组成。
 - 先生成`F1_malignancy_cluster_review_template.tsv`供人工审阅。`epithelial_subtype`使用marker panel中的固定名称：`Pit_mucous_epithelial`、`Mucous_neck_epithelial`、`Chief_epithelial`、`Parietal_epithelial`、`Enteroendocrine_epithelial`或`Intestinal_like_epithelial`；暂时不能归类时填`epithelial_uncertain`。模板列出父级上皮cluster marker、候选sample × inferCNV subcluster与同谱系`Normal_Gastric`的marker检出比例、正常参照细胞数及样本数、组织/样本构成和DecontX摘要；不能映射或没有同谱系正常参照时明确记为不可评估，不自动按阴性处理。
 - 谱系marker只说明细胞像哪类胃上皮，不能直接证明非恶性。`normal_program_support`要求整体接近同谱系`Normal_Gastric`；`tumor_program_support`要求相对同谱系正常细胞出现成套异常变化，不采用单个“癌marker”硬判。增殖、高MT、缺氧、应激、凋亡、intestinal-like状态、ambient或肿瘤组织来源均不能单独形成肿瘤样支持；也不使用MLMOD或预后信息。
 - 两个程序字段允许同时为TRUE或同时为FALSE；冲突或均不明确时保持`epithelial_uncertain`，不为追求纳入量强行裁决。
-- 标签实现与主线一致：`malignant_probable_infercnv`和`malignant_probable_copykat`均要求无强正常样程序；`non_malignant_epithelial`要求无肿瘤样程序。批准后形成`05`、`06a`和`06b`对象。
+- 标签实现与主线一致：`malignant_probable_infercnv`和`malignant_probable_copykat`均要求无强正常样程序；`non_malignant_epithelial`要求无肿瘤样程序。`malignant_probable_copykat`只保留在`05`和探索性输出；`06a`只纳入至少有weak inferCNV大片段支持的`malignant_high_confidence`与`malignant_probable_infercnv`，`06b`只纳入前者。
 
 ## 4. 表达矩阵用途
 

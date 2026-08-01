@@ -63,6 +63,12 @@ f1_build_config <- function(project_root) {
       decontx_corrected_dir = file.path(root, "objects", "F1_single_cell", "decontX_corrected_by_sample"),
       ambient_cell_estimates = file.path(root, "results", "F1_qc", "ambient_rna_cell_estimates.tsv"),
       ambient_summary = file.path(root, "results", "F1_qc", "ambient_rna_summary_by_sample.tsv"),
+      ambient_lineage_summary = file.path(root, "results", "F1_qc", "ambient_rna_summary_by_lineage.tsv"),
+      ambient_cluster_summary = file.path(root, "results", "F1_qc", "ambient_rna_summary_by_cluster.tsv"),
+      ambient_corrected_count_summary = file.path(
+        root, "results", "F1_qc",
+        "ambient_rna_corrected_count_summary_by_sample.tsv"
+      ),
       annotation_template = file.path(root, "results", "F1_annotation", "F1_cluster_annotation_template.tsv"),
       annotation_approved = file.path(root, "data", "metadata", "F1_cluster_annotation_approved.tsv"),
       epithelial_review_template = file.path(root, "results", "F1_annotation", "F1_epithelial_cluster_review_template.tsv"),
@@ -101,6 +107,7 @@ f1_build_config <- function(project_root) {
       vst_flavor = "v2",
       variable_features_n = 3000L,
       vars_to_regress = NULL,
+      minimum_cells_per_gene = 5L,
       conserve_memory = TRUE,
       pca_npcs = 50L,
       main_dims = 1:30,
@@ -112,7 +119,7 @@ f1_build_config <- function(project_root) {
     execution = list(
       # 默认保持单进程；服务器启动脚本显式提高并行度，并把实际值写入参数表。
       future_workers = f1_env_integer(
-        "F1_FUTURE_WORKERS", 1L, minimum = 1L, maximum = 12L
+        "F1_FUTURE_WORKERS", 1L, minimum = 1L, maximum = 24L
       ),
       future_globals_max_gb = f1_env_numeric(
         "F1_FUTURE_GLOBALS_MAX_GB", 32, minimum = 4, maximum = 80
@@ -128,10 +135,22 @@ f1_build_config <- function(project_root) {
       minimum_reference_cells = 50L,
       maximum_reference_cells = 500L,
       infercnv_cutoff = 0.1,
+      infercnv_scipen = 100L,
+      infercnv_bitmap_type = "cairo",
+      sample_workers = f1_env_integer(
+        "F1_CNV_SAMPLE_WORKERS", 1L, minimum = 1L, maximum = 6L
+      ),
       infercnv_threads = f1_env_integer(
         "F1_INFERCNV_THREADS", 4L, minimum = 1L, maximum = 32L
       ),
-      infercnv_hmm = FALSE,
+      infercnv_min_cells_per_gene = 3L,
+      infercnv_window_length = 101L,
+      infercnv_observation_group = "observations",
+      infercnv_hmm = TRUE,
+      infercnv_hmm_type = "i6",
+      infercnv_hmm_report_by = "subcluster",
+      infercnv_bayes_max_p_normal = 0.5,
+      infercnv_reassign_cnvs = TRUE,
       infercnv_denoise = TRUE,
       infercnv_analysis_mode = "subclusters",
       infercnv_tumor_subcluster_partition_method = "leiden",
@@ -141,12 +160,20 @@ f1_build_config <- function(project_root) {
       infercnv_leiden_function = "CPM",
       infercnv_inspect_subclusters = TRUE,
       infercnv_output_format = "pdf",
+      infercnv_write_expr_matrix = TRUE,
       infercnv_resume_mode = FALSE,
       copykat_ngene_chr = 5L,
+      copykat_internal_min_genes_per_cell = 200L,
       copykat_win_size = 25L,
       copykat_ks_cut = 0.1,
       copykat_cores = f1_env_integer(
         "F1_COPYKAT_CORES", 4L, minimum = 1L, maximum = 32L
+      ),
+      copykat_holdout_seed = 42L,
+      copykat_normal_epithelial_holdout_fraction = 0.5,
+      copykat_baseline_suspect_epithelial_fraction = 0.5,
+      copykat_secretory_genes = c(
+        "PGA3", "PGA4", "PGA5", "PGC", "LIPF", "ATP4A", "ATP4B"
       ),
       require_explicit_execution_approval = TRUE
     ),

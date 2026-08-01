@@ -16,4 +16,7 @@ max_abs_PCA_correlation_mt_percent	0.386345429427271	用于发现QC变量是否�
 max_abs_PCA_correlation_HB_percent	0.00589910497821233	用于发现QC变量是否明显主导PC；不据此反向改QC阈值
 unintegrated_reference	SCT_PCA_and_umap.sct_pca_retained	用于识别Harmony是否抹除患者特异肿瘤结构
 main_embedding	Harmony_sample_id_UMAP_Leiden	主要细胞大类聚类空间
-normalization_sensitivity	LogNormalize_not_triggered_no_specific_concern	只有明确深度驱动或审稿质疑时才运行LogNormalize敏感性
+normalization_sensitivity	LogNormalize_not_triggered_after_cluster_review	不设置单一PC相关硬阈值；综合判断为不触发：max|r|(nCount)=0.476，max|r|(nFeature)=0.377，technical HVG=0.93%，主要谱系marker清楚且未见技术指标主导聚类。
+cluster_sample_patient_composition_review	clusters=24;n_patients_per_cluster=26-29;max_dominant_sample_fraction=0.2302;max_dominant_patient_fraction=0.3119	每簇均补充dominant sample/patient及组织来源构成；这些占比用于发现来源异常，不能单独证明过度整合。
+preliminary_integration_review_after_clustering	no_single_sample_dominated_cluster_detected;c3_Normal_Gastric=0.3178;c3_Primary_Tumor=0.6582;c3_malignancy_pending_F1.5_F1.6	当前没有单一样本垄断的粗cluster；c3跨正常胃和原发肿瘤来源且marker混合，需在F1.5/F1.6结合未整合结构、上皮细分和CNV复核，目前既不证明过度整合，也不证明恶性。
+lineage_stratified_integration_review_status	researcher_approved_2026-07-30;B/Plasma(n_clusters=5,max_sample=0.149,max_patient=0.173);Endothelial/Pericyte(n_clusters=2,max_sample=0.103,max_patient=0.103);Epithelial(n_clusters=5,max_sample=0.168,max_patient=0.184);Fibroblast/CAF(n_clusters=1,max_sample=0.127,max_patient=0.127);Mast(n_clusters=1,max_sample=0.132,max_patient=0.132);Mesothelial(n_clusters=1,max_sample=0.230,max_patient=0.312);Myeloid(n_clusters=3,max_sample=0.200,max_patient=0.200);T/NK(n_clusters=6,max_sample=0.217,max_patient=0.217)	24个cluster的粗谱系标签已获研究者批准。各谱系保留连贯marker且未见单一样本垄断；F1.4最终cluster版DecontX复核未改变任何cluster的粗谱系marker最佳匹配方向，上皮簇继续进入F1.5/F1.6判断。跨患者混合仍不能被自动解释为整合成功或失败。

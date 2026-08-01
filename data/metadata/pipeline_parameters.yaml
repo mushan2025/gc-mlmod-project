@@ -1,6 +1,6 @@
 project: gc_mlmod_project
 stage: F1_execution_script_preparation
-updated_at: "2026-07-29"
+updated_at: "2026-08-01"
 execution_policy:
   priority_order:
     - laptop_thinkbook16p
@@ -73,7 +73,15 @@ F1:
     leiden_method: PCA
     leiden_function: CPM
     inspect_subclusters: true
-    HMM: false
+    observation_group: observations
+    original_epithelial_cluster_role: cell_level_annotation_and_composition_context_only
+    min_cells_per_gene: 3
+    window_length: 101
+    HMM: true
+    HMM_type: i6
+    HMM_report_by: subcluster
+    BayesMaxPNormal: 0.5
+    reassignCNVs: true
     observation_unit: sample_id_by_infercnv_subcluster
     reference_scope: same_sample_then_same_patient_normal_gastric_then_balanced_other_patient_normal_gastric_immune
     reference_pairing_rule: exact_patient_id_and_normal_gastric_group_only
@@ -82,7 +90,11 @@ F1:
     subcluster_interpretation: cnv_pattern_group_not_true_clone
     output_format: pdf
     copykat_input_scope: all_QC_singlet_cells_from_current_sample_only
-    copykat_known_normal_rule: same_sample_T_NK_then_B_Plasma_if_at_least_50_else_automatic_within_sample
+    copykat_arm_A: primary_self_estimated_baseline_without_norm_cell_names
+    copykat_arm_B: sensitivity_same_sample_T_NK_then_B_Plasma_if_at_least_50
+    copykat_arm_C: Normal_Gastric_only_two_fold_held_out_epithelium_plus_same_sample_immune
+    copykat_holdout_seed: 42
+    copykat_baseline_suspect_rule: predicted_diploid_candidate_epithelial_fraction_gt_0.5
     copykat_external_reference: prohibited
   matrix_routing:
     RNA_counts: "QC, doublet, DecontX input, inferCNV, CopyKAT, pseudobulk and F2 UCell"
